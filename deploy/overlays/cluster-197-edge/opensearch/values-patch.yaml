@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-values-197
+  namespace: logging
+data:
+  values.yaml: |
+    # Cluster 197 Edge - OpenSearch Configuration
+
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      hosts:
+        - host: opensearch.mkube-197.miribit.lab
+          paths:
+            - path: /
+              pathType: Prefix

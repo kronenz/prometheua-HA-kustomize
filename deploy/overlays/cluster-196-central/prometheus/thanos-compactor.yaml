@@ -1,0 +1,106 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-compactor
+  namespace: monitoring
+  labels:
+    app: thanos-compactor
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 10902
+      targetPort: 10902
+  selector:
+    app: thanos-compactor
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-compactor
+  namespace: monitoring
+  labels:
+    app: thanos-compactor
+spec:
+  replicas: 1
+  serviceName: thanos-compactor
+  selector:
+    matchLabels:
+      app: thanos-compactor
+  template:
+    metadata:
+      labels:
+        app: thanos-compactor
+    spec:
+      containers:
+        - name: thanos-compactor
+          image: quay.io/thanos/thanos:v0.37.2
+          args:
+            - compact
+            - --log.level=info
+            - --data-dir=/var/thanos/compactor
+            - --objstore.config-file=/etc/thanos/objstore.yml
+            - --retention.resolution-raw=14d  # 14 days raw data
+            - --retention.resolution-5m=30d   # 30 days 5m resolution
+            - --retention.resolution-1h=90d   # 90 days 1h resolution
+            - --wait
+            - --wait-interval=3m
+          ports:
+            - name: http
+              containerPort: 10902
+          volumeMounts:
+            - name: data
+              mountPath: /var/thanos/compactor
+            - name: s3-config
+              mountPath: /etc/thanos
+              readOnly: true
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 10902
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 10902
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      volumes:
+        - name: s3-config
+          secret:
+            secretName: thanos-s3-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 10Gi
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: thanos-compactor
+  namespace: monitoring
+  labels:
+    app: thanos-compactor
+spec:
+  selector:
+    matchLabels:
+      app: thanos-compactor
+  endpoints:
+    - port: http
+      interval: 30s

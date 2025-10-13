@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-values-196
+  namespace: logging
+data:
+  values.yaml: |
+    # Cluster 196 Central - OpenSearch Configuration
+
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      hosts:
+        - host: opensearch.mkube-196.miribit.lab
+          paths:
+            - path: /
+              pathType: Prefix

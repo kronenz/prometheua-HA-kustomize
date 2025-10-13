@@ -1,0 +1,153 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-ruler
+  namespace: monitoring
+  labels:
+    app: thanos-ruler
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 10902
+      targetPort: 10902
+    - name: grpc
+      port: 10901
+      targetPort: 10901
+  selector:
+    app: thanos-ruler
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-ruler
+  namespace: monitoring
+  labels:
+    app: thanos-ruler
+spec:
+  replicas: 1
+  serviceName: thanos-ruler
+  selector:
+    matchLabels:
+      app: thanos-ruler
+  template:
+    metadata:
+      labels:
+        app: thanos-ruler
+    spec:
+      serviceAccountName: prometheus-kube-prometheus-prometheus
+      containers:
+        - name: thanos-ruler
+          image: quay.io/thanos/thanos:v0.37.2
+          args:
+            - rule
+            - --log.level=info
+            - --data-dir=/var/thanos/ruler
+            - --eval-interval=30s
+            - --rule-file=/etc/thanos-ruler/**/*.yaml
+            - --alertmanagers.url=http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093
+            - --query=http://thanos-query.monitoring.svc.cluster.local:9090
+            - --objstore.config-file=/etc/thanos/objstore.yml
+            - --label=rule_replica="$(POD_NAME)"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - name: http
+              containerPort: 10902
+            - name: grpc
+              containerPort: 10901
+          volumeMounts:
+            - name: data
+              mountPath: /var/thanos/ruler
+            - name: s3-config
+              mountPath: /etc/thanos
+              readOnly: true
+            - name: rules
+              mountPath: /etc/thanos-ruler
+              readOnly: true
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 10902
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 10902
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      volumes:
+        - name: s3-config
+          secret:
+            secretName: thanos-s3-config
+        - name: rules
+          configMap:
+            name: thanos-ruler-rules
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 5Gi
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-ruler-rules
+  namespace: monitoring
+data:
+  thanos-alerts.yaml: |
+    groups:
+      - name: thanos
+        interval: 30s
+        rules:
+          - alert: ThanosCompactHalted
+            expr: thanos_compactor_halted{job="thanos-compactor"} == 1
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Thanos Compactor has halted"
+              description: "Thanos Compactor {{ $labels.instance }} has halted"
+
+          - alert: ThanosQueryGrpcErrorRate
+            expr: rate(grpc_server_handled_total{grpc_code=~"Unknown|ResourceExhausted|Internal|Unavailable",job="thanos-query"}[5m]) > 0.01
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Thanos Query gRPC error rate is high"
+              description: "Thanos Query {{ $labels.instance }} gRPC error rate is {{ $value }}"
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: thanos-ruler
+  namespace: monitoring
+  labels:
+    app: thanos-ruler
+spec:
+  selector:
+    matchLabels:
+      app: thanos-ruler
+  endpoints:
+    - port: http
+      interval: 30s

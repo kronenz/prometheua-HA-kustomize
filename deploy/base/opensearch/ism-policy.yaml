@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-ism-policy
+  namespace: logging
+data:
+  log-retention-policy.json: |
+    {
+      "policy": {
+        "description": "14일 로컬 보관 후 S3 이동, 180일 후 삭제",
+        "default_state": "hot",
+        "states": [
+          {
+            "name": "hot",
+            "actions": [],
+            "transitions": [
+              {
+                "state_name": "cold",
+                "conditions": {
+                  "min_index_age": "14d"
+                }
+              }
+            ]
+          },
+          {
+            "name": "cold",
+            "actions": [
+              {
+                "snapshot": {
+                  "repository": "s3-snapshots",
+                  "snapshot": "logs-{{ctx.index}}-{{now/d}}"
+                }
+              }
+            ],
+            "transitions": [
+              {
+                "state_name": "delete",
+                "conditions": {
+                  "min_index_age": "180d"
+                }
+              }
+            ]
+          },
+          {
+            "name": "delete",
+            "actions": [
+              {
+                "delete": {}
+              }
+            ],
+            "transitions": []
+          }
+        ],
+        "ism_template": [
+          {
+            "index_patterns": ["logs-*"],
+            "priority": 100
+          }
+        ]
+      }
+    }

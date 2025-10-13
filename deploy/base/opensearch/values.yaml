@@ -1,0 +1,98 @@
+# OpenSearch Base Configuration
+# NOTE: Cluster-specific settings are in overlays
+
+clusterName: "opensearch-cluster"
+nodeGroup: "master"
+
+replicas: 1
+
+roles:
+  - master
+  - data
+  - ingest
+
+# Resource configuration
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Storage
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 30Gi
+
+# JVM heap size (50% of memory request)
+opensearchJavaOpts: "-Xmx1g -Xms1g"
+
+# S3 snapshot repository plugin
+plugins:
+  enabled: true
+  installList:
+    - repository-s3
+
+# Security configuration
+config:
+  opensearch.yml: |
+    cluster.name: opensearch-cluster
+    network.host: 0.0.0.0
+
+    # S3 Repository settings
+    s3.client.default.endpoint: https://172.20.40.21:30001
+    s3.client.default.protocol: https
+    s3.client.default.path_style_access: true
+
+    # Security
+    plugins.security.ssl.http.enabled: false
+    plugins.security.ssl.transport.enabled: false
+    plugins.security.disabled: true
+
+# Service configuration
+service:
+  type: ClusterIP
+  httpPort: 9200
+
+# Ingress configured per cluster in overlays
+ingress:
+  enabled: false
+
+# ISM (Index State Management) enabled
+extraEnvs:
+  - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+    value: "Admin123!"
+
+# Anti-affinity for HA (if replicas > 1)
+antiAffinity: "soft"
+
+# Security context
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  runAsUser: 1000
+
+sysctlInit:
+  enabled: true
+
+# Service Monitor for Prometheus
+# Requires prometheus-operator CRDs
+extraObjects:
+  - apiVersion: v1
+    kind: ServiceMonitor
+    metadata:
+      name: opensearch
+      labels:
+        app: opensearch
+    spec:
+      selector:
+        matchLabels:
+          app: opensearch
+      endpoints:
+        - port: http
+          interval: 30s
+          path: /_prometheus/metrics

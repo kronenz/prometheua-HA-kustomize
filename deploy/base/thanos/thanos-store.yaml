@@ -1,0 +1,109 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-store
+  namespace: monitoring
+  labels:
+    app: thanos-store
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless service for gRPC
+  ports:
+    - name: http
+      port: 10902
+      targetPort: 10902
+    - name: grpc
+      port: 10901
+      targetPort: 10901
+  selector:
+    app: thanos-store
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-store
+  namespace: monitoring
+  labels:
+    app: thanos-store
+spec:
+  replicas: 1
+  serviceName: thanos-store
+  selector:
+    matchLabels:
+      app: thanos-store
+  template:
+    metadata:
+      labels:
+        app: thanos-store
+    spec:
+      containers:
+        - name: thanos-store
+          image: quay.io/thanos/thanos:v0.37.2
+          args:
+            - store
+            - --log.level=info
+            - --data-dir=/var/thanos/store
+            - --objstore.config-file=/etc/thanos/objstore.yml
+            - --index-cache-size=500MB
+            - --chunk-pool-size=500MB
+          ports:
+            - name: http
+              containerPort: 10902
+            - name: grpc
+              containerPort: 10901
+          volumeMounts:
+            - name: data
+              mountPath: /var/thanos/store
+            - name: s3-config
+              mountPath: /etc/thanos
+              readOnly: true
+          resources:
+            limits:
+              cpu: 500m
+              memory: 2Gi
+            requests:
+              cpu: 250m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 10902
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 10902
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      volumes:
+        - name: s3-config
+          secret:
+            secretName: thanos-s3-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 10Gi
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: thanos-store
+  namespace: monitoring
+  labels:
+    app: thanos-store
+spec:
+  selector:
+    matchLabels:
+      app: thanos-store
+  endpoints:
+    - port: http
+      interval: 30s

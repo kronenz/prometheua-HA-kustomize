@@ -1,0 +1,29 @@
+# Longhorn Base Configuration
+# NOTE: This is the base configuration. Cluster-specific settings are in overlays.
+
+persistence:
+  defaultClass: true
+  defaultClassReplicaCount: 2
+  reclaimPolicy: Retain
+
+defaultSettings:
+  backupTarget: s3://longhorn-backups@us-east-1/
+  backupTargetCredentialSecret: longhorn-s3-secret
+  defaultReplicaCount: 2
+  guaranteedInstanceManagerCpu: 12
+  storageMinimalAvailablePercentage: 15
+
+ingress:
+  enabled: false  # Configured per cluster in overlays
+
+service:
+  ui:
+    type: ClusterIP
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
