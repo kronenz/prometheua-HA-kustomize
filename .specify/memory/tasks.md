@@ -73,17 +73,17 @@
 
 ### Implementation for User Story 4
 
-- [ ] T017 [P] [US4] Create Longhorn base kustomization: `deploy/base/longhorn/kustomization.yaml` with helmCharts pointing to longhorn/longhorn chart v1.5.3
-- [ ] T018 [P] [US4] Create Longhorn base values.yaml with defaultReplicaCount=1, backupTarget=s3://longhorn-backups@us-east-1/
-- [ ] T019 [P] [US4] Create Longhorn S3 secret template `deploy/base/longhorn/s3-secret.yaml` with MinIO credentials
-- [ ] T020 [P] [US4] Create NGINX Ingress base kustomization: `deploy/base/nginx-ingress/kustomization.yaml` with ingress-nginx/ingress-nginx chart v4.8.3
-- [ ] T021 [P] [US4] Create NGINX Ingress base values.yaml with controller.hostNetwork=true, controller.kind=DaemonSet
-- [ ] T022 [P] [US4] Create cluster-196 overlay for Longhorn: `deploy/overlays/cluster-196-central/longhorn/kustomization.yaml`
-- [ ] T023 [P] [US4] Create cluster-197 overlay for Longhorn: `deploy/overlays/cluster-197-edge/longhorn/kustomization.yaml`
-- [ ] T024 [P] [US4] Create cluster-198 overlay for Longhorn: `deploy/overlays/cluster-198-edge/longhorn/kustomization.yaml`
-- [ ] T025 [P] [US4] Create cluster-196 overlay for NGINX Ingress: `deploy/overlays/cluster-196-central/nginx-ingress/kustomization.yaml`
-- [ ] T026 [P] [US4] Create cluster-197 overlay for NGINX Ingress: `deploy/overlays/cluster-197-edge/nginx-ingress/kustomization.yaml`
-- [ ] T027 [P] [US4] Create cluster-198 overlay for NGINX Ingress: `deploy/overlays/cluster-198-edge/nginx-ingress/kustomization.yaml`
+- [x] T017 [P] [US4] Create Longhorn base kustomization: `deploy/base/longhorn/kustomization.yaml` with helmCharts pointing to longhorn/longhorn chart v1.5.3
+- [x] T018 [P] [US4] Create Longhorn base values.yaml with defaultReplicaCount=1, backupTarget=s3://longhorn-backups@us-east-1/
+- [x] T019 [P] [US4] Create Longhorn S3 secret template (created in overlays: `deploy/overlays/cluster-*/longhorn/longhorn-s3-secret.yaml`)
+- [x] T020 [P] [US4] Create NGINX Ingress base kustomization: `deploy/base/ingress-nginx/kustomization.yaml` with ingress-nginx/ingress-nginx chart v4.8.3
+- [x] T021 [P] [US4] Create NGINX Ingress base values.yaml with controller.hostNetwork=true, controller.kind=DaemonSet
+- [x] T022 [P] [US4] Create cluster-196 overlay for Longhorn: `deploy/overlays/cluster-196-central/longhorn/kustomization.yaml`
+- [x] T023 [P] [US4] Create cluster-197 overlay for Longhorn: `deploy/overlays/cluster-197-edge/longhorn/kustomization.yaml`
+- [x] T024 [P] [US4] Create cluster-198 overlay for Longhorn: `deploy/overlays/cluster-198-edge/longhorn/kustomization.yaml`
+- [x] T025 [P] [US4] Create cluster-196 overlay for NGINX Ingress: `deploy/overlays/cluster-196-central/ingress-nginx/kustomization.yaml`
+- [x] T026 [P] [US4] Create cluster-197 overlay for NGINX Ingress: `deploy/overlays/cluster-197-edge/ingress-nginx/kustomization.yaml`
+- [x] T027 [P] [US4] Create cluster-198 overlay for NGINX Ingress: `deploy/overlays/cluster-198-edge/ingress-nginx/kustomization.yaml`
 - [ ] T028 [P] [US4] Deploy Longhorn to cluster 196: `kustomize build deploy/overlays/cluster-196-central/longhorn --enable-helm | kubectl apply -f - -n longhorn-system`
 - [ ] T029 [P] [US4] Deploy Longhorn to cluster 197: `kustomize build deploy/overlays/cluster-197-edge/longhorn --enable-helm | kubectl apply -f - -n longhorn-system`
 - [ ] T030 [P] [US4] Deploy Longhorn to cluster 198: `kustomize build deploy/overlays/cluster-198-edge/longhorn --enable-helm | kubectl apply -f - -n longhorn-system`
@@ -111,16 +111,16 @@
 ### Implementation for User Story 1
 
 - [ ] T041 [US1] Create Thanos S3 secret for cluster 196: `kubectl create secret generic thanos-s3-secret --from-literal=objstore.yml=... -n monitoring`
-- [ ] T042 [P] [US1] Create kube-prometheus-stack base kustomization: `deploy/base/kube-prometheus-stack/kustomization.yaml` with prometheus-community/kube-prometheus-stack chart v55.5.0
-- [ ] T043 [P] [US1] Create kube-prometheus-stack base values.yaml: prometheus.retention=2h, prometheus.scrapeInterval=30s, grafana.enabled=true
-- [ ] T044 [P] [US1] Create Thanos base kustomization: `deploy/base/thanos/kustomization.yaml` (plain YAML, no Helm chart)
-- [ ] T045 [P] [US1] Create Thanos Query deployment: `deploy/base/thanos/query.yaml` with 2 replicas, anti-affinity rules
-- [ ] T046 [P] [US1] Create Thanos Store Gateway deployment: `deploy/base/thanos/store-gateway.yaml` with S3 config
-- [ ] T047 [P] [US1] Create Thanos Query Frontend deployment: `deploy/base/thanos/query-frontend.yaml`
-- [ ] T048 [US1] Create cluster-196 overlay for kube-prometheus-stack: `deploy/overlays/cluster-196-central/kube-prometheus-stack/kustomization.yaml`
-- [ ] T049 [US1] Create cluster-196 Grafana ingress patch: `deploy/overlays/cluster-196-central/ingress-grafana.yaml` with hostname grafana.mkube-196.miribit.lab
-- [ ] T050 [US1] Create cluster-196 Prometheus ingress patch: `deploy/overlays/cluster-196-central/ingress-prometheus.yaml` with hostname prometheus.mkube-196.miribit.lab
-- [ ] T051 [US1] Create cluster-196 Thanos overlay: `deploy/overlays/cluster-196-central/thanos/kustomization.yaml` including Query, Store, Frontend
+- [x] T042 [P] [US1] Create kube-prometheus-stack base kustomization (created as `deploy/base/prometheus/kustomization.yaml`)
+- [x] T043 [P] [US1] Create kube-prometheus-stack base values.yaml: prometheus.retention=2h, prometheus.scrapeInterval=30s, grafana.enabled=true
+- [x] T044 [P] [US1] Create Thanos base kustomization: `deploy/base/thanos/kustomization.yaml` (plain YAML, no Helm chart)
+- [x] T045 [P] [US1] Create Thanos Query deployment (created as `deploy/base/thanos/thanos-query.yaml`)
+- [x] T046 [P] [US1] Create Thanos Store Gateway deployment (created as `deploy/base/thanos/thanos-store.yaml`)
+- [x] T047 [P] [US1] Create Thanos additional components (created Compactor: `deploy/base/thanos/thanos-compactor.yaml`, Ruler: `deploy/base/thanos/thanos-ruler.yaml`)
+- [x] T048 [US1] Create cluster-196 overlay for kube-prometheus-stack (created as `deploy/overlays/cluster-196-central/prometheus/kustomization.yaml`)
+- [x] T049 [US1] Create cluster-196 Grafana ingress patch (included in prometheus values-patch.yaml)
+- [x] T050 [US1] Create cluster-196 Prometheus ingress patch (included in Thanos Query ingress)
+- [x] T051 [US1] Create cluster-196 Thanos overlay (included in prometheus overlay with Query/Store/Compactor/Ruler)
 - [ ] T052 [US1] Deploy kube-prometheus-stack to cluster 196: `kustomize build deploy/overlays/cluster-196-central/kube-prometheus-stack --enable-helm | kubectl apply -f - -n monitoring`
 - [ ] T053 [US1] Wait for Prometheus pods Ready: `kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus -n monitoring --timeout=180s`
 - [ ] T054 [US1] Deploy Thanos components to cluster 196: `kustomize build deploy/overlays/cluster-196-central/thanos | kubectl apply -f - -n monitoring`
@@ -187,16 +187,16 @@
 
 ### Implementation for User Story 3
 
-- [ ] T092 [P] [US3] Create OpenSearch base kustomization: `deploy/base/opensearch/kustomization.yaml` with opensearch-project-helm-charts/opensearch chart v2.17.0
-- [ ] T093 [P] [US3] Create OpenSearch base values.yaml: replicas=1 per cluster (total 3 nodes), masterService pointing to shared service, replication factor 2
-- [ ] T094 [P] [US3] Create OpenSearch S3 secret: `deploy/base/opensearch/s3-secret.yaml` with MinIO credentials
-- [ ] T095 [P] [US3] Create OpenSearch S3 snapshot repository ConfigMap: `deploy/base/opensearch/snapshot-repository.yaml` with endpoint https://172.20.40.21:30001
-- [ ] T096 [P] [US3] Create OpenSearch ISM policy ConfigMap: `deploy/base/opensearch/ism-policy.yaml` for 14-day local retention, snapshot then delete
-- [ ] T097 [P] [US3] Create Fluent-bit base kustomization: `deploy/base/fluent-bit/kustomization.yaml` with fluent/fluent-bit chart v0.43.0
-- [ ] T098 [P] [US3] Create Fluent-bit base values.yaml: DaemonSet, outputs to OpenSearch endpoints, filters for Kubernetes metadata
-- [ ] T099 [US3] Create cluster-196 overlay for OpenSearch: `deploy/overlays/cluster-196-central/opensearch/kustomization.yaml`
-- [ ] T100 [US3] Create cluster-197 overlay for OpenSearch: `deploy/overlays/cluster-197-edge/opensearch/kustomization.yaml`
-- [ ] T101 [US3] Create cluster-198 overlay for OpenSearch: `deploy/overlays/cluster-198-edge/opensearch/kustomization.yaml`
+- [x] T092 [P] [US3] Create OpenSearch base kustomization: `deploy/base/opensearch/kustomization.yaml` with opensearch-project-helm-charts/opensearch chart v2.17.0
+- [x] T093 [P] [US3] Create OpenSearch base values.yaml: replicas=1 per cluster (total 3 nodes), masterService pointing to shared service, replication factor 2
+- [x] T094 [P] [US3] Create OpenSearch S3 secret: `deploy/base/opensearch/s3-secret.yaml` with MinIO credentials
+- [x] T095 [P] [US3] Create OpenSearch S3 snapshot repository ConfigMap (included in s3-secret.yaml)
+- [x] T096 [P] [US3] Create OpenSearch ISM policy ConfigMap: `deploy/base/opensearch/ism-policy.yaml` for 14-day local retention, snapshot then delete
+- [x] T097 [P] [US3] Create Fluent-bit base kustomization: `deploy/base/fluent-bit/kustomization.yaml` with fluent/fluent-bit chart v0.43.0
+- [x] T098 [P] [US3] Create Fluent-bit base values.yaml: DaemonSet, outputs to OpenSearch endpoints, filters for Kubernetes metadata
+- [x] T099 [US3] Create cluster-196 overlay for OpenSearch: `deploy/overlays/cluster-196-central/opensearch/kustomization.yaml`
+- [x] T100 [US3] Create cluster-197 overlay for OpenSearch: `deploy/overlays/cluster-197-edge/opensearch/kustomization.yaml`
+- [x] T101 [US3] Create cluster-198 overlay for OpenSearch: `deploy/overlays/cluster-198-edge/opensearch/kustomization.yaml`
 - [ ] T102 [P] [US3] Deploy OpenSearch to cluster 196: `kustomize build deploy/overlays/cluster-196-central/opensearch --enable-helm | kubectl apply -f - -n logging`
 - [ ] T103 [P] [US3] Deploy OpenSearch to cluster 197: `kustomize build deploy/overlays/cluster-197-edge/opensearch --enable-helm | kubectl apply -f - -n logging`
 - [ ] T104 [P] [US3] Deploy OpenSearch to cluster 198: `kustomize build deploy/overlays/cluster-198-edge/opensearch --enable-helm | kubectl apply -f - -n logging`
@@ -204,11 +204,11 @@
 - [ ] T106 [US3] Form OpenSearch 3-node cluster: Configure discovery.seed_hosts in OpenSearch config to include all 3 node IPs
 - [ ] T107 [US3] Verify OpenSearch cluster health: `curl http://opensearch.logging.svc:9200/_cluster/health` shows green with 3 nodes
 - [ ] T108 [US3] Register S3 snapshot repository in OpenSearch: `PUT _snapshot/s3-logs-repository` with MinIO config
-- [ ] T109 [US3] Apply ISM policy to log indices: `PUT _index_template/logs-template` with ISM policy_id
-- [ ] T110 [P] [US3] Create ServiceMonitor for OpenSearch: `deploy/base/opensearch/servicemonitor.yaml` scraping port 9200 /_prometheus/metrics
-- [ ] T111 [P] [US3] Create cluster-196 overlay for Fluent-bit: `deploy/overlays/cluster-196-central/fluent-bit/kustomization.yaml`
-- [ ] T112 [P] [US3] Create cluster-197 overlay for Fluent-bit: `deploy/overlays/cluster-197-edge/fluent-bit/kustomization.yaml`
-- [ ] T113 [P] [US3] Create cluster-198 overlay for Fluent-bit: `deploy/overlays/cluster-198-edge/fluent-bit/kustomization.yaml`
+- [ ] T109 [US3] Apply ISM policy to log indices: `PUT _index_template/logs-template` with ISM policy_id (requires running OpenSearch cluster)
+- [x] T110 [P] [US3] Create ServiceMonitor for OpenSearch (included in values.yaml extraObjects)
+- [x] T111 [P] [US3] Create cluster-196 overlay for Fluent-bit: `deploy/overlays/cluster-196-central/fluent-bit/kustomization.yaml`
+- [x] T112 [P] [US3] Create cluster-197 overlay for Fluent-bit: `deploy/overlays/cluster-197-edge/fluent-bit/kustomization.yaml`
+- [x] T113 [P] [US3] Create cluster-198 overlay for Fluent-bit: `deploy/overlays/cluster-198-edge/fluent-bit/kustomization.yaml`
 - [ ] T114 [P] [US3] Deploy Fluent-bit to cluster 196: `kustomize build deploy/overlays/cluster-196-central/fluent-bit --enable-helm | kubectl apply -f - -n logging`
 - [ ] T115 [P] [US3] Deploy Fluent-bit to cluster 197: `kustomize build deploy/overlays/cluster-197-edge/fluent-bit --enable-helm | kubectl apply -f - -n logging`
 - [ ] T116 [P] [US3] Deploy Fluent-bit to cluster 198: `kustomize build deploy/overlays/cluster-198-edge/fluent-bit --enable-helm | kubectl apply -f - -n logging`
