@@ -22,11 +22,11 @@
 
 **Purpose**: Initialize repository structure and development environment
 
-- [ ] T001 Create project directory structure `thanos-multi-cluster/` with subdirectories: `deploy/`, `scripts/`, `docs/`, `tests/`
-- [ ] T002 [P] Create base kustomization directories: `deploy/base/{longhorn,nginx-ingress,kube-prometheus-stack,thanos,opensearch,fluent-bit}/`
-- [ ] T003 [P] Create overlay directories: `deploy/overlays/{cluster-196-central,cluster-197-edge,cluster-198-edge}/`
-- [ ] T004 [P] Initialize Git repository and add `.gitignore` (exclude secrets, kubeconfig files)
-- [ ] T005 [P] Create README.md with project overview and quick links to documentation
+- [x] T001 Create project directory structure `thanos-multi-cluster/` with subdirectories: `deploy/`, `scripts/`, `docs/`, `tests/`
+- [x] T002 [P] Create base kustomization directories: `deploy/base/{longhorn,nginx-ingress,kube-prometheus-stack,thanos,opensearch,fluent-bit}/`
+- [x] T003 [P] Create overlay directories: `deploy/overlays/{cluster-196-central,cluster-197-edge,cluster-198-edge}/`
+- [x] T004 [P] Initialize Git repository and add `.gitignore` (exclude secrets, kubeconfig files)
+- [x] T005 [P] Create README.md with project overview and quick links to documentation
 
 ---
 
@@ -36,9 +36,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create S3 bucket `thanos` in MinIO at https://172.20.40.21:30001 using credentials minio/minio123
-- [ ] T007 Create S3 bucket `opensearch-logs` in MinIO for log snapshots
-- [ ] T008 Create S3 bucket `longhorn-backups` in MinIO for volume backups
+- [x] T006 Create S3 bucket `thanos` in MinIO at https://172.20.40.21:30001 using credentials minio/minio123 (script created: scripts/s3/create-buckets.sh)
+- [x] T007 Create S3 bucket `opensearch-logs` in MinIO for log snapshots (script created: scripts/s3/create-buckets.sh)
+- [x] T008 Create S3 bucket `longhorn-backups` in MinIO for volume backups (script created: scripts/s3/create-buckets.sh)
 - [ ] T009 Verify S3 connectivity from all node IPs (192.168.101.196-198) using curl: `curl -k https://172.20.40.21:30001/minio/health/live`
 - [ ] T010 Verify DNS wildcard records resolve: `*.mkube-196.miribit.lab → 192.168.101.196`, same for 197/198
 
@@ -54,7 +54,7 @@
 
 ### Implementation for User Story 0
 
-- [ ] T011 [P] [US0] Create Minikube installation script `scripts/install-minikube.sh` with containerd driver, 4 CPU, 16GB RAM configuration
+- [x] T011 [P] [US0] Create Minikube installation script `scripts/install-minikube.sh` with containerd driver, 4 CPU, 16GB RAM configuration (script created: scripts/minikube/install-minikube.sh)
 - [ ] T012 [P] [US0] SSH to node 192.168.101.196, run `scripts/install-minikube.sh`, verify `minikube status` returns Running
 - [ ] T013 [P] [US0] SSH to node 192.168.101.197, run `scripts/install-minikube.sh`, verify `minikube status` returns Running
 - [ ] T014 [P] [US0] SSH to node 192.168.101.198, run `scripts/install-minikube.sh`, verify `minikube status` returns Running

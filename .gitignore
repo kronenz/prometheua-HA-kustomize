@@ -24,3 +24,12 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Helm/Kustomize build artifacts
+*.rendered.yaml
+kustomize-build-*.yaml
+
+# Terraform (if used)
+.terraform/
+*.tfstate*
+*.tfvars.local
