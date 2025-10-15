@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-ops-main-navigation
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  ops-main-navigation.json: |-
+    {
+      "dashboard": {
+        "uid": "ops-nav-main",
+        "title": "🎯 플랫폼 운영 네비게이션",
+        "tags": ["navigation", "operations", "performance"],
+        "timezone": "browser",
+        "schemaVersion": 27,
+        "version": 1,
+        "refresh": "30s",
+        "panels": [
+          {
+            "id": 1,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 0,
+              "w": 24,
+              "h": 3
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"text-align: center; padding: 24px; background: linear-gradient(135deg, #1a1d29 0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-bottom: 12px; border: 1px solid rgba(100,210,255,0.15);\">\n  <h1 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 36px; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; letter-spacing: -0.5px;\">플랫폼 운영 네비게이션</h1>\n  <p style=\"font-size: 14px; color: #a0aec0; margin: 0;\">Operations & Performance Monitoring Center</p>\n</div>"
+            }
+          },
+          {
+            "id": 2,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 3,
+              "w": 12,
+              "h": 10
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 20px; background: #2d3748; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(66,153,225,0.2);\">\n  <div style=\"display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid rgba(66,153,225,0.3);\">\n    <div style=\"display: flex; align-items: center;\">\n      <div style=\"width: 48px; height: 48px; background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 16px; box-shadow: 0 4px 12px rgba(66,153,225,0.4);\">🖥️</div>\n      <div>\n        <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 24px; color: #ffffff; margin: 0;\">인프라 운영</h3>\n        <p style=\"font-size: 12px; color: #a0aec0; margin: 4px 0 0 0;\">Infrastructure Operations</p>\n      </div>\n    </div>\n    <a href=\"/d/ops-nav-infrastructure\" style=\"padding: 8px 16px; background: rgba(66,153,225,0.2); border: 1px solid #4299e1; border-radius: 8px; color: #63b3ed; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s;\">드릴다운 →</a>\n  </div>\n  <div style=\"display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;\">\n    <div style=\"padding: 14px; background: rgba(66,153,225,0.08); border-left: 3px solid #4299e1; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">노드 성능</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #63b3ed;\">CPU / Memory</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(66,153,225,0.08); border-left: 3px solid #4299e1; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">네트워크 성능</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #63b3ed;\">대역폭 / 지연</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(66,153,225,0.08); border-left: 3px solid #4299e1; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">디스크 I/O</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #63b3ed;\">IOPS / 처리량</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(66,153,225,0.08); border-left: 3px solid #4299e1; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">스토리지 운영</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #63b3ed;\">용량 / 백업</div>\n    </div>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 3,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 12,
+              "y": 3,
+              "w": 12,
+              "h": 10
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 20px; background: #2d3748; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(72,187,120,0.2);\">\n  <div style=\"display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid rgba(72,187,120,0.3);\">\n    <div style=\"display: flex; align-items: center;\">\n      <div style=\"width: 48px; height: 48px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 16px; box-shadow: 0 4px 12px rgba(72,187,120,0.4);\">☸️</div>\n      <div>\n        <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 24px; color: #ffffff; margin: 0;\">쿠버네티스 운영</h3>\n        <p style=\"font-size: 12px; color: #a0aec0; margin: 4px 0 0 0;\">Kubernetes Operations</p>\n      </div>\n    </div>\n    <a href=\"/d/ops-nav-kubernetes\" style=\"padding: 8px 16px; background: rgba(72,187,120,0.2); border: 1px solid #48bb78; border-radius: 8px; color: #68d391; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s;\">드릴다운 →</a>\n  </div>\n  <div style=\"display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;\">\n    <div style=\"padding: 14px; background: rgba(72,187,120,0.08); border-left: 3px solid #48bb78; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">클러스터 헬스</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #68d391;\">가용성 / 상태</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(72,187,120,0.08); border-left: 3px solid #48bb78; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">워크로드 성능</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #68d391;\">응답시간 / 처리량</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(72,187,120,0.08); border-left: 3px solid #48bb78; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">리소스 활용</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #68d391;\">CPU / 메모리</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(72,187,120,0.08); border-left: 3px solid #48bb78; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">Pod 성능</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #68d391;\">재시작 / 로드</div>\n    </div>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 4,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 13,
+              "w": 12,
+              "h": 10
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 20px; background: #2d3748; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(159,122,234,0.2);\">\n  <div style=\"display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid rgba(159,122,234,0.3);\">\n    <div style=\"display: flex; align-items: center;\">\n      <div style=\"width: 48px; height: 48px; background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 16px; box-shadow: 0 4px 12px rgba(159,122,234,0.4);\">📈</div>\n      <div>\n        <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 24px; color: #ffffff; margin: 0;\">모니터링 플랫폼</h3>\n        <p style=\"font-size: 12px; color: #a0aec0; margin: 4px 0 0 0;\">Monitoring Platform</p>\n      </div>\n    </div>\n    <a href=\"/d/ops-nav-monitoring\" style=\"padding: 8px 16px; background: rgba(159,122,234,0.2); border: 1px solid #9f7aea; border-radius: 8px; color: #b794f4; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s;\">드릴다운 →</a>\n  </div>\n  <div style=\"display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;\">\n    <div style=\"padding: 14px; background: rgba(159,122,234,0.08); border-left: 3px solid #9f7aea; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">Thanos 성능</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #b794f4;\">쿼리 / 압축</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(159,122,234,0.08); border-left: 3px solid #9f7aea; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">Prometheus 성능</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #b794f4;\">수집 / 쿼리</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(159,122,234,0.08); border-left: 3px solid #9f7aea; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">S3 스토리지</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #b794f4;\">업로드 / 용량</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(159,122,234,0.08); border-left: 3px solid #9f7aea; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">알림 성능</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #b794f4;\">발생 / 응답</div>\n    </div>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 5,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 12,
+              "y": 13,
+              "w": 12,
+              "h": 10
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 20px; background: #2d3748; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(237,137,54,0.2);\">\n  <div style=\"display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid rgba(237,137,54,0.3);\">\n    <div style=\"display: flex; align-items: center;\">\n      <div style=\"width: 48px; height: 48px; background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 16px; box-shadow: 0 4px 12px rgba(237,137,54,0.4);\">🔥</div>\n      <div>\n        <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 24px; color: #ffffff; margin: 0;\">데이터 플랫폼 운영</h3>\n        <p style=\"font-size: 12px; color: #a0aec0; margin: 4px 0 0 0;\">Data Platform Operations</p>\n      </div>\n    </div>\n    <a href=\"/d/ops-nav-dataplatform\" style=\"padding: 8px 16px; background: rgba(237,137,54,0.2); border: 1px solid #ed8936; border-radius: 8px; color: #f6ad55; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s;\">드릴다운 →</a>\n  </div>\n  <div style=\"display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;\">\n    <div style=\"padding: 14px; background: rgba(237,137,54,0.08); border-left: 3px solid #ed8936; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">Spark 작업</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #f6ad55;\">Job / Stage</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(237,137,54,0.08); border-left: 3px solid #ed8936; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">Trino 쿼리</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #f6ad55;\">성능 / 처리량</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(237,137,54,0.08); border-left: 3px solid #ed8936; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">데이터베이스</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #f6ad55;\">응답 / 연결</div>\n    </div>\n    <div style=\"padding: 14px; background: rgba(237,137,54,0.08); border-left: 3px solid #ed8936; border-radius: 8px;\">\n      <div style=\"font-size: 11px; color: #a0aec0; margin-bottom: 4px;\">파이프라인</div>\n      <div style=\"font-size: 18px; font-weight: 700; color: #f6ad55;\">배포 / 성공률</div>\n    </div>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 6,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 23,
+              "w": 24,
+              "h": 2
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"text-align: center; padding: 16px; color: #718096; font-size: 13px; background: #1a202c; border-radius: 10px; border: 1px solid rgba(100,210,255,0.1);\">\n  <p style=\"margin: 0; font-weight: 500;\">🎯 Operations & Performance Monitoring | Real-time Metrics & Analytics | Last Updated: ${__from:date:YYYY-MM-DD HH:mm:ss}</p>\n</div>"
+            }
+          }
+        ]
+      },
+      "overwrite": true,
+      "message": "Main operations navigation portal"
+    }

@@ -14,3 +14,9 @@ helmCharts:
 resources:
   - namespace.yaml
   - thanos-s3-secret.yaml
+  - grafana-dashboard-stable-nav.yaml
+  - grafana-dashboard-ops-main-navigation.yaml
+  - grafana-dashboard-ops-nav-infrastructure.yaml
+  - grafana-dashboard-ops-nav-kubernetes.yaml
+  - grafana-dashboard-ops-nav-monitoring.yaml
+  - grafana-dashboard-ops-nav-dataplatform.yaml

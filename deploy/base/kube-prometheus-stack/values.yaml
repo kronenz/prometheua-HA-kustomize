@@ -115,6 +115,29 @@ grafana:
   # Grafana admin credentials
   adminPassword: admin123
 
+  # Dashboard providers - enables loading dashboards from ConfigMaps
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+  # Dashboard ConfigMaps - automatically loaded
+  dashboardsConfigMaps:
+    default: grafana-dashboard-stable-nav
+    operations: grafana-dashboard-ops-main-navigation
+    infrastructure: grafana-dashboard-ops-nav-infrastructure
+    kubernetes: grafana-dashboard-ops-nav-kubernetes
+    monitoring: grafana-dashboard-ops-nav-monitoring
+    dataplatform: grafana-dashboard-ops-nav-dataplatform
+
   # Datasources - Thanos Query will be added in central cluster overlay
   datasources:
     datasources.yaml:

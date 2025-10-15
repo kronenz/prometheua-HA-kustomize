@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-stable-nav
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  stable-navigation.json: |-
+    {
+      "dashboard": {
+        "uid": "nav-portal-stable",
+        "title": "📊 플랫폼 대시보드 네비게이션",
+        "tags": ["navigation", "portal", "thanos", "stable"],
+        "timezone": "browser",
+        "schemaVersion": 27,
+        "version": 1,
+        "refresh": false,
+        "panels": [
+          {
+            "id": 1,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 0,
+              "w": 24,
+              "h": 3
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"text-align: center; padding: 24px; background: linear-gradient(135deg, #1a1d29 0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-bottom: 12px; border: 1px solid rgba(100,210,255,0.15);\">\n  <h1 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 36px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0; letter-spacing: -0.5px;\">플랫폼 대시보드 네비게이션</h1>\n  <div style=\"display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-top: 12px;\">\n    <span style=\"padding: 6px 14px; background: rgba(72, 187, 120, 0.15); border: 1px solid #48bb78; border-radius: 16px; color: #68d391; font-size: 13px; font-weight: 600;\">● 4 Clusters</span>\n    <span style=\"padding: 6px 14px; background: rgba(66, 153, 225, 0.15); border: 1px solid #4299e1; border-radius: 16px; color: #63b3ed; font-size: 13px; font-weight: 600;\">● S3 Storage</span>\n    <span style=\"padding: 6px 14px; background: rgba(159, 122, 234, 0.15); border: 1px solid #9f7aea; border-radius: 16px; color: #b794f4; font-size: 13px; font-weight: 600;\">● Monitoring</span>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 2,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 3,
+              "w": 8,
+              "h": 11
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 18px; background: #2d3748; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(100,210,255,0.1);\">\n  <div style=\"display: flex; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);\">\n    <div style=\"width: 40px; height: 40px; background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 12px;\">🖥️</div>\n    <div>\n      <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 18px; color: #ffffff; margin: 0;\">인프라 모니터링</h3>\n      <p style=\"font-size: 11px; color: #a0aec0; margin: 2px 0 0 0;\">Infrastructure</p>\n    </div>\n  </div>\n  <a href=\"/d/infrastructure-overview\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(66, 153, 225, 0.12); border-left: 3px solid #4299e1; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;\">\n      <span>인프라 Overview</span>\n      <span style=\"padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #ed8936; color: #ffffff;\">HOT</span>\n    </div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">물리 노드, CPU, 메모리, 디스크</div>\n  </a>\n  <a href=\"/d/node-exporter-full\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(66, 153, 225, 0.08); border-left: 3px solid #4299e1; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px;\">Node Exporter</div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">노드별 상세 메트릭</div>\n  </a>\n  <a href=\"/d/network-monitoring\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(66, 153, 225, 0.08); border-left: 3px solid #4299e1; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px;\">네트워크 모니터링</div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">대역폭, 패킷, 연결 상태</div>\n  </a>\n  <div style=\"margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #ffffff; margin: 0 0 12px 0;\">💾 스토리지</h4>\n    <a href=\"/d/longhorn-overview\" style=\"display: block; padding: 10px 14px; margin-bottom: 8px; background: rgba(66, 153, 225, 0.08); border-left: 3px solid #4299e1; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 3px;\">Longhorn</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">볼륨, 스냅샷, 백업</div>\n    </a>\n    <a href=\"/d/minio-overview\" style=\"display: block; padding: 10px 14px; background: rgba(66, 153, 225, 0.08); border-left: 3px solid #4299e1; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 3px;\">MinIO S3</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">오브젝트 스토리지</div>\n    </a>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 3,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 8,
+              "y": 3,
+              "w": 8,
+              "h": 11
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 18px; background: #2d3748; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(100,210,255,0.1);\">\n  <div style=\"display: flex; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);\">\n    <div style=\"width: 40px; height: 40px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 12px;\">☸️</div>\n    <div>\n      <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 18px; color: #ffffff; margin: 0;\">Kubernetes</h3>\n      <p style=\"font-size: 11px; color: #a0aec0; margin: 2px 0 0 0;\">Container Platform</p>\n    </div>\n  </div>\n  <a href=\"/d/k8s-cluster-overview\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(72, 187, 120, 0.12); border-left: 3px solid #48bb78; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;\">\n      <span>Cluster Overview</span>\n      <span style=\"padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #ed8936; color: #ffffff;\">HOT</span>\n    </div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">4개 클러스터 전체 상태</div>\n  </a>\n  <a href=\"/d/k8s-workloads\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(72, 187, 120, 0.08); border-left: 3px solid #48bb78; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px;\">Workload 모니터링</div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">Deployment, StatefulSet</div>\n  </a>\n  <a href=\"/d/k8s-pods\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(72, 187, 120, 0.08); border-left: 3px solid #48bb78; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px;\">Pod 상세 메트릭</div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">CPU, 메모리, 네트워크</div>\n  </a>\n  <div style=\"margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #ffffff; margin: 0 0 12px 0;\">🔍 로그 & 검색</h4>\n    <a href=\"/d/opensearch-overview\" style=\"display: block; padding: 10px 14px; margin-bottom: 8px; background: rgba(72, 187, 120, 0.08); border-left: 3px solid #48bb78; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 3px;\">OpenSearch</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">로그 인덱싱 및 검색</div>\n    </a>\n    <a href=\"/d/fluent-bit\" style=\"display: block; padding: 10px 14px; background: rgba(72, 187, 120, 0.08); border-left: 3px solid #48bb78; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 3px;\">Fluent Bit</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">로그 수집 및 전송</div>\n    </a>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 4,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 16,
+              "y": 3,
+              "w": 8,
+              "h": 11
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 18px; background: #2d3748; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(100,210,255,0.1);\">\n  <div style=\"display: flex; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);\">\n    <div style=\"width: 40px; height: 40px; background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 12px;\">📈</div>\n    <div>\n      <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 18px; color: #ffffff; margin: 0;\">Thanos & Prometheus</h3>\n      <p style=\"font-size: 11px; color: #a0aec0; margin: 2px 0 0 0;\">Metrics Platform</p>\n    </div>\n  </div>\n  <a href=\"/d/thanos-overview\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(159, 122, 234, 0.12); border-left: 3px solid #9f7aea; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;\">\n      <span>Thanos Overview</span>\n      <span style=\"padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #48bb78; color: #ffffff;\">NEW</span>\n    </div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">Query, Store, Compactor</div>\n  </a>\n  <a href=\"/d/multi-cluster-metrics\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(159, 122, 234, 0.12); border-left: 3px solid #9f7aea; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;\">\n      <span>Multi-Cluster Metrics</span>\n      <span style=\"padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #48bb78; color: #ffffff;\">NEW</span>\n    </div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">통합 메트릭 뷰</div>\n  </a>\n  <a href=\"/d/prometheus-overview\" style=\"display: block; padding: 12px 14px; margin-bottom: 10px; background: rgba(159, 122, 234, 0.08); border-left: 3px solid #9f7aea; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"font-weight: 600; font-size: 14px; margin-bottom: 4px;\">Prometheus</div>\n    <div style=\"font-size: 12px; color: #a0aec0; line-height: 1.4;\">타겟, 쿼리, 스토리지</div>\n  </a>\n  <div style=\"margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #ffffff; margin: 0 0 12px 0;\">🚨 알림 & 장애</h4>\n    <a href=\"/d/alertmanager\" style=\"display: block; padding: 10px 14px; margin-bottom: 8px; background: rgba(237, 137, 54, 0.12); border-left: 3px solid #ed8936; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between;\">\n        <span>Alertmanager</span>\n        <span style=\"padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #ed8936; color: #ffffff;\">HOT</span>\n      </div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">활성 알림 및 규칙</div>\n    </a>\n    <a href=\"/d/slo-dashboard\" style=\"display: block; padding: 10px 14px; background: rgba(159, 122, 234, 0.08); border-left: 3px solid #9f7aea; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 3px;\">SLO Dashboard</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">서비스 레벨 목표</div>\n    </a>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 5,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 14,
+              "w": 12,
+              "h": 6
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 18px; background: #2d3748; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(100,210,255,0.1);\">\n  <div style=\"display: flex; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);\">\n    <div style=\"width: 40px; height: 40px; background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 12px;\">🔥</div>\n    <div>\n      <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 18px; color: #ffffff; margin: 0;\">데이터 플랫폼</h3>\n      <p style=\"font-size: 11px; color: #a0aec0; margin: 2px 0 0 0;\">Big Data Processing</p>\n    </div>\n  </div>\n  <div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;\">\n    <a href=\"/d/spark-overview\" style=\"display: block; padding: 12px 10px; background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s; text-align: center;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 4px;\">Apache Spark</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">Job, Executor</div>\n    </a>\n    <a href=\"/d/trino-overview\" style=\"display: block; padding: 12px 10px; background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s; text-align: center;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 4px;\">Trino</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">쿼리 성능</div>\n    </a>\n    <a href=\"/d/oracle-db\" style=\"display: block; padding: 12px 10px; background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s; text-align: center;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 4px;\">Oracle DB</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">데이터베이스</div>\n    </a>\n    <a href=\"/d/metastore\" style=\"display: block; padding: 12px 10px; background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s; text-align: center;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 4px;\">Metastore</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">메타데이터</div>\n    </a>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 6,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 12,
+              "y": 14,
+              "w": 12,
+              "h": 6
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 18px; background: #2d3748; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.25); height: 100%; border: 1px solid rgba(100,210,255,0.1);\">\n  <div style=\"display: flex; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);\">\n    <div style=\"width: 40px; height: 40px; background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 12px;\">🚀</div>\n    <div>\n      <h3 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 18px; color: #ffffff; margin: 0;\">GitOps & CI/CD</h3>\n      <p style=\"font-size: 11px; color: #a0aec0; margin: 2px 0 0 0;\">Deployment Pipeline</p>\n    </div>\n  </div>\n  <div style=\"display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;\">\n    <a href=\"/d/argocd-overview\" style=\"display: block; padding: 12px 10px; background: rgba(66, 153, 225, 0.1); border-left: 3px solid #4299e1; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s; text-align: center;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 4px;\">ArgoCD</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">GitOps 배포</div>\n    </a>\n    <a href=\"/d/jenkins-overview\" style=\"display: block; padding: 12px 10px; background: rgba(66, 153, 225, 0.1); border-left: 3px solid #4299e1; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s; text-align: center;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 4px;\">Jenkins</div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">CI/CD 파이프라인</div>\n    </a>\n    <a href=\"/d/dora-metrics\" style=\"display: block; padding: 12px 10px; background: rgba(66, 153, 225, 0.1); border-left: 3px solid #4299e1; border-radius: 6px; text-decoration: none; color: #e2e8f0; transition: all 0.2s; text-align: center;\">\n      <div style=\"font-weight: 600; font-size: 13px; margin-bottom: 4px;\">DORA Metrics <span style=\"padding: 2px 6px; border-radius: 8px; font-size: 9px; font-weight: 700; background: #48bb78; color: #ffffff; margin-left: 4px;\">NEW</span></div>\n      <div style=\"font-size: 11px; color: #a0aec0;\">배포 성과 지표</div>\n    </a>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 7,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 20,
+              "w": 24,
+              "h": 2
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"text-align: center; padding: 16px; color: #718096; font-size: 13px; background: #1a202c; border-radius: 10px; border: 1px solid rgba(100,210,255,0.1);\">\n  <p style=\"margin: 0; font-weight: 500;\">🔒 Thanos Multi-Cluster Monitoring Platform | Cluster-01 (Central) • Cluster-02, 03, 04 (Edge) • MinIO S3</p>\n</div>"
+            }
+          }
+        ]
+      },
+      "overwrite": true,
+      "message": "Stable color palette navigation with optimized panel sizes"
+    }

@@ -135,19 +135,24 @@ Operations team accesses centralized Grafana dashboard on cluster-01 to view met
 - **FR-000**: System MUST install 4 independent Kubernetes clusters using kubeadm on nodes (192.168.101.194, 196, 197, 198) with containerd runtime, where each node functions as a single-node cluster with both control-plane and worker roles
 - **FR-001**: System MUST deploy all components using Kustomize with Helm chart inflation (no direct `helm install` commands allowed)
 - **FR-002**: System MUST provision persistent storage via Longhorn storage class on each independent cluster
-- **FR-003**: System MUST configure NGINX Ingress controller for external access to Grafana, Prometheus, and OpenSearch interfaces on each cluster
+- **FR-003**: System MUST configure Cilium CNI with Ingress controller for external access to Grafana, Prometheus, and OpenSearch interfaces on each cluster
 - **FR-003a**: System MUST configure ingress hostnames using pattern: *.k8s-cluster-01.miribit.lab (node 194), *.k8s-cluster-02.miribit.lab (node 196), *.k8s-cluster-03.miribit.lab (node 197), *.k8s-cluster-04.miribit.lab (node 198)
+- **FR-003b**: System MUST configure Cilium LoadBalancer IP Pools: cluster-01 (192.168.101.210), cluster-02 (192.168.101.211), cluster-03 (192.168.101.212), cluster-04 (192.168.101.213)
+- **FR-003c**: System MUST configure Cilium L2 Announcement Policy for LoadBalancer IP advertisement on all clusters
 - **FR-004**: System MUST deploy Prometheus Operator on each of the 4 clusters with 2-hour local metric retention and 30-second scrape interval
 - **FR-005**: System MUST deploy Thanos Sidecar alongside Prometheus on each cluster to upload metric blocks to S3 with external labels identifying the source cluster (cluster: "cluster-01", "cluster-02", "cluster-03", "cluster-04")
 - **FR-006**: System MUST deploy Thanos Query, Query Frontend, Store Gateway, Compactor, and Ruler components on cluster-01 (central) for multi-cluster metric aggregation
-- **FR-007**: System MUST configure S3 storage backend with S3 API http://s3.minio.miribit.lab (Console: http://console.minio.miribit.lab) and credentials (access key: minio, secret key: minio123)
+- **FR-007**: System MUST configure S3 storage backend with endpoint s3.minio.miribit.lab:80 (Console: http://console.minio.miribit.lab) and credentials (access_key: Kl8u9VGxT4KA8TxlLEfO, secret_key: U9KVRsMZlHJtiToriOxXfl9uPAXqFjqAI1ZdRCOz)
+- **FR-007b**: System MUST use bucket name "thanos-bucket" for metric storage, "opensearch-logs" for log snapshots, and "longhorn-backups" for volume backups
+- **FR-007c**: System MUST configure S3 client with insecure: true and insecure_skip_verify: true for HTTP connections without TLS
 - **FR-007a**: System MUST store S3 credentials in Kubernetes Secrets and reference them in Thanos and OpenSearch configurations
 - **FR-008**: System MUST deploy OpenSearch on cluster-01 (central) to receive logs from all 4 clusters
 - **FR-009**: System MUST deploy Fluent-bit as DaemonSet on all 4 clusters to collect pod logs and forward to central OpenSearch on cluster-01
 - **FR-009a**: System MUST configure OpenSearch to retain logs locally for 14 days, then move to S3 snapshots
 - **FR-009b**: System MUST configure S3 lifecycle policy to delete log snapshots after 180 days
-- **FR-010**: System MUST configure Prometheus ServiceMonitors on each cluster for all monitoring components (Thanos, Fluent-bit, Longhorn, NGINX Ingress)
-- **FR-011**: System MUST configure Grafana on cluster-01 with dashboards for Thanos health, multi-cluster Prometheus status, OpenSearch cluster health, Longhorn storage, and NGINX Ingress traffic across all clusters
+- **FR-010**: System MUST configure Prometheus ServiceMonitors on each cluster for all monitoring components (Thanos, Fluent-bit, Longhorn, Cilium)
+- **FR-011**: System MUST configure Grafana on cluster-01 with dashboards for Thanos health, multi-cluster Prometheus status, OpenSearch cluster health, Longhorn storage, and Cilium network monitoring across all clusters
+- **FR-011a**: System MUST configure Grafana datasource pointing to Thanos Query endpoint for unified multi-cluster metric queries
 - **FR-012**: System MUST configure alerts for S3 connectivity loss, Thanos Sidecar upload failures, Prometheus scrape failures, and disk pressure warnings on each cluster
 - **FR-012a**: System MUST configure Alertmanager on each cluster to send notifications to operators via configured channels (email, webhook, or Slack)
 - **FR-012b**: System MUST NOT implement automated remediation actions; all alert responses require manual operator intervention
@@ -166,15 +171,17 @@ Operations team accesses centralized Grafana dashboard on cluster-01 to view met
 - **Kubernetes Node**: Physical/virtual machine running a single-node cluster with both control-plane and worker components (192.168.101.194, 196, 197, 198)
 - **Prometheus Instance**: Prometheus deployment on each cluster with Thanos Sidecar for metrics collection
 - **Metric Block**: 2-hour chunks of Prometheus time series data uploaded to S3 by Thanos Sidecar
-- **External Label**: Label added by Thanos Sidecar to identify source cluster (cluster: "cluster-01", "cluster-02", "cluster-03", "cluster-04")
-- **StoreAPI Endpoint**: gRPC endpoint exposing metrics data from each cluster's Prometheus Sidecar to Thanos Query on cluster-01
+- **External Label**: Label added by Thanos Sidecar to identify source cluster (cluster: "cluster-01", region: "central" for cluster-01; cluster: "cluster-XX", region: "edge" for others)
+- **StoreAPI Endpoint**: gRPC endpoint (port 10901) exposing metrics data from each cluster's Prometheus Sidecar to Thanos Query on cluster-01
+- **LoadBalancer Service**: Cilium L2-announced LoadBalancer exposing Thanos Sidecar StoreAPI from edge clusters (IPs: 211, 212, 213) to central cluster
 - **Log Entry**: Structured log line collected by Fluent-bit from any cluster and forwarded to central OpenSearch on cluster-01
-- **S3 Bucket**: Object storage container for persistent metrics, logs, and backups (thanos-bucket, opensearch-snapshots, longhorn-backup)
+- **S3 Bucket**: Object storage container for persistent metrics, logs, and backups (thanos-bucket, opensearch-logs, longhorn-backups)
 - **Storage Volume**: Longhorn-provisioned persistent volume for component state on each cluster
 - **Service Monitor**: Prometheus Operator custom resource defining scrape targets for metrics collection on each cluster
 - **Dashboard**: Grafana visualization on cluster-01 showing metrics from all 4 clusters with Thanos aggregation
 - **Alert Rule**: Prometheus alert definition triggering on specific metric conditions on each cluster
-- **Ingress Route**: NGINX Ingress routing rule for external access to services on each cluster (*.k8s-cluster-XX.miribit.lab)
+- **Ingress Route**: Cilium Ingress routing rule for external access to services on each cluster (*.k8s-cluster-XX.miribit.lab)
+- **IP Pool**: Cilium LoadBalancer IP Pool defining available IP addresses for LoadBalancer services on each cluster
 
 ## Clarifications
 
@@ -185,7 +192,9 @@ Operations team accesses centralized Grafana dashboard on cluster-01 to view met
 - Q: How should the system respond when alerts are triggered? → A: Alert 발생 시 Alertmanager를 통해 오퍼레이터에게 알림만 전송 (수동 대응)
 - Q: What hostname pattern should be used for ingress access to monitoring UIs? → A: *.k8s-cluster-01.miribit.lab, *.k8s-cluster-02.miribit.lab, *.k8s-cluster-03.miribit.lab, *.k8s-cluster-04.miribit.lab
 - Q: What scrape interval should Prometheus use for collecting metrics? → A: 30초
-- Q: What are the S3 storage endpoint and credentials? → A: S3 API: http://s3.minio.miribit.lab, Console: http://console.minio.miribit.lab, minio/minio123
+- Q: What are the S3 storage endpoint and credentials? → A: S3 endpoint: s3.minio.miribit.lab:80, Console: http://console.minio.miribit.lab, access_key: Kl8u9VGxT4KA8TxlLEfO, secret_key: U9KVRsMZlHJtiToriOxXfl9uPAXqFjqAI1ZdRCOz
+- Q: What CNI should be used? → A: Cilium CNI with kubeProxyReplacement, L2 announcements for LoadBalancer services
+- Q: What IP addresses are assigned for LoadBalancer services? → A: cluster-01: 192.168.101.210, cluster-02: 192.168.101.211, cluster-03: 192.168.101.212, cluster-04: 192.168.101.213
 
 ### Session 2025-10-14
 
@@ -220,14 +229,16 @@ Operations team accesses centralized Grafana dashboard on cluster-01 to view met
 ## Assumptions *(optional)*
 
 - All 4 nodes are running Linux OS (Ubuntu 22.04+ or RHEL 8+) with containerd runtime available
-- Nodes have network connectivity to each other and to MinIO S3 endpoint at http://s3.minio.miribit.lab
-- Nodes have internet connectivity for downloading Kubernetes binaries, kubeadm, and container images
-- MinIO S3 storage is deployed at http://s3.minio.miribit.lab and accessible with credentials minio/minio123
+- Nodes have network connectivity to each other and to MinIO S3 endpoint at s3.minio.miribit.lab:80
+- Nodes have internet connectivity for downloading Kubernetes binaries, kubeadm, Helm charts, and container images
+- MinIO S3 storage is deployed at s3.minio.miribit.lab:80 and accessible with credentials (access_key: Kl8u9VGxT4KA8TxlLEfO, secret_key: U9KVRsMZlHJtiToriOxXfl9uPAXqFjqAI1ZdRCOz)
+- Cilium CNI v1.18.2 is installed on all clusters with kubeProxyReplacement and L2 announcement capabilities
 - Each node has sufficient resources (minimum 4 CPU, 16GB RAM, 100GB disk per node recommended)
 - Kustomize 4.5+, kubectl, and kubeadm are installed on operator workstation
 - SSH access to nodes uses credentials `bsh / 123qwe` (to be rotated post-deployment)
 - All Helm charts sourced from ArtifactHub (kube-prometheus-stack, opensearch, fluent-bit, longhorn, nginx-ingress)
-- DNS server configured at 192.168.1.1 with wildcard records for *.k8s-cluster-01.miribit.lab, *.k8s-cluster-02.miribit.lab, *.k8s-cluster-03.miribit.lab, *.k8s-cluster-04.miribit.lab
+- DNS records configured for: grafana.k8s-cluster-01.miribit.lab → 192.168.101.210, s3.minio.miribit.lab → 172.16.203.1, console.minio.miribit.lab → 172.16.203.1
+- LoadBalancer IPs 192.168.101.210-213 are allocated for ingress services across all clusters
 - Korean language documentation is required for operational procedures
 - Each node runs an independent single-node Kubernetes cluster (control-plane + worker on same node)
 - Clusters do not form a multi-node cluster; they are separate independent clusters
@@ -237,20 +248,26 @@ Operations team accesses centralized Grafana dashboard on cluster-01 to view met
 
 ## Dependencies *(optional)*
 
-- MinIO S3 storage at http://s3.minio.miribit.lab (externally managed)
+- MinIO S3 storage at s3.minio.miribit.lab:80 (externally managed)
 - Linux OS with containerd runtime on all target nodes
 - kubectl, kubeadm, kubelet binaries available for cluster management
-- Network connectivity between all nodes (192.168.101.194, 196-198) and MinIO endpoint (http://s3.minio.miribit.lab)
+- Cilium CNI v1.18.2+ with L2 announcement support
+- Helm v3.10+ for chart templating (used via kustomize --enable-helm)
+- Kustomize v5.0+ with Helm chart inflation support
+- Network connectivity between all nodes (192.168.101.194, 196-198) and MinIO endpoint (s3.minio.miribit.lab:80)
 - Sufficient disk space on each node for Longhorn storage provisioning (minimum 100GB per node)
 - Helm charts availability from ArtifactHub (internet connectivity or internal mirror)
+- open-iscsi and nfs-common packages installed on all nodes for Longhorn requirements
 
 ## Out of Scope *(optional)*
 
-- MinIO S3 storage deployment and configuration (assumed to be externally managed at http://s3.minio.miribit.lab)
+- MinIO S3 storage deployment and configuration (assumed to be externally managed at s3.minio.miribit.lab:80)
 - Base Linux OS installation and configuration on nodes
 - containerd runtime installation and configuration
-- kubeadm, kubectl, kubelet binary installation (assumed to be pre-installed or documented separately)
-- DNS wildcard record setup for *.k8s-cluster-01.miribit.lab, *.k8s-cluster-02.miribit.lab, *.k8s-cluster-03.miribit.lab, *.k8s-cluster-04.miribit.lab (assumed to be pre-configured)
+- kubeadm, kubectl, kubelet binary installation (documented in deployment guide but not automated)
+- Cilium CNI installation (documented in deployment guide as part of cluster bootstrap)
+- DNS record setup for *.k8s-cluster-01.miribit.lab and s3.minio.miribit.lab (assumed to be pre-configured)
+- open-iscsi and nfs-common package installation (documented but not automated)
 - TLS certificate provisioning and management for HTTPS ingress
 - Authentication and authorization for Grafana/Prometheus/OpenSearch UI access (basic auth assumed initially)
 - Multi-tenancy isolation between different application teams

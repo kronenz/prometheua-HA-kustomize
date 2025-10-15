@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-ops-nav-monitoring
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  ops-nav-monitoring.json: |-
+    {
+      "dashboard": {
+        "uid": "ops-nav-monitoring",
+        "title": "📈 모니터링 플랫폼 대시보드",
+        "tags": ["operations", "monitoring", "thanos", "drilldown"],
+        "timezone": "browser",
+        "schemaVersion": 27,
+        "version": 1,
+        "refresh": "30s",
+        "panels": [
+          {
+            "id": 1,
+            "type": "text",
+            "title": "",
+            "gridPos": {
+              "x": 0,
+              "y": 0,
+              "w": 24,
+              "h": 3
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 20px; background: linear-gradient(135deg, #1a1d29 0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-bottom: 12px; border: 1px solid rgba(159,122,234,0.3);\">\n  <div style=\"display: flex; align-items: center; justify-content: space-between;\">\n    <div style=\"display: flex; align-items: center;\">\n      <a href=\"/d/ops-nav-main\" style=\"padding: 8px 12px; background: rgba(159,122,234,0.2); border: 1px solid #9f7aea; border-radius: 8px; color: #b794f4; text-decoration: none; font-weight: 600; font-size: 13px; margin-right: 20px;\">← 메인</a>\n      <div style=\"width: 48px; height: 48px; background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-right: 16px;\">📈</div>\n      <div>\n        <h1 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 32px; color: #ffffff; margin: 0; letter-spacing: -0.5px;\">모니터링 플랫폼 대시보드</h1>\n        <p style=\"font-size: 13px; color: #a0aec0; margin: 4px 0 0 0;\">Thanos & Prometheus Operations Metrics</p>\n      </div>\n    </div>\n  </div>\n</div>"
+            }
+          },
+          {
+            "id": 2,
+            "type": "text",
+            "title": "Thanos 쿼리 성능",
+            "gridPos": {
+              "x": 0,
+              "y": 3,
+              "w": 12,
+              "h": 9
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(159,122,234,0.1); border-left: 4px solid #9f7aea; border-radius: 8px;\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #b794f4; margin: 0 0 8px 0;\">🔍 Thanos Query</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height: 1.6;\">멀티 클러스터 쿼리 성능과 연결 상태를 모니터링합니다</p>\n  </div>\n  <a href=\"/d/thanos-query-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">쿼리 응답시간</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">P50/P95/P99 레이턴시, 쿼리 실행시간</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/thanos-query-connections\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Store 연결 상태</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">연결된 Store 수, gRPC 연결, 건강도</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/thanos-query-cache\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">캐시 효율성</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">캐시 히트율, 메모리 사용량</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"
+            }
+          },
+          {
+            "id": 3,
+            "type": "text",
+            "title": "Prometheus 성능",
+            "gridPos": {
+              "x": 12,
+              "y": 3,
+              "w": 12,
+              "h": 9
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(159,122,234,0.1); border-left: 4px solid #9f7aea; border-radius: 8px;\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #b794f4; margin: 0 0 8px 0;\">⚡ Prometheus</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height: 1.6;\">메트릭 수집, 쿼리, 스토리지 성능을 추적합니다</p>\n  </div>\n  <a href=\"/d/prometheus-scrape-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">스크랩 성능</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">타겟 수집 시간, 샘플 수, 실패율</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/prometheus-query-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">쿼리 처리 성능</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">쿼리 실행시간, 동시 쿼리, 타임아웃</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/prometheus-tsdb\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">TSDB 성능</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">압축, Head 블록, WAL 쓰기 성능</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"
+            }
+          },
+          {
+            "id": 4,
+            "type": "text",
+            "title": "S3 스토리지 운영",
+            "gridPos": {
+              "x": 0,
+              "y": 12,
+              "w": 12,
+              "h": 9
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(159,122,234,0.1); border-left: 4px solid #9f7aea; border-radius: 8px;\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #b794f4; margin: 0 0 8px 0;\">💾 S3 Storage</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height: 1.6;\">Thanos S3 블록 업로드, 압축, 용량을 모니터링합니다</p>\n  </div>\n  <a href=\"/d/thanos-sidecar-upload\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Sidecar 업로드 성능</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">업로드 속도, 성공률, 대기 블록</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/thanos-compactor-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Compactor 압축 성능</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">압축 시간, 다운샘플링, 블록 정리</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/thanos-store-operations\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Store Gateway 운영</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">블록 로드, 캐시, S3 읽기 성능</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"
+            }
+          },
+          {
+            "id": 5,
+            "type": "text",
+            "title": "알림 & 규칙 성능",
+            "gridPos": {
+              "x": 12,
+              "y": 12,
+              "w": 12,
+              "h": 9
+            },
+            "options": {
+              "mode": "html",
+              "content": "<div style=\"padding: 16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(159,122,234,0.1); border-left: 4px solid #9f7aea; border-radius: 8px;\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #b794f4; margin: 0 0 8px 0;\">🚨 Alerting</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height: 1.6;\">알림 발생, 전송, 응답 시간을 추적합니다</p>\n  </div>\n  <a href=\"/d/alertmanager-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Alertmanager 성능</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">알림 처리 시간, 전송 성공률</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/thanos-ruler-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Thanos Ruler 성능</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">규칙 평가 시간, 알림 생성 속도</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/alert-response-time\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(159,122,234,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">알림 응답 시간</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">발생부터 전송까지의 지연시간 (MTTA)</div>\n      </div>\n      <div style=\"color: #9f7aea; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"
+            }
+          }
+        ]
+      },
+      "overwrite": true,
+      "message": "Monitoring platform drill-down dashboard"
+    }
