@@ -1,0 +1,182 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+  - thanos-s3-secret.yaml
+  - thanos-query.yaml
+  - thanos-store.yaml
+  - thanos-compactor.yaml
+  - thanos-ruler.yaml
+
+helmCharts:
+  - name: kube-prometheus-stack
+    repo: https://prometheus-community.github.io/helm-charts
+    version: 78.2.1
+    releaseName: kube-prometheus-stack
+    namespace: monitoring
+    valuesInline:
+      # Global settings
+      global:
+        evaluation_interval: 30s
+
+      # Prometheus Operator
+      prometheusOperator:
+        enabled: true
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+
+      # Prometheus with HA (2 replicas)
+      prometheus:
+        enabled: true
+
+        prometheusSpec:
+          # HA Configuration: 2 replicas
+          replicas: 2
+          replicaExternalLabelName: prometheus_replica
+          prometheusExternalLabelName: prometheus
+
+          retention: 2h
+          retentionSize: 10GB
+          scrapeInterval: 30s
+          evaluationInterval: 30s
+
+          # External labels for Thanos multi-cluster
+          externalLabels:
+            cluster: cluster-01
+            region: central
+
+          storageSpec:
+            volumeClaimTemplate:
+              spec:
+                storageClassName: longhorn
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 15Gi
+
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+
+          # Thanos sidecar for S3 upload
+          thanos:
+            image: quay.io/thanos/thanos:v0.37.2
+            version: v0.37.2
+            objectStorageConfig:
+              name: thanos-s3-config
+              key: objstore.yml
+            resources:
+              limits:
+                cpu: 500m
+                memory: 512Mi
+              requests:
+                cpu: 100m
+                memory: 128Mi
+
+          serviceMonitorSelectorNilUsesHelmValues: false
+          podMonitorSelectorNilUsesHelmValues: false
+          ruleSelectorNilUsesHelmValues: false
+
+      # Alertmanager with HA
+      alertmanager:
+        enabled: true
+
+        alertmanagerSpec:
+          replicas: 2
+
+          storage:
+            volumeClaimTemplate:
+              spec:
+                storageClassName: longhorn
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 5Gi
+
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+      # Grafana
+      grafana:
+        enabled: true
+        replicas: 1
+        adminPassword: admin123
+
+        persistence:
+          enabled: true
+          storageClassName: longhorn
+          size: 5Gi
+
+        ingress:
+          enabled: true
+          ingressClassName: cilium
+          hosts:
+            - grafana.k8s-cluster-01.miribit.lab
+          tls: []
+
+        # Datasources: Thanos Query as primary
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Thanos-Query
+                type: prometheus
+                url: http://thanos-query.monitoring:9090
+                access: proxy
+                isDefault: true
+                jsonData:
+                  timeInterval: 30s
+
+              - name: Prometheus-Local-0
+                type: prometheus
+                url: http://kube-prometheus-stack-prometheus-0.kube-prometheus-stack-prometheus.monitoring:9090
+                access: proxy
+
+              - name: Prometheus-Local-1
+                type: prometheus
+                url: http://kube-prometheus-stack-prometheus-1.kube-prometheus-stack-prometheus.monitoring:9090
+                access: proxy
+
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+
+      # Node Exporter
+      nodeExporter:
+        enabled: true
+
+      # Kube State Metrics
+      kubeStateMetrics:
+        enabled: true
+
+      # Default Rules
+      defaultRules:
+        create: true
+        rules:
+          etcd: false
+          alertmanager: true
+          general: true
+          k8s: true
+          kubeApiserver: true
+          prometheus: true

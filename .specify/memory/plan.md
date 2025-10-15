@@ -1,57 +1,62 @@
-# Implementation Plan: Thanos Multi-Cluster Monitoring Infrastructure
+# Implementation Plan: Thanos HA Monitoring Infrastructure with kubeadm
 
-**Branch**: `001-thanos-multi-cluster` | **Date**: 2025-10-13 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/root/specs/001-thanos-multi-cluster/spec.md`
+**Branch**: `001-thanos-multi-cluster` | **Date**: 2025-10-13 | **Updated**: 2025-10-14 (Changed to kubeadm HA architecture) | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `.specify/memory/spec.md`
 
 ## Summary
 
-Deploy a distributed Thanos-based monitoring infrastructure across 3 Minikube clusters (nodes 196, 197, 198) with centralized metric aggregation, S3-backed unlimited retention, and comprehensive observability. The system includes Prometheus for metrics collection, Thanos for multi-cluster aggregation, OpenSearch+Fluent-bit for log management, Longhorn for storage, and NGINX Ingress for external access. All components are deployed via Kustomize+Helm following IaC principles with Korean documentation and Mermaid architecture diagrams.
+Deploy a Thanos-based High Availability monitoring infrastructure on a single Kubernetes cluster built with kubeadm across 4 nodes (192.168.101.194, 196, 197, 198). Each node runs both control-plane and worker components for maximum availability. The system includes Prometheus HA with multiple replicas distributed across nodes, Thanos for metric aggregation/deduplication and S3-backed unlimited retention, OpenSearch+Fluent-bit for log management, Longhorn for distributed storage, and NGINX Ingress for external access. All components are deployed via Kustomize+Helm following IaC principles with Korean documentation and Mermaid architecture diagrams.
 
 ## Technical Context
 
 **Language/Version**: YAML (Kustomize manifests), Bash (installation scripts), Korean (documentation)
 **Primary Dependencies**:
-- Kubernetes: Minikube with containerd driver
-- Monitoring: kube-prometheus-stack (Prometheus Operator, Grafana, Alertmanager), Thanos (Query, Sidecar, Store Gateway)
+- Kubernetes: kubeadm 1.28+ with containerd runtime
+- Monitoring: kube-prometheus-stack (Prometheus Operator with HA, Grafana, Alertmanager), Thanos (Query, Sidecar, Store Gateway, Compactor, Ruler)
 - Logging: OpenSearch 2.x, Fluent-bit 2.x
-- Storage: Longhorn 1.5+, MinIO S3 (external at https://172.20.40.21:30001)
+- Storage: Longhorn 1.5+ distributed storage, MinIO S3 (external at http://s3.minio.miribit.lab)
 - Ingress: NGINX Ingress Controller
 - Deployment: Kustomize 4.5+, Helm charts from ArtifactHub
 
 **Storage**:
-- Local: Longhorn distributed block storage (2-hour Prometheus retention, 14-day OpenSearch retention)
-- Remote: MinIO S3 at https://172.20.40.21:30001 (unlimited metrics, 180-day logs)
+- Local: Longhorn distributed block storage across 4 nodes (2-hour Prometheus retention, 14-day OpenSearch retention)
+- Remote: MinIO S3 at http://s3.minio.miribit.lab (unlimited metrics, 180-day logs)
 
 **Testing**:
 - Contract tests: Kubernetes manifest validation (kubeval, kustomize build verification)
-- Integration tests: Health check scripts per component, end-to-end query validation
+- Integration tests: Health check scripts per component, end-to-end query validation, HA failover tests
 - Smoke tests: Quickstart.md validation script
 
 **Target Platform**:
-- 3x Linux nodes (192.168.101.196-198) running Minikube single-node clusters
-- Node 196: Central cluster (Thanos Query aggregation)
-- Nodes 197-198: Edge clusters (local Prometheus + Thanos Sidecar)
+- 4x Linux nodes (192.168.101.194, 196, 197, 198) running kubeadm Kubernetes cluster
+- All nodes: control-plane + worker (HA configuration)
+- etcd: Stacked topology on all control-plane nodes
+- Prometheus: 2+ replicas with pod anti-affinity distributed across nodes
+- Thanos Query: 2+ replicas with pod anti-affinity for query HA
 
-**Project Type**: Infrastructure (Kubernetes multi-cluster deployment)
+**Project Type**: Infrastructure (Kubernetes HA single-cluster deployment)
 
 **Performance Goals**:
 - Metrics: 30-second scrape interval, <5 second Grafana dashboard load
 - Logs: <30 second ingestion latency from pod to OpenSearch
 - Storage: 60 second PVC provisioning via Longhorn
-- Deployment: 15 minutes Minikube installation, 60 minutes full stack deployment
+- Deployment: 30 minutes kubeadm cluster installation, 60 minutes full stack deployment
+- HA: System survives single node failure without data loss
 
 **Constraints**:
 - No manual deployments (IaC only via Kustomize)
 - No local persistent storage (S3 only for metrics/logs)
 - No helm install command (Kustomize helmCharts only)
-- DNS: *.mkube-{196,197,198}.miribit.lab
-- Resources: Minimum 4 CPU, 16GB RAM per node
+- DNS: *.k8s.miribit.lab (grafana.k8s.miribit.lab, prometheus.k8s.miribit.lab, etc.)
+- Resources: Minimum 4 CPU, 16GB RAM, 100GB disk per node
 
 **Scale/Scope**:
-- 3 Kubernetes clusters (1 per node)
-- ~15 monitoring components across all clusters
-- OpenSearch 3-node cluster with replication factor 2
-- Thanos Query: 2 replicas with anti-affinity
+- 1 Kubernetes cluster across 4 nodes (all nodes control-plane + worker)
+- ~15 monitoring components with HA configurations
+- Prometheus: 2+ replicas distributed across nodes
+- OpenSearch: 3-node cluster with replication factor 2
+- Thanos Query: 2+ replicas with anti-affinity
+- etcd: 4-member cluster for control-plane HA
 
 ## Constitution Check
 
@@ -70,24 +75,26 @@ Deploy a distributed Thanos-based monitoring infrastructure across 3 Minikube cl
 **Implementation**:
 - FR-001: Kustomize with Helm chart inflation
 - FR-018: ConfigMaps, Secrets, overlays for environment-specific config
-- FR-019: Base/overlay pattern for 3 clusters
+- FR-019: Base/overlay pattern for production cluster
 - FR-020: Standardized deployment command
 
-### Principle II: Multi-Cluster Architecture
+### Principle II: High Availability Architecture
 
 **Status**: ✅ COMPLIANT
 
 **Verification**:
-- Node 196: Central cluster (Thanos Query, Query Frontend, Store Gateway)
-- Nodes 197-198: Edge clusters (Prometheus, Thanos Sidecar)
-- Independent operation: Each cluster has local Prometheus + Grafana
-- Shared S3 backend: All Thanos components use MinIO at 172.20.40.21:30001
+- All 4 nodes: control-plane + worker (no single point of failure)
+- Prometheus: Multiple replicas with pod anti-affinity across nodes
+- Thanos Query: 2+ replicas with pod anti-affinity
+- etcd: 4-member cluster (maintains quorum with 1 node failure)
+- Shared S3 backend: All Thanos components use MinIO at http://s3.minio.miribit.lab
 
 **Implementation**:
-- FR-006: Central cluster Thanos components on node 196
-- FR-005: Edge cluster Thanos Sidecars on nodes 197-198
-- FR-014: Independent cluster operation requirement
-- FR-015: Thanos Query 2 replicas with anti-affinity
+- FR-000: kubeadm with all nodes as control-plane + worker
+- FR-004: Prometheus HA with 2+ replicas and anti-affinity
+- FR-006: Thanos components distributed across cluster
+- FR-014: Prometheus replicas operate independently
+- FR-015: Thanos Query 2+ replicas with anti-affinity
 
 ### Principle III: S3-Backed Storage (NON-NEGOTIABLE)
 
@@ -101,7 +108,7 @@ Deploy a distributed Thanos-based monitoring infrastructure across 3 Minikube cl
 - No hostPath or emptyDir for persistent data (FR-013)
 
 **Implementation**:
-- FR-007: S3 endpoint https://172.20.40.21:30001, credentials minio/minio123
+- FR-007: S3 endpoint http://s3.minio.miribit.lab, credentials minio/minio123
 - FR-007a: S3 credentials in Kubernetes Secrets
 - FR-013: Explicit prohibition of local storage
 
@@ -121,14 +128,12 @@ deploy/
 ├── base/
 │   ├── longhorn/
 │   ├── nginx-ingress/
-│   ├── kube-prometheus-stack/
-│   ├── thanos/
+│   ├── kube-prometheus-stack/  # with HA configuration
+│   ├── thanos/                  # Query, Store, Compactor, Ruler
 │   ├── opensearch/
 │   └── fluent-bit/
 └── overlays/
-    ├── cluster-196-central/
-    ├── cluster-197-edge/
-    └── cluster-198-edge/
+    └── production/               # production cluster overlay
 ```
 
 **Implementation**:
@@ -162,10 +167,11 @@ deploy/
 4. `docs/quickstart.md`: 15-minute validation script
 
 **Mermaid Diagrams Required**:
-- Multi-cluster architecture (3 nodes, components per node)
-- Data flow: Prometheus → Thanos Sidecar → S3, Thanos Query → Store Gateway
+- HA cluster architecture (4 nodes, control-plane + worker on each)
+- Data flow: Prometheus replicas → Thanos Sidecar → S3, Thanos Query → Store Gateway with deduplication
 - Log flow: Pods → Fluent-bit → OpenSearch → S3
-- Network topology: Ingress (*.mkube-{node}.miribit.lab) → Services
+- Network topology: Ingress (*.k8s.miribit.lab) → Services
+- HA failover: Pod anti-affinity and automatic rescheduling
 
 ### Gate Result: ✅ PASS
 
@@ -176,27 +182,27 @@ No constitutional violations detected. All 5 core principles are satisfied by th
 ### Documentation (this feature)
 
 ```
-specs/001-thanos-multi-cluster/
-├── spec.md                  # Feature specification (complete)
-├── plan.md                  # This file (in progress)
-├── research.md              # Phase 0 output (pending)
-├── data-model.md            # Phase 1 output (pending)
-├── quickstart.md            # Phase 1 output (pending)
-├── contracts/               # Phase 1 output (pending)
-│   ├── minikube-install.md
+.specify/memory/
+├── spec.md                  # Feature specification (updated for kubeadm HA)
+├── plan.md                  # This file (updated for kubeadm HA)
+├── research.md              # Phase 0 output (needs update)
+├── data-model.md            # Phase 1 output (needs update)
+├── quickstart.md            # Phase 1 output (needs update)
+├── contracts/               # Phase 1 output (needs update)
+│   ├── kubeadm-install.md   # NEW: kubeadm cluster setup
 │   ├── longhorn-deployment.md
 │   ├── nginx-ingress-deployment.md
-│   ├── kube-prometheus-stack.md
+│   ├── kube-prometheus-stack-ha.md  # UPDATED: HA configuration
 │   ├── thanos-deployment.md
 │   ├── opensearch-deployment.md
 │   └── fluent-bit-deployment.md
-└── tasks.md                 # Phase 2 output (/tasks command)
+└── tasks.md                 # Phase 2 output (needs update for kubeadm)
 ```
 
 ### Source Code (repository root)
 
 ```
-thanos-multi-cluster/
+thanos/
 ├── deploy/
 │   ├── base/
 │   │   ├── longhorn/

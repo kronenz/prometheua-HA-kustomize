@@ -13,23 +13,80 @@ Thumbs.db
 *.tmp
 *.bak
 *.orig
+*.tar.gz.tmp
+*.tar.tmp
 
 # Secrets (double-check before committing)
 *secret*.yaml.local
+*-secret.yaml.local
 *.key
 *.pem
+*.crt
+*credentials*
+*password*
+.env
+.env.local
+
+# S3 and Storage Credentials
+s3-credentials.yaml
+*s3-secret*.yaml
+*longhorn-s3-secret*.yaml
+minio-*.yaml
 
 # Kubernetes
 *.kubeconfig
+kubeconfig
+.kube/
+admin.conf
+*.conf
 
 # Logs
 *.log
+logs/
+*.out
 
 # Helm/Kustomize build artifacts
 *.rendered.yaml
 kustomize-build-*.yaml
+rendered/
+output/
+build/
+
+# Helm charts cache
+charts/
+*.tgz
 
 # Terraform (if used)
 .terraform/
 *.tfstate*
 *.tfvars.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+venv/
+env/
+
+# Ansible
+*.retry
+.ansible/
+
+# Local overrides and testing
+*-local.yaml
+*.local
+test-*.yaml
+debug-*.yaml
+
+# Deployment archives
+*.tar.gz
+*.zip
+
+# Node/NPM (if used)
+node_modules/
+package-lock.json
+
+# Documentation build artifacts
+docs/_build/
+site/

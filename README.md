@@ -24,7 +24,7 @@ graph TB
     end
 
     subgraph Storage["외부 스토리지"]
-        S3[MinIO S3<br/>172.20.40.21:30001]
+        S3[MinIO S3<br/>s3.minio.miribit.lab]
     end
 
     P196 -->|메트릭 업로드| S3

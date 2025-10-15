@@ -1,0 +1,169 @@
+# kube-prometheus-stack Base Configuration with Thanos Integration
+# Chart version: 78.2.1
+# NOTE: This is the base configuration. Cluster-specific settings are in overlays.
+
+# Global settings
+global:
+  evaluation_interval: 30s
+
+# Prometheus Operator
+prometheusOperator:
+  enabled: true
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Prometheus instance
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    replicas: 1
+
+    retention: 2h  # Constitution Principle III: max 2 hours local retention
+    retentionSize: 10GB
+
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+    # External labels for cluster identification in Thanos
+    # These will be overridden in overlays per cluster
+    externalLabels:
+      cluster: cluster-default
+      replica: "$(POD_NAME)"
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 15Gi
+
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+    # Thanos sidecar configuration
+    # NOTE: Enabled per cluster in overlays
+    # All clusters use Thanos Sidecar to upload blocks to S3
+    # Central cluster (01) additionally runs standalone Thanos components
+    thanos:
+      image: quay.io/thanos/thanos:v0.37.2
+      version: v0.37.2
+      objectStorageConfig:
+        name: thanos-s3-config
+        key: objstore.yml
+      # Resources for Thanos sidecar
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+
+    # Service monitors
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+# Alertmanager
+alertmanager:
+  enabled: true
+
+  alertmanagerSpec:
+    replicas: 1
+
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Grafana
+grafana:
+  enabled: true
+
+  replicas: 1
+
+  persistence:
+    enabled: true
+    storageClassName: longhorn
+    size: 5Gi
+
+  # Grafana admin credentials
+  adminPassword: admin123
+
+  # Datasources - Thanos Query will be added in central cluster overlay
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://kube-prometheus-stack-prometheus.monitoring:9090
+          access: proxy
+          isDefault: true
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  # Grafana ingress configured in overlays
+  ingress:
+    enabled: false
+
+# Node Exporter
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics
+kubeStateMetrics:
+  enabled: true
+
+# Default Service Monitors
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false  # Not applicable to single-node clusters
+    general: true
+    k8s: true
+    kubeApiserver: true
+    kubeApiserverAvailability: true
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeScheduler: true
+    network: true
+    node: true
+    prometheus: true
+    prometheusOperator: true

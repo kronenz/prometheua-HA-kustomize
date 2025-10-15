@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring
+spec:
+  values:
+    # Cluster-03 Edge: Enable Thanos Sidecar only
+    prometheus:
+      prometheusSpec:
+        # External labels for Thanos
+        externalLabels:
+          cluster: cluster-03
+          replica: "$(POD_NAME)"
+
+        # Enable Thanos sidecar
+        thanos:
+          image: quay.io/thanos/thanos:v0.37.2
+          version: v0.37.2
+          objectStorageConfig:
+            name: thanos-s3-config
+            key: objstore.yml
+
+    # Grafana configuration
+    grafana:
+      ingress:
+        enabled: true
+        ingressClassName: nginx
+        hosts:
+          - grafana.k8s-cluster-03.miribit.lab
+        tls: []

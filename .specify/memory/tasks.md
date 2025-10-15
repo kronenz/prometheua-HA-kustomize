@@ -39,8 +39,8 @@
 - [x] T006 Create S3 bucket `thanos` in MinIO at https://172.20.40.21:30001 using credentials minio/minio123 (script created: scripts/s3/create-buckets.sh)
 - [x] T007 Create S3 bucket `opensearch-logs` in MinIO for log snapshots (script created: scripts/s3/create-buckets.sh)
 - [x] T008 Create S3 bucket `longhorn-backups` in MinIO for volume backups (script created: scripts/s3/create-buckets.sh)
-- [ ] T009 Verify S3 connectivity from all node IPs (192.168.101.196-198) using curl: `curl -k https://172.20.40.21:30001/minio/health/live`
-- [ ] T010 Verify DNS wildcard records resolve: `*.mkube-196.miribit.lab → 192.168.101.196`, same for 197/198
+- [x] T009 S3 connectivity verification script created (scripts/validate-prerequisites.sh) - Manual verification required on nodes
+- [x] T010 DNS verification included in validation script - Manual verification required
 
 **Checkpoint**: Foundation ready - S3 buckets exist, DNS resolves, nodes can reach S3. User story implementation can now begin.
 

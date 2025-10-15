@@ -1,0 +1,94 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-query
+  namespace: monitoring
+  labels:
+    app: thanos-query
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 10902
+    - name: grpc
+      port: 10901
+      targetPort: 10901
+  selector:
+    app: thanos-query
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-query
+  namespace: monitoring
+  labels:
+    app: thanos-query
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thanos-query
+  template:
+    metadata:
+      labels:
+        app: thanos-query
+    spec:
+      containers:
+        - name: thanos-query
+          image: quay.io/thanos/thanos:v0.37.2
+          args:
+            - query
+            - --log.level=info
+            - --query.replica-label=prometheus_replica
+            - --query.replica-label=rule_replica
+            # Store endpoints for central cluster
+            - --store=dnssrv+_grpc._tcp.prometheus-operated.monitoring.svc.cluster.local
+            - --store=thanos-store.monitoring.svc.cluster.local:10901
+            - --store=thanos-ruler.monitoring.svc.cluster.local:10901
+            # Store endpoints for edge clusters
+            - --store=192.168.101.211:10901
+            - --store=192.168.101.212:10901
+            - --store=192.168.101.213:10901
+          ports:
+            - name: http
+              containerPort: 10902
+            - name: grpc
+              containerPort: 10901
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 10902
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 10902
+            initialDelaySeconds: 15
+            periodSeconds: 5
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: thanos-query
+  namespace: monitoring
+  labels:
+    app: thanos-query
+spec:
+  selector:
+    matchLabels:
+      app: thanos-query
+  endpoints:
+    - port: http
+      interval: 30s

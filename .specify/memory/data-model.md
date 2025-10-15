@@ -1,6 +1,7 @@
-# Data Model: Thanos Multi-Cluster Monitoring Infrastructure
+# Data Model: Thanos HA Monitoring Infrastructure with kubeadm
 
 **Date**: 2025-10-13
+**Updated**: 2025-10-14 (Changed to kubeadm HA architecture)
 **Feature**: 001-thanos-multi-cluster
 **Note**: This is an infrastructure project, so this document describes the deployment model and configuration entities rather than application data models.
 
@@ -8,22 +9,28 @@
 
 ```mermaid
 erDiagram
-    CLUSTER ||--o{ COMPONENT : hosts
-    CLUSTER ||--|| MINIKUBE : runs
-    CLUSTER }o--|| S3_BUCKET : uses
+    KUBERNETES_CLUSTER ||--o{ KUBERNETES_NODE : contains
+    KUBERNETES_NODE ||--o{ COMPONENT_REPLICA : hosts
+    KUBERNETES_CLUSTER }o--|| S3_BUCKET : uses
 
-    COMPONENT ||--o{ STORAGE_VOLUME : provisions
-    COMPONENT ||--o{ SERVICE_MONITOR : exposes
-    COMPONENT ||--o{ INGRESS_ROUTE : routes_to
+    COMPONENT_REPLICA ||--o{ STORAGE_VOLUME : provisions
+    COMPONENT_REPLICA ||--o{ SERVICE_MONITOR : exposes
+    COMPONENT_REPLICA ||--o{ INGRESS_ROUTE : routes_to
 
-    PROMETHEUS ||--|{ METRIC_BLOCK : generates
+    PROMETHEUS_REPLICA ||--|{ METRIC_BLOCK : generates
+    PROMETHEUS_REPLICA ||--|| THANOS_SIDECAR : has
     METRIC_BLOCK }o--|| S3_BUCKET : stored_in
+    METRIC_BLOCK ||--|| EXTERNAL_LABEL : tagged_with
+
+    THANOS_QUERY ||--o{ PROMETHEUS_REPLICA : queries
+    THANOS_QUERY ||--o{ THANOS_STORE : queries
+    THANOS_QUERY ||--|| DEDUPLICATION : performs
 
     POD ||--|{ LOG_ENTRY : emits
     LOG_ENTRY }o--|| OPENSEARCH_INDEX : indexed_in
     OPENSEARCH_INDEX }o--|| S3_BUCKET : snapshot_to
 
-    PROMETHEUS ||--o{ ALERT_RULE : evaluates
+    PROMETHEUS_REPLICA ||--o{ ALERT_RULE : evaluates
     ALERT_RULE }o--|| ALERTMANAGER : fires_to
 
     GRAFANA ||--o{ DASHBOARD : displays
@@ -32,128 +39,240 @@ erDiagram
 
 ## Core Entities
 
-### 1. Cluster
+### 1. Kubernetes Cluster
 
-**Description**: Represents a Minikube Kubernetes cluster on a single node
+**Description**: Represents the single kubeadm-based Kubernetes cluster spanning 4 nodes
 
 **Fields**:
 ```yaml
-name: string              # "cluster-196-central", "cluster-197-edge", "cluster-198-edge"
-node_ip: ipv4            # 192.168.101.{196,197,198}
-role: enum               # "central" | "edge"
-minikube_driver: string  # "containerd"
-cpu_allocation: integer  # 4 (minimum)
-memory_mb: integer       # 16384 (minimum)
-kubernetes_version: string # "v1.28.0"
-status: enum             # "not_installed" | "installing" | "running" | "stopped" | "failed"
+name: string              # "thanos-ha-cluster"
+cluster_domain: string    # "cluster.local"
+api_server_endpoint: string # Load balancer VIP or primary node IP
+kubernetes_version: string  # "v1.28.0"
+container_runtime: string   # "containerd"
+pod_network_cidr: string    # "10.244.0.0/16" (Flannel/Calico)
+service_cidr: string        # "10.96.0.0/12"
+etcd_topology: enum         # "stacked" (etcd on control-plane nodes)
+status: enum                # "not_installed" | "installing" | "running" | "degraded" | "failed"
 ```
 
 **Relationships**:
-- Has many: Components (Longhorn, NGINX, Prometheus, Thanos, OpenSearch, Fluent-bit)
-- Has one: Minikube instance
-- Uses: S3 Bucket (shared across clusters)
+- Has many: Kubernetes Nodes (4 nodes)
+- Has many: Component Replicas distributed across nodes
+- Uses: S3 Bucket for metrics and logs
 
 **Validation Rules**:
-- `node_ip` MUST match pattern `192.168.101.{196,197,198}`
-- `role` "central" ONLY for node 196
-- `cpu_allocation` >= 4
-- `memory_mb` >= 16384
 - `kubernetes_version` >= "v1.28.0"
+- `etcd_topology` MUST be "stacked"
+- Minimum 4 nodes for HA configuration
+- `container_runtime` MUST be "containerd"
 
 **State Transitions**:
 ```
 not_installed → installing → running
-running → stopped → running (minikube stop/start)
-installing/running → failed (on error)
-failed → installing (retry)
+running → degraded (when nodes fail but quorum maintained)
+degraded → running (when failed nodes recover)
+installing/running → failed (on critical error or quorum loss)
+failed → installing (cluster rebuild)
 ```
 
 ---
 
-### 2. Component
+### 2. Kubernetes Node
 
-**Description**: Monitoring stack component deployed on a cluster
+**Description**: Represents a physical/virtual machine running both control-plane and worker components
 
 **Fields**:
 ```yaml
-name: string             # "longhorn", "nginx-ingress", "prometheus", "thanos-query", etc.
-cluster: reference       # → Cluster
+name: string              # "node-194", "node-196", "node-197", "node-198"
+ip_address: ipv4          # 192.168.101.{194,196,197,198}
+hostname: string          # FQDN of the node
+roles: list[string]       # ["control-plane", "worker"]
+cpu_cores: integer        # 4 (minimum)
+memory_gb: integer        # 16 (minimum)
+disk_gb: integer          # 100 (minimum)
+is_control_plane: boolean # true (all nodes)
+is_worker: boolean        # true (all nodes)
+kubelet_version: string   # "v1.28.0"
+status: enum              # "not_ready" | "ready" | "scheduling_disabled" | "unreachable"
+taints: list[taint]       # Node taints (if any)
+labels: map[string]string # Node labels for scheduling
+```
+
+**Relationships**:
+- Belongs to: Kubernetes Cluster
+- Hosts: Component Replicas (pods scheduled on this node)
+- Part of: etcd cluster (for control-plane)
+
+**Validation Rules**:
+- `ip_address` MUST match pattern `192.168.101.{194,196,197,198}`
+- `cpu_cores` >= 4
+- `memory_gb` >= 16
+- `disk_gb` >= 100
+- `roles` MUST include both "control-plane" and "worker"
+- `kubelet_version` MUST match cluster version
+
+**State Transitions**:
+```
+not_ready → ready (after kubeadm join)
+ready → scheduling_disabled (cordon for maintenance)
+scheduling_disabled → ready (uncordon)
+ready → unreachable (network/node failure)
+unreachable → ready (recovery)
+```
+
+---
+
+### 3. Component Replica
+
+**Description**: Individual replica/pod of a monitoring stack component
+
+**Fields**:
+```yaml
+component_name: string   # "prometheus", "thanos-query", "opensearch", etc.
+replica_index: integer   # 0, 1, 2... (for StatefulSets/Deployments with replicas > 1)
+node: reference          # → Kubernetes Node (where this replica is scheduled)
 deployment_method: string # "kustomize-helm" | "kustomize-yaml"
 helm_chart: string       # "prometheus-community/kube-prometheus-stack" (if helm)
 chart_version: string    # "55.5.0"
 namespace: string        # "monitoring", "logging", "longhorn-system", "ingress-nginx"
-replica_count: integer   # Component-specific
-status: enum             # "not_deployed" | "deploying" | "running" | "degraded" | "failed"
+pod_name: string         # Actual Kubernetes pod name
+status: enum             # "pending" | "running" | "failed" | "unknown"
+restart_count: integer   # Number of container restarts
 health_check_url: string # For validation
+anti_affinity: boolean   # Whether pod anti-affinity is configured
 ```
 
 **Relationships**:
-- Belongs to: Cluster
-- Provisions: Storage Volumes (if需要 PVCs)
+- Scheduled on: Kubernetes Node
+- Provisions: Storage Volumes (if PVCs required)
 - Exposes: Service Monitors (for Prometheus scraping)
 - Routes to: Ingress Routes
 
-**Component Types** (per cluster role):
-- **All clusters**: Longhorn, NGINX Ingress, Prometheus, Grafana, Alertmanager
-- **Central only (196)**: Thanos Query, Thanos Store Gateway, Thanos Query Frontend
-- **Edge only (197/198)**: Thanos Sidecar
-- **All clusters**: OpenSearch (1 node per cluster), Fluent-bit
+**Component Types** (cluster-wide):
+- **Storage & Ingress**: Longhorn, NGINX Ingress
+- **Monitoring (HA)**: Prometheus (2+ replicas), Grafana, Alertmanager
+- **Thanos**: Query (2+ replicas), Store Gateway, Compactor, Ruler
+- **Thanos Sidecar**: One per Prometheus replica
+- **Logging**: OpenSearch (3 replicas), Fluent-bit (DaemonSet on all nodes)
 
 **Validation Rules**:
 - `namespace` MUST match deployment conventions: monitoring, logging, longhorn-system, ingress-nginx
-- Thanos Query components ONLY on cluster-196-central
-- Thanos Sidecar ONLY on cluster-197-edge and cluster-198-edge
+- Prometheus replicas MUST have anti-affinity to distribute across nodes
+- Thanos Query replicas MUST have anti-affinity to distribute across nodes
+- Each Prometheus replica MUST have exactly one Thanos Sidecar
 
 **State Transitions**:
 ```
-not_deployed → deploying → running
-running → degraded (some pods not ready)
-degraded → running (pods recover)
-deploying/running/degraded → failed (critical error)
-failed → deploying (redeploy)
+pending → running (successful pod start)
+running → failed (container crash)
+failed → running (automatic restart)
+running → unknown (node unreachable)
+unknown → running (node recovery)
 ```
 
 ---
 
-### 3. Metric Block
+### 4. Prometheus Replica
+
+**Description**: Individual Prometheus instance in HA configuration
+
+**Fields**:
+```yaml
+replica_id: string       # "prometheus-0", "prometheus-1"
+node: reference          # → Kubernetes Node (scheduled by anti-affinity)
+replica_index: integer   # 0, 1, 2...
+external_labels: map[string]string # For Thanos deduplication {"replica": "A", "cluster": "thanos-ha"}
+has_thanos_sidecar: boolean # true (all replicas)
+sidecar_upload_enabled: boolean # true
+scrape_interval: duration # 30s
+retention_time: duration  # 2h (local retention only)
+storage_size: string     # "10Gi" PVC size
+status: enum             # "pending" | "running" | "failed"
+```
+
+**Relationships**:
+- Scheduled on: Kubernetes Node
+- Has one: Thanos Sidecar
+- Generates: Metric Blocks
+- Scrapes: Service Monitors
+- Queried by: Thanos Query (via StoreAPI)
+
+**Validation Rules**:
+- `scrape_interval` = 30s (per requirements)
+- `retention_time` = 2h (per requirements)
+- `external_labels` MUST include "replica" label for deduplication
+- Pod anti-affinity MUST be configured to avoid co-location
+
+---
+
+### 5. External Label
+
+**Description**: Labels added by Thanos Sidecar to identify source Prometheus replica
+
+**Fields**:
+```yaml
+prometheus_replica: reference # → Prometheus Replica
+label_key: string      # "replica", "cluster", "region", etc.
+label_value: string    # "A", "B", "thanos-ha", etc.
+```
+
+**Purpose**:
+- Enables Thanos Query to deduplicate metrics from multiple replicas
+- Identifies data source for troubleshooting
+- Used in PromQL queries for filtering
+
+**Standard Labels**:
+```yaml
+replica: "A" | "B" | "C"...  # Unique per Prometheus replica
+cluster: "thanos-ha"          # Cluster identifier
+```
+
+---
+
+### 6. Metric Block
 
 **Description**: 2-hour chunk of Prometheus TSDB data uploaded to S3 by Thanos Sidecar
 
 **Fields**:
 ```yaml
 block_id: uuid           # Thanos block ULID
-prometheus_instance: string # "prometheus-cluster-197"
-cluster_source: reference # → Cluster
+prometheus_replica: reference # → Prometheus Replica
+external_labels: map[string]string # Copied from Prometheus external labels
 start_time: timestamp    # Block time range start
 end_time: timestamp      # Block time range end (typically start + 2h)
-s3_path: string          # "s3://thanos/01HXXX.../meta.json"
+s3_path: string          # "s3://thanos-bucket/01HXXX.../meta.json"
 size_bytes: integer      # Block size in bytes
 upload_time: timestamp   # When uploaded to S3
-compacted: boolean       # Future: if Thanos Compactor runs
-status: enum             # "collecting" | "uploaded" | "available" | "deleted"
+compacted: boolean       # Whether Thanos Compactor has processed this block
+compaction_level: integer # 1 (original), 2+ (compacted)
+status: enum             # "collecting" | "uploaded" | "available" | "compacted" | "deleted"
 ```
 
 **Relationships**:
-- Generated by: Prometheus (via Thanos Sidecar)
-- Stored in: S3 Bucket
+- Generated by: Prometheus Replica (via Thanos Sidecar)
+- Stored in: S3 Bucket (thanos-bucket)
 - Queried by: Thanos Store Gateway
+- Processed by: Thanos Compactor
 
 **Validation Rules**:
 - `end_time` - `start_time` = 2 hours (Prometheus default block duration)
-- `s3_path` MUST start with configured bucket name
+- `s3_path` MUST start with "s3://thanos-bucket/"
 - `size_bytes` > 0 after upload
+- `external_labels` MUST match source Prometheus replica labels
 
 **Lifecycle**:
 ```
 collecting (Prometheus writing TSDB) →
 uploaded (Sidecar uploaded to S3) →
 available (Store Gateway can query) →
-deleted (manual cleanup or compaction, not automatic)
+compacted (Compactor merges multiple blocks) →
+deleted (old blocks deleted after compaction, or manual cleanup)
 ```
 
 ---
 
-### 4. Log Entry
+### 7. Log Entry
 
 **Description**: Single log line from a Kubernetes pod
 
@@ -161,7 +280,7 @@ deleted (manual cleanup or compaction, not automatic)
 ```yaml
 log_id: uuid             # Generated by OpenSearch
 timestamp: timestamp     # Log emission time
-cluster_source: reference # → Cluster
+node_name: string        # Source Kubernetes node
 namespace: string        # Pod namespace
 pod_name: string         # Source pod
 container_name: string   # Source container
@@ -172,13 +291,13 @@ labels: map[string]string # Kubernetes labels
 
 **Relationships**:
 - Emitted by: Pod (any Kubernetes pod)
-- Collected by: Fluent-bit DaemonSet
+- Collected by: Fluent-bit DaemonSet (running on each node)
 - Indexed in: OpenSearch Index
 - Snapshotted to: S3 Bucket (via OpenSearch snapshot)
 
 **Validation Rules**:
 - `timestamp` within last 24 hours (prevent stale logs)
-- `cluster_source` MUST match one of 3 clusters
+- `node_name` MUST match one of 4 cluster nodes
 - `pod_name` format: `^[a-z0-9-]+$`
 
 **Lifecycle**:

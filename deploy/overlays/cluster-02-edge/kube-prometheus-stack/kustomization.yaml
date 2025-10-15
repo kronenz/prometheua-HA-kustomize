@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+  - thanos-s3-secret.yaml
+  - thanos-sidecar-lb.yaml
+
+helmCharts:
+  - name: kube-prometheus-stack
+    repo: https://prometheus-community.github.io/helm-charts
+    version: 78.2.1
+    releaseName: kube-prometheus-stack
+    namespace: monitoring
+    valuesInline:
+      prometheus:
+        prometheusSpec:
+          replicas: 1
+          retention: 2h
+          retentionSize: 10GB
+          externalLabels:
+            cluster: cluster-02
+            region: edge
+          storageSpec:
+            volumeClaimTemplate:
+              spec:
+                storageClassName: longhorn
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 15Gi
+          thanos:
+            image: quay.io/thanos/thanos:v0.37.2
+            version: v0.37.2
+            objectStorageConfig:
+              name: thanos-s3-config
+              key: objstore.yml
+      grafana:
+        enabled: false
+      alertmanager:
+        alertmanagerSpec:
+          replicas: 1
+          storage:
+            volumeClaimTemplate:
+              spec:
+                storageClassName: longhorn
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 5Gi
+      defaultRules:
+        rules:
+          etcd: false

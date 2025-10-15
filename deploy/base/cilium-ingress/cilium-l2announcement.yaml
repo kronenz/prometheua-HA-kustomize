@@ -1,0 +1,17 @@
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: l2-announcement-policy
+spec:
+  # Select all LoadBalancer services
+  serviceSelector:
+    matchLabels: {}
+  # Announce on all network interfaces
+  interfaces:
+  - ^eth[0-9]+
+  - ^ens[0-9]+
+  - ^enp[0-9]+s[0-9]+
+  # Priority for L2 announcements
+  externalIPs: true
+  loadBalancerIPs: true

@@ -11,11 +11,13 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # 설정
-S3_ENDPOINT="${S3_ENDPOINT:-https://172.20.40.21:30001}"
-S3_ACCESS_KEY="${S3_ACCESS_KEY:-minio}"
+# S3 API: http://s3.minio.miribit.lab
+# Console: http://console.minio.miribit.lab
+S3_ENDPOINT="${S3_ENDPOINT:-http://s3.minio.miribit.lab}"
+S3_ACCESS_KEY="${S3_ACCESS_KEY:-MezGARChpr3sknvLqMEtNpeGrR8ISY0RcutMIAqG}"
 S3_SECRET_KEY="${S3_SECRET_KEY:-minio123}"
 
-BUCKETS=("thanos" "opensearch-logs" "longhorn-backups")
+BUCKETS=("thanos-bucket" "opensearch-logs" "longhorn-backups")
 
 echo -e "${GREEN}=== MinIO S3 버킷 생성 ===${NC}"
 echo "Endpoint: ${S3_ENDPOINT}"
@@ -32,10 +34,10 @@ fi
 
 # mc alias 설정
 echo -e "${YELLOW}MinIO 연결 설정 중...${NC}"
-mc alias set thanos-minio ${S3_ENDPOINT} ${S3_ACCESS_KEY} ${S3_SECRET_KEY} --insecure
+mc alias set thanos-minio ${S3_ENDPOINT} ${S3_ACCESS_KEY} ${S3_SECRET_KEY}
 
 # 연결 테스트
-if ! mc admin info thanos-minio --insecure > /dev/null 2>&1; then
+if ! mc admin info thanos-minio > /dev/null 2>&1; then
     echo -e "${RED}❌ MinIO 연결 실패. 엔드포인트와 인증 정보를 확인하세요.${NC}"
     exit 1
 fi
@@ -48,11 +50,11 @@ for bucket in "${BUCKETS[@]}"; do
     echo -e "${YELLOW}버킷 생성 중: ${bucket}${NC}"
 
     # 버킷이 이미 존재하는지 확인
-    if mc ls thanos-minio/${bucket} --insecure > /dev/null 2>&1; then
+    if mc ls thanos-minio/${bucket} > /dev/null 2>&1; then
         echo -e "${GREEN}✓ 버킷이 이미 존재합니다: ${bucket}${NC}"
     else
         # 버킷 생성
-        if mc mb thanos-minio/${bucket} --insecure; then
+        if mc mb thanos-minio/${bucket}; then
             echo -e "${GREEN}✓ 버킷 생성 완료: ${bucket}${NC}"
         else
             echo -e "${RED}❌ 버킷 생성 실패: ${bucket}${NC}"
@@ -64,7 +66,7 @@ done
 
 # 버킷 목록 확인
 echo -e "${GREEN}=== 생성된 버킷 목록 ===${NC}"
-mc ls thanos-minio --insecure
+mc ls thanos-minio
 
 echo ""
 echo -e "${GREEN}=== S3 버킷 생성 완료 ===${NC}"
@@ -80,5 +82,5 @@ echo -e "${YELLOW}버킷 상세 정보:${NC}"
 for bucket in "${BUCKETS[@]}"; do
     echo ""
     echo "버킷: ${bucket}"
-    mc stat thanos-minio/${bucket} --insecure 2>/dev/null || echo "  (정보 없음)"
+    mc stat thanos-minio/${bucket} 2>/dev/null || echo "  (정보 없음)"
 done
