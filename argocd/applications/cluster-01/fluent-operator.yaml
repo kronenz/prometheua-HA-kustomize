@@ -12,7 +12,7 @@ spec:
   project: observability
 
   source:
-    repoURL: http://gitlab.k8s-cluster-01.miribit.lab/observability/thanos-multi-cluster.git
+    repoURL: http://gitea.k8s-cluster-01.miribit.lab/gitea_admin/thanos-multi-cluster.git
     targetRevision: main
     path: deploy/overlays/cluster-01-central/fluent-operator
 

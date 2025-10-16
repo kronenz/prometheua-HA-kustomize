@@ -10,7 +10,7 @@ spec:
   project: default
 
   source:
-    repoURL: http://gitlab.k8s-cluster-01.miribit.lab/observability/thanos-multi-cluster.git
+    repoURL: http://gitea.k8s-cluster-01.miribit.lab/gitea_admin/thanos-multi-cluster.git
     targetRevision: main
     path: argocd/applications
 
