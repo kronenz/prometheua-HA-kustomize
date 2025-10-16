@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - cluster-01/cilium-ingress.yaml
+  - cluster-01/fluent-operator.yaml
+  - cluster-01/fluentbit.yaml
+  - cluster-01/longhorn.yaml
+  - cluster-01/opensearch-cluster.yaml
+  - cluster-01/opensearch-operator.yaml
+  - cluster-01/prometheus-operator.yaml
+  - cluster-01/thanos-receiver.yaml
+  - cluster-02/fluent-operator.yaml
+  - cluster-02/fluentbit.yaml
+  - cluster-02/prometheus-agent.yaml
+  - cluster-03/fluent-operator.yaml
+  - cluster-03/fluentbit.yaml
+  - cluster-03/prometheus-agent.yaml
+  - cluster-04/fluent-operator.yaml
+  - cluster-04/fluentbit.yaml
+  - cluster-04/prometheus-agent.yaml
