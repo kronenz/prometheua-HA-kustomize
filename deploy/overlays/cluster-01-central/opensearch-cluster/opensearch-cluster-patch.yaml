@@ -23,7 +23,10 @@ spec:
         - cluster_manager
         - data
       persistence:
-        storageClass: longhorn
+        pvc:
+          storageClass: longhorn
+          accessModes:
+            - ReadWriteOnce
       resources:
         requests:
           memory: 2Gi
@@ -39,7 +42,10 @@ spec:
         - data
         - ingest
       persistence:
-        storageClass: longhorn
+        pvc:
+          storageClass: longhorn
+          accessModes:
+            - ReadWriteOnce
       resources:
         requests:
           memory: 4Gi
