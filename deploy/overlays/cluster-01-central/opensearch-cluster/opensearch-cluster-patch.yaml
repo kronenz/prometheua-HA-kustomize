@@ -17,8 +17,8 @@ spec:
 
   nodePools:
     - component: masters
-      replicas: 3
-      diskSize: 30Gi
+      replicas: 1
+      diskSize: 20Gi
       roles:
         - cluster_manager
         - data
@@ -36,8 +36,8 @@ spec:
           cpu: 1000m
 
     - component: data
-      replicas: 3
-      diskSize: 100Gi
+      replicas: 1
+      diskSize: 50Gi
       roles:
         - data
         - ingest
