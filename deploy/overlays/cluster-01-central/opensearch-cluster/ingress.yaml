@@ -4,11 +4,8 @@ kind: Ingress
 metadata:
   name: opensearch-dashboards
   namespace: logging
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 spec:
-  ingressClassName: nginx
+  ingressClassName: cilium
   rules:
     - host: opensearch-dashboards.k8s-cluster-01.miribit.lab
       http:
@@ -26,12 +23,8 @@ kind: Ingress
 metadata:
   name: opensearch-api
   namespace: logging
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
-    nginx.ingress.kubernetes.io/backend-protocol-insecure: "true"
 spec:
-  ingressClassName: nginx
+  ingressClassName: cilium
   rules:
     - host: opensearch.k8s-cluster-01.miribit.lab
       http:
