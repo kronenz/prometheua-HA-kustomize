@@ -18,6 +18,9 @@ spec:
     - component: masters
       replicas: 3
       diskSize: 30Gi
+      roles:
+        - cluster_manager
+        - data
       persistence:
         storageClass: longhorn
       resources:
@@ -31,6 +34,9 @@ spec:
     - component: data
       replicas: 3
       diskSize: 100Gi
+      roles:
+        - data
+        - ingest
       persistence:
         storageClass: longhorn
       resources:
