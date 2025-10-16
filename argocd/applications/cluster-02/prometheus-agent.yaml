@@ -11,7 +11,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/<your-org>/thanos-multi-cluster.git
+    repoURL: http://gitea.k8s-cluster-01.miribit.lab/gitea_admin/thanos-multi-cluster.git
     targetRevision: main
     path: deploy/overlays/cluster-02-edge/prometheus-agent
 
