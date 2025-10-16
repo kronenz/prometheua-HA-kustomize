@@ -15,8 +15,6 @@ spec:
     repoURL: http://gitea.k8s-cluster-01.miribit.lab/gitea_admin/thanos-multi-cluster.git
     targetRevision: main
     path: deploy/overlays/cluster-02-edge/fluent-operator
-    plugin:
-      name: kustomize-with-helm
 
   destination:
     server: https://192.168.101.196:6443
