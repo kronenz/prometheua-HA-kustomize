@@ -9,10 +9,11 @@ spec:
     pluginsList:
       - repository-s3
 
-  bootstrap:
-    additionalConfig:
-      s3.client.default.endpoint: s3.minio.miribit.lab:9000
-      s3.client.default.protocol: http
+  # S3 configuration will be added via keystore after cluster is running
+  # bootstrap:
+  #   additionalConfig:
+  #     s3.client.default.endpoint: s3.minio.miribit.lab:9000
+  #     s3.client.default.protocol: http
 
   nodePools:
     - component: masters
