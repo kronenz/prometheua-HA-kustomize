@@ -1,0 +1,10 @@
+[
+  {
+    "hashring": "default",
+    "endpoints": [
+      "thanos-receiver-0.thanos-receiver-headless.monitoring.svc.cluster.local:10901",
+      "thanos-receiver-1.thanos-receiver-headless.monitoring.svc.cluster.local:10901",
+      "thanos-receiver-2.thanos-receiver-headless.monitoring.svc.cluster.local:10901"
+    ]
+  }
+]

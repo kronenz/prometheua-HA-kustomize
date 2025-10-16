@@ -1,0 +1,27 @@
+# Fluent Operator Helm Values
+operator:
+  image:
+    repository: kubesphere/fluent-operator
+    tag: v3.1.0
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Disable Fluentd (we only use Fluent-Bit)
+  fluentd:
+    enable: false
+
+  # Enable Fluent-Bit
+  fluentbit:
+    enable: true
+
+# Container Runtime
+containerRuntime: containerd
+
+# Namespaces to watch
+watchNamespaces: []  # Watch all namespaces

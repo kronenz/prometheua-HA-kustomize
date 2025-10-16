@@ -1,0 +1,128 @@
+global:
+  edition: ce
+  hosts:
+    domain: k8s-cluster-01.miribit.lab
+    https: false
+    gitlab:
+      name: gitlab.k8s-cluster-01.miribit.lab
+    registry:
+      name: registry.k8s-cluster-01.miribit.lab
+
+  ingress:
+    enabled: true
+    class: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    tls:
+      enabled: false
+
+  time_zone: Asia/Seoul
+
+  # Use external PostgreSQL and Redis (deployed separately)
+  psql:
+    host: postgresql.gitlab.svc.cluster.local
+    port: 5432
+    database: gitlabhq_production
+    username: gitlab
+    password:
+      secret: gitlab-postgresql
+      key: postgresql-password
+
+  redis:
+    host: redis.gitlab.svc.cluster.local
+    port: 6379
+    password:
+      enabled: false
+
+  # Storage configuration
+  minio:
+    enabled: false
+
+  registry:
+    enabled: false
+
+  appConfig:
+    lfs:
+      enabled: true
+      bucket: gitlab-lfs
+      connection:
+        secret: gitlab-object-storage
+        key: connection
+    artifacts:
+      enabled: true
+      bucket: gitlab-artifacts
+      connection:
+        secret: gitlab-object-storage
+        key: connection
+    uploads:
+      enabled: true
+      bucket: gitlab-uploads
+      connection:
+        secret: gitlab-object-storage
+        key: connection
+    packages:
+      enabled: true
+      bucket: gitlab-packages
+      connection:
+        secret: gitlab-object-storage
+        key: connection
+    backups:
+      bucket: gitlab-backups
+      tmpBucket: gitlab-tmp
+
+# Component-specific configurations
+gitlab:
+  webservice:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+  sidekiq:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+  gitaly:
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: longhorn
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+  gitlab-shell:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# Disable components not needed for basic setup
+nginx-ingress:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+certmanager:
+  install: false
+
+gitlab-runner:
+  install: false

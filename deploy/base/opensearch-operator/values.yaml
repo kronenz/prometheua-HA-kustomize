@@ -1,0 +1,32 @@
+# OpenSearch Operator Helm Values
+manager:
+  image:
+    repository: public.ecr.aws/opensearchproject/opensearch-operator
+    tag: 2.6.0
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Environment variables
+  env:
+    - name: WATCH_NAMESPACE
+      value: ""  # Watch all namespaces
+
+# Service Account
+serviceAccount:
+  create: true
+  name: opensearch-operator-controller-manager
+
+# RBAC
+rbac:
+  create: true
+
+# Webhook configuration
+webhook:
+  enabled: true
+  port: 9443

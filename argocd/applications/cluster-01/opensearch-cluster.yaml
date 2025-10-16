@@ -1,0 +1,40 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opensearch-cluster-cluster-01
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: observability
+
+  source:
+    repoURL: http://gitlab.k8s-cluster-01.miribit.lab/observability/thanos-multi-cluster.git
+    targetRevision: main
+    path: deploy/overlays/cluster-01-central/opensearch-cluster
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: logging
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: opensearch.opster.io
+      kind: OpenSearchCluster
+      jsonPointers:
+        - /spec/nodePools/*/resources

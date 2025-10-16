@@ -1,0 +1,13 @@
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterOutput
+metadata:
+  name: opensearch
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+    cluster: cluster-03-edge
+spec:
+  opensearch:
+    host: opensearch-cluster.logging.svc.cluster-01.local
+    port: 9200
+    logstashPrefix: cluster-03-kubernetes

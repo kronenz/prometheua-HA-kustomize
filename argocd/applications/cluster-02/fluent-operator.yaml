@@ -1,0 +1,36 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fluent-operator-cluster-02
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: observability
+
+  source:
+    repoURL: http://gitlab.k8s-cluster-01.miribit.lab/observability/thanos-multi-cluster.git
+    targetRevision: main
+    path: deploy/overlays/cluster-02-edge/fluent-operator
+    plugin:
+      name: kustomize-with-helm
+
+  destination:
+    server: https://192.168.101.196:6443
+    namespace: fluent-operator-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

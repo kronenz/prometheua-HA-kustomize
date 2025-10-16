@@ -1,0 +1,62 @@
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: kubernetes
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  filters:
+    - kubernetes:
+        kubeURL: https://kubernetes.default.svc:443
+        kubeCAFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        kubeTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+        labels: true
+        annotations: false
+        mergeLog: true
+        keepLog: true
+        k8sLoggingParser: true
+        k8sLoggingExclude: true
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: nest
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  filters:
+    - nest:
+        operation: lift
+        nestedUnder: kubernetes
+        addPrefix: kubernetes_
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: modify
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  filters:
+    - modify:
+        rules:
+          - rename:
+              key: kubernetes_container_name
+              value: container
+          - rename:
+              key: kubernetes_namespace_name
+              value: namespace
+          - rename:
+              key: kubernetes_pod_name
+              value: pod
+          - rename:
+              key: kubernetes_host
+              value: node
+          - remove:
+              key: stream
+          - remove:
+              key: logtag

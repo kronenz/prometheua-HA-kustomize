@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logging
+
+resources:
+  - ../../../base/opensearch-cluster
+  - ingress.yaml
+  - s3-snapshot-secret.yaml
+
+patchesStrategicMerge:
+  - opensearch-cluster-patch.yaml
+
+configMapGenerator:
+  - name: opensearch-config
+    namespace: logging
+    literals:
+      - cluster.name=cluster-01-opensearch
+      - node.store.allow_mmap=false

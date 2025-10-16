@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: opensearch-admin-credentials
+  namespace: logging
+type: Opaque
+stringData:
+  username: admin
+  password: admin123
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: opensearch-security-config
+  namespace: logging
+type: Opaque
+stringData:
+  internal_users.yml: |
+    admin:
+      hash: "$2y$12$K1U6DqKWHZZhZU6qQqHZJe5f5xGHZVHZZHZHZHZHZHZHZHZHZHZ"
+      reserved: true
+      backend_roles:
+        - admin
+      description: "Admin user"

@@ -44,14 +44,13 @@ spec:
             - --log.level=info
             - --query.replica-label=prometheus_replica
             - --query.replica-label=rule_replica
+            - --query.replica-label=receive_replica
             # Store endpoints for central cluster
             - --store=dnssrv+_grpc._tcp.prometheus-operated.monitoring.svc.cluster.local
             - --store=thanos-store.monitoring.svc.cluster.local:10901
             - --store=thanos-ruler.monitoring.svc.cluster.local:10901
-            # Store endpoints for edge clusters
-            - --store=192.168.101.211:10901
-            - --store=192.168.101.212:10901
-            - --store=192.168.101.213:10901
+            # Thanos Receiver (receives from edge Prometheus Agents)
+            - --store=dnssrv+_grpc._tcp.thanos-receiver-headless.monitoring.svc.cluster.local
           ports:
             - name: http
               containerPort: 10902

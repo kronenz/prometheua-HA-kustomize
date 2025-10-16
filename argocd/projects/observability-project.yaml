@@ -1,0 +1,30 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: observability
+  namespace: argocd
+spec:
+  description: Multi-cluster Observability Stack (Thanos, OpenSearch, Fluent)
+
+  sourceRepos:
+    - http://gitlab.k8s-cluster-01.miribit.lab/observability/thanos-multi-cluster.git
+    - https://prometheus-community.github.io/helm-charts
+    - https://grafana.github.io/helm-charts
+    - https://opensearch-project.github.io/helm-charts
+    - https://fluent.github.io/helm-charts
+
+  destinations:
+    - namespace: '*'
+      server: '*'
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  orphanedResources:
+    warn: true

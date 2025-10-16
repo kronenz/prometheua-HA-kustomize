@@ -1,0 +1,164 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-receiver
+  namespace: monitoring
+  labels:
+    app: thanos-receiver
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 10902
+      targetPort: 10902
+    - name: grpc
+      port: 10901
+      targetPort: 10901
+    - name: remote-write
+      port: 19291
+      targetPort: 19291
+  selector:
+    app: thanos-receiver
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-receiver-headless
+  namespace: monitoring
+  labels:
+    app: thanos-receiver
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http
+      port: 10902
+      targetPort: 10902
+    - name: grpc
+      port: 10901
+      targetPort: 10901
+    - name: remote-write
+      port: 19291
+      targetPort: 19291
+  selector:
+    app: thanos-receiver
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-receiver
+  namespace: monitoring
+  labels:
+    app: thanos-receiver
+spec:
+  serviceName: thanos-receiver-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: thanos-receiver
+  template:
+    metadata:
+      labels:
+        app: thanos-receiver
+    spec:
+      serviceAccountName: thanos-receiver
+      containers:
+        - name: thanos
+          image: quay.io/thanos/thanos:v0.37.2
+          args:
+            - receive
+            - --grpc-address=0.0.0.0:10901
+            - --http-address=0.0.0.0:10902
+            - --remote-write.address=0.0.0.0:19291
+            - --tsdb.path=/var/thanos/receive
+            - --label=receive_replica="$(POD_NAME)"
+            - --label=receive="true"
+            - --objstore.config-file=/etc/thanos/objstore.yml
+            - --tsdb.retention=2h
+            - --receive.replication-factor=2
+            - --receive.hashrings-file=/etc/thanos/hashrings.json
+            - --log.level=info
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: http
+              containerPort: 10902
+            - name: grpc
+              containerPort: 10901
+            - name: remote-write
+              containerPort: 19291
+          volumeMounts:
+            - name: data
+              mountPath: /var/thanos/receive
+            - name: objstore-config
+              mountPath: /etc/thanos
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 10902
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 10902
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+      volumes:
+        - name: objstore-config
+          secret:
+            secretName: thanos-objstore-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 50Gi
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: thanos-receiver
+  namespace: monitoring
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thanos-receiver-hashrings
+  namespace: monitoring
+data:
+  hashrings.json: |
+    [
+      {
+        "hashring": "default",
+        "endpoints": [
+          "thanos-receiver-0.thanos-receiver-headless.monitoring.svc.cluster.local:10901",
+          "thanos-receiver-1.thanos-receiver-headless.monitoring.svc.cluster.local:10901",
+          "thanos-receiver-2.thanos-receiver-headless.monitoring.svc.cluster.local:10901"
+        ]
+      }
+    ]

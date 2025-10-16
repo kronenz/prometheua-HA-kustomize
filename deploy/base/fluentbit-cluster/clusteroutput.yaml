@@ -1,0 +1,28 @@
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterOutput
+metadata:
+  name: opensearch
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  opensearch:
+    host: opensearch-cluster.logging.svc.cluster.local
+    port: 9200
+    httpUser:
+      valueFrom:
+        secretKeyRef:
+          name: opensearch-admin-credentials
+          key: username
+    httpPassword:
+      valueFrom:
+        secretKeyRef:
+          name: opensearch-admin-credentials
+          key: password
+    logstashFormat: true
+    logstashPrefix: kubernetes
+    timeKey: "@timestamp"
+    suppressTypeName: true
+    tls:
+      verify: false
