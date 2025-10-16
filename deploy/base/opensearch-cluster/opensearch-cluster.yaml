@@ -30,6 +30,11 @@ spec:
     - component: masters
       replicas: 3
       diskSize: 30Gi
+      roles:
+        - cluster_manager
+        - data
+      persistence:
+        emptyDir: {}
       resources:
         requests:
           memory: 2Gi
@@ -37,14 +42,16 @@ spec:
         limits:
           memory: 4Gi
           cpu: 1000m
-      roles:
-        - master
-        - data
       jvm: -Xmx1g -Xms1g
 
     - component: data
       replicas: 3
       diskSize: 100Gi
+      roles:
+        - data
+        - ingest
+      persistence:
+        emptyDir: {}
       resources:
         requests:
           memory: 4Gi
@@ -52,9 +59,6 @@ spec:
         limits:
           memory: 8Gi
           cpu: 2000m
-      roles:
-        - data
-        - ingest
       jvm: -Xmx2g -Xms2g
 
   security:
