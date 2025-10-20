@@ -6,6 +6,7 @@ namespace: monitoring
 resources:
   - namespace.yaml
   - thanos-receiver.yaml
+  - ingress.yaml
 
 configMapGenerator:
   - name: thanos-receiver-hashrings

@@ -78,7 +78,7 @@ spec:
             - --label=receive="true"
             - --objstore.config-file=/etc/thanos/objstore.yml
             - --tsdb.retention=2h
-            - --receive.replication-factor=2
+            - --receive.replication-factor=3
             - --receive.hashrings-file=/etc/thanos/hashrings.json
             - --log.level=info
           env:

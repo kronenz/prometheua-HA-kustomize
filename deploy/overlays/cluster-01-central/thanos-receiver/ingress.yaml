@@ -1,0 +1,22 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: thanos-receiver-ingress
+  namespace: monitoring
+  annotations:
+    # Cilium-specific annotations
+    io.cilium/lb-ipam-ips: "192.168.101.210"
+spec:
+  ingressClassName: cilium
+  rules:
+    - host: thanos-receiver.k8s-cluster-01.miribit.lab
+      http:
+        paths:
+          - path: /api/v1/receive
+            pathType: Prefix
+            backend:
+              service:
+                name: thanos-receiver
+                port:
+                  number: 19291
