@@ -138,16 +138,22 @@ grafana:
     monitoring: grafana-dashboard-ops-nav-monitoring
     dataplatform: grafana-dashboard-ops-nav-dataplatform
 
-  # Datasources - Thanos Query will be added in central cluster overlay
+  # Datasources - Thanos Query added for multi-cluster metrics
   datasources:
     datasources.yaml:
       apiVersion: 1
       datasources:
-        - name: Prometheus
+        - name: Thanos Query (Multi-Cluster)
+          type: prometheus
+          url: http://thanos-query.monitoring.svc.cluster.local:9090
+          access: proxy
+          isDefault: true
+          jsonData:
+            timeInterval: 30s
+        - name: Prometheus (Local)
           type: prometheus
           url: http://kube-prometheus-stack-prometheus.monitoring:9090
           access: proxy
-          isDefault: true
 
   resources:
     limits:
