@@ -6,7 +6,237 @@ Thanos Receiver는 Prometheus Remote Write 프로토콜로 메트릭을 수신�
 
 ---
 
-## 🏗️ Thanos Receiver 아키텍처
+## 🏗️ C4 Container Diagram (Thanos Receiver 상세)
+
+```mermaid
+C4Container
+    title Container Diagram - Thanos Receiver Pattern (Central Cluster)
+
+    Person(sre, "SRE", "시스템 운영자")
+
+    System_Boundary(edge, "Edge Clusters") {
+        Container(agent02, "Prometheus Agent", "Agent Mode", "Cluster-02<br/>메트릭 수집 및 Remote Write")
+        Container(agent03, "Prometheus Agent", "Agent Mode", "Cluster-03")
+        Container(agent04, "Prometheus Agent", "Agent Mode", "Cluster-04")
+    }
+
+    System_Boundary(central, "Central Cluster") {
+        Container_Boundary(ingress, "Ingress Layer") {
+            Container(nginx, "Nginx Ingress", "HTTP Router", "TLS 종료<br/>로드 밸런싱")
+        }
+
+        Container_Boundary(receiver_pool, "Thanos Receiver Pool") {
+            ContainerDb(recv0, "Receiver-0", "StatefulSet Pod", "Hashring Member<br/>TSDB + WAL<br/>PVC: 100Gi")
+            ContainerDb(recv1, "Receiver-1", "StatefulSet Pod", "Hashring Member<br/>TSDB + WAL<br/>PVC: 100Gi")
+            ContainerDb(recv2, "Receiver-2", "StatefulSet Pod", "Hashring Member<br/>TSDB + WAL<br/>PVC: 100Gi")
+
+            Container(hashring, "Hashring Config", "ConfigMap", "Consistent Hashing<br/>Tenant Routing")
+        }
+
+        Container_Boundary(query_layer, "Query Layer") {
+            Container(query, "Thanos Query", "Query Engine", "PromQL + Deduplication<br/>StoreAPI Gateway")
+            Container(store, "Thanos Store", "S3 Gateway", "Historical Data<br/>Index Cache")
+        }
+    }
+
+    ContainerDb(s3, "MinIO S3", "Object Storage", "TSDB Blocks<br/>Long-term Storage<br/>Erasure Coding")
+
+    Rel(agent02, nginx, "Remote Write", "HTTPS POST<br/>/api/v1/receive<br/>Protobuf")
+    Rel(agent03, nginx, "Remote Write", "HTTPS POST")
+    Rel(agent04, nginx, "Remote Write", "HTTPS POST")
+
+    Rel(nginx, recv0, "Route by Hashring", "HTTP<br/>Hash(tenant, series)")
+    Rel(nginx, recv1, "Route by Hashring", "HTTP")
+    Rel(nginx, recv2, "Route by Hashring", "HTTP")
+
+    Rel(recv0, hashring, "Read Config", "Watch ConfigMap")
+    Rel(recv1, hashring, "Read Config", "Watch ConfigMap")
+    Rel(recv2, hashring, "Read Config", "Watch ConfigMap")
+
+    Rel(recv0, recv1, "Replicate (RF=3)", "gRPC<br/>Forward Write")
+    Rel(recv0, recv2, "Replicate (RF=3)", "gRPC")
+    Rel(recv1, recv2, "Replicate (RF=3)", "gRPC")
+
+    Rel(recv0, s3, "Upload 2h Block", "S3 PUT<br/>Every 2 hours")
+    Rel(recv1, s3, "Upload 2h Block", "S3 PUT")
+    Rel(recv2, s3, "Upload 2h Block", "S3 PUT")
+
+    Rel(query, recv0, "Query Recent Data", "gRPC StoreAPI<br/>Last 2 hours")
+    Rel(query, recv1, "Query Recent Data", "gRPC StoreAPI")
+    Rel(query, recv2, "Query Recent Data", "gRPC StoreAPI")
+    Rel(query, store, "Query Historical", "gRPC StoreAPI<br/>>2 hours ago")
+    Rel(store, s3, "Read Blocks", "S3 GET<br/>Index + Chunks")
+
+    Rel(sre, query, "PromQL Query", "HTTP/9090<br/>Grafana")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+```
+
+---
+
+## 🔬 공학적 상세 설명
+
+### Hashring (Consistent Hashing) 동작 원리
+
+```mermaid
+graph LR
+    subgraph "시계열 데이터"
+        TS1["{__name__='cpu',<br/>cluster='cluster-02',<br/>pod='app-1'}"]
+        TS2["{__name__='memory',<br/>cluster='cluster-03',<br/>pod='app-2'}"]
+        TS3["{__name__='disk',<br/>cluster='cluster-04',<br/>pod='app-3'}"]
+    end
+
+    subgraph "Hash 링 (0~2^32-1)"
+        HASH[Hash Function<br/>murmur3/fnv1a]
+        RING[("Hash Ring<br/>360도 원형")]
+    end
+
+    subgraph "Receiver Nodes"
+        R0["Receiver-0<br/>Hash: 12345678"]
+        R1["Receiver-1<br/>Hash: 87654321"]
+        R2["Receiver-2<br/>Hash: 45678901"]
+    end
+
+    TS1 --> HASH
+    TS2 --> HASH
+    TS3 --> HASH
+
+    HASH -->|"hash(labels)"| RING
+    RING -->|"시계방향 가장 가까운 노드"| R0
+    RING -->|"시계방향 가장 가까운 노드"| R1
+    RING -->|"시계방향 가장 가까운 노드"| R2
+
+    style RING fill:#81c784
+    style HASH fill:#ffd54f
+```
+
+**동작 과정**:
+1. **Hash 계산**: 시계열의 레이블 조합을 해시 (예: `murmur3("{__name__='cpu',cluster='cluster-02',pod='app-1'}")`)
+2. **노드 배치**: 각 Receiver도 해시 링 상에 배치 (Pod 이름 기반)
+3. **노드 선택**: 시계열 해시값에서 시계방향으로 가장 가까운 Receiver 선택
+4. **일관성 보장**: 노드 추가/제거 시에도 대부분의 시계열은 동일한 노드로 라우팅 (K/N만 재분배)
+
+**수학적 특성**:
+- **부하 분산**: 각 노드는 평균 1/N의 데이터 담당
+- **재분배 최소화**: 노드 변경 시 평균 K/N 시계열만 이동 (K = 전체 시계열 수)
+- **Virtual Nodes**: 각 물리 노드를 여러 가상 노드로 배치하여 균등 분산 강화
+
+---
+
+### Replication Factor=3 동작 원리
+
+```mermaid
+sequenceDiagram
+    participant Agent as Prometheus Agent
+    participant LB as Load Balancer
+    participant R0 as Receiver-0 (Primary)
+    participant R1 as Receiver-1 (Replica)
+    participant R2 as Receiver-2 (Replica)
+    participant TSDB0 as TSDB-0
+    participant TSDB1 as TSDB-1
+    participant TSDB2 as TSDB-2
+
+    Agent->>LB: Remote Write Request<br/>(1000 samples)
+    LB->>R0: Route by Hashring<br/>(Hash → Receiver-0)
+
+    Note over R0: Primary Write 담당
+    R0->>R0: Hashring 계산<br/>Replication Factor=3
+
+    par Parallel Replication
+        R0->>R1: gRPC Forward Write<br/>(1000 samples)
+        R0->>R2: gRPC Forward Write<br/>(1000 samples)
+        R0->>TSDB0: Write to Local TSDB
+    end
+
+    par Parallel TSDB Writes
+        R1->>TSDB1: Write to Local TSDB
+        R2->>TSDB2: Write to Local TSDB
+    end
+
+    Note over R0,R2: 3개 노드 모두 동일 데이터 저장
+
+    alt All Replications Success
+        R1-->>R0: 200 OK
+        R2-->>R0: 200 OK
+        R0-->>LB: 200 OK (Quorum: 2/3)
+        LB-->>Agent: 200 OK
+    else Partial Failure (1 failed)
+        R1-->>R0: 200 OK
+        R2-->>R0: 500 Error
+        Note over R0: Quorum=2 충족<br/>Write Success
+        R0-->>LB: 200 OK
+    else Majority Failure (2+ failed)
+        R1-->>R0: 500 Error
+        R2-->>R0: 500 Error
+        Note over R0: Quorum 미달<br/>Write Failed
+        R0-->>LB: 500 Error
+        LB-->>Agent: 500 Error (Retry WAL)
+    end
+```
+
+**공학적 특성**:
+- **Write Amplification**: 실제 저장량 = 수신량 × Replication Factor (3배)
+- **Quorum Write**: 과반수(2/3) 성공 시 Write 성공 응답
+- **Read Repair**: Query 시 3개 복제본 비교하여 불일치 수정
+- **장애 허용**: 최대 (RF-1)개 노드 장애 시에도 데이터 손실 없음
+
+---
+
+### TSDB 블록 생성 및 업로드 주기
+
+```mermaid
+gantt
+    title TSDB 블록 생성 및 S3 업로드 타임라인
+    dateFormat HH:mm
+    axisFormat %H:%M
+
+    section Receiver-0 TSDB
+    2h Block-1 (00:00-02:00) :active, b1, 00:00, 2h
+    Upload Block-1 to S3    :crit, u1, 02:00, 15m
+    2h Block-2 (02:00-04:00) :active, b2, 02:00, 2h
+    Upload Block-2 to S3    :crit, u2, 04:00, 15m
+    2h Block-3 (04:00-06:00) :active, b3, 04:00, 2h
+
+    section Local Disk
+    Block-1 on Disk (15d retention) :done, d1, 00:00, 15d
+    Block-2 on Disk :done, d2, 02:00, 15d
+    Disk Cleanup (>15d blocks) :milestone, 02:15, 0
+
+    section S3 Storage
+    Block-1 in S3 (Permanent) :s1, 02:15, 178d
+    Block-2 in S3 :s2, 04:15, 178d
+    Compactor Downsampling (5m) :c1, 04:00, 2h
+```
+
+**블록 생성 공학**:
+1. **Head Block**: 메모리 내 최신 데이터 (0~2시간)
+   - Write Ahead Log (WAL) 보호
+   - mmap 기반 메모리 관리
+   - 청크 압축: Gorilla, XOR encoding
+
+2. **Block Compaction** (2시간마다):
+   ```
+   [00:00 ~ 02:00] → Block-1 (meta.json + index + chunks/)
+   - meta.json: 블록 메타데이터, 시간 범위, 통계
+   - index: 역색인 (label → posting list)
+   - chunks/: 압축된 시계열 데이터
+   ```
+
+3. **S3 Upload**:
+   - Multipart Upload (청크당 5MB)
+   - Exponential Backoff Retry
+   - 업로드 완료 후 로컬 블록 유지 (15일 retention)
+
+4. **Compactor Downsampling** (백그라운드):
+   ```
+   Raw (15s) → 5m (5분 집계) → 1h (1시간 집계)
+   - Count, Sum, Min, Max, Avg 보존
+   - Query 속도: 5m (2.5배 빠름), 1h (12배 빠름)
+   ```
+
+---
+
+## 🏗️ 기존 간략 아키텍처
 
 ```mermaid
 graph TB
