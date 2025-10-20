@@ -65,6 +65,10 @@ spec:
         app: thanos-receiver
     spec:
       serviceAccountName: thanos-receiver
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+        runAsNonRoot: true
       containers:
         - name: thanos
           image: quay.io/thanos/thanos:v0.37.2
@@ -76,10 +80,10 @@ spec:
             - --tsdb.path=/var/thanos/receive
             - --label=receive_replica="$(POD_NAME)"
             - --label=receive="true"
-            - --objstore.config-file=/etc/thanos/objstore.yml
+            - --objstore.config-file=/etc/thanos-config/objstore.yml
             - --tsdb.retention=2h
             - --receive.replication-factor=3
-            - --receive.hashrings-file=/etc/thanos/hashrings.json
+            - --receive.hashrings-file=/etc/thanos-hashrings/hashrings.json
             - --log.level=info
           env:
             - name: POD_NAME
@@ -100,8 +104,11 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/thanos/receive
+            - name: hashring-config
+              mountPath: /etc/thanos-hashrings
+              readOnly: true
             - name: objstore-config
-              mountPath: /etc/thanos
+              mountPath: /etc/thanos-config
               readOnly: true
           livenessProbe:
             httpGet:
@@ -123,9 +130,12 @@ spec:
               cpu: 1000m
               memory: 2Gi
       volumes:
+        - name: hashring-config
+          configMap:
+            name: thanos-receiver-hashrings
         - name: objstore-config
           secret:
-            secretName: thanos-objstore-config
+            secretName: thanos-s3-config
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -143,22 +153,3 @@ kind: ServiceAccount
 metadata:
   name: thanos-receiver
   namespace: monitoring
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: thanos-receiver-hashrings
-  namespace: monitoring
-data:
-  hashrings.json: |
-    [
-      {
-        "hashring": "default",
-        "endpoints": [
-          "thanos-receiver-0.thanos-receiver-headless.monitoring.svc.cluster.local:10901",
-          "thanos-receiver-1.thanos-receiver-headless.monitoring.svc.cluster.local:10901",
-          "thanos-receiver-2.thanos-receiver-headless.monitoring.svc.cluster.local:10901"
-        ]
-      }
-    ]
