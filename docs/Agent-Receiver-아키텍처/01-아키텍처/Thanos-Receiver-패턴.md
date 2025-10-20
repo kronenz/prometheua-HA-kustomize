@@ -221,7 +221,7 @@ spec:
 ```mermaid
 sequenceDiagram
     participant Agent as Prometheus Agent
-    participant Ingress as Nginx Ingress
+    participant Ingress as cillium Ingress
     participant Receiver as Thanos Receiver
     participant Hashring as Hashring Logic
 
