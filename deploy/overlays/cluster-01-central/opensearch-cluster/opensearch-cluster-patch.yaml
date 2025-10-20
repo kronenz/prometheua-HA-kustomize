@@ -17,11 +17,30 @@ spec:
 
   nodePools:
     - component: masters
-      replicas: 1
-      diskSize: 20Gi
+      replicas: 2
+      diskSize: 10Gi
       roles:
         - cluster_manager
         - data
+      persistence:
+        pvc:
+          storageClass: longhorn
+          accessModes:
+            - ReadWriteOnce
+      resources:
+        requests:
+          memory: 1Gi
+          cpu: 250m
+        limits:
+          memory: 2Gi
+          cpu: 500m
+
+    - component: data
+      replicas: 2
+      diskSize: 20Gi
+      roles:
+        - data
+        - ingest
       persistence:
         pvc:
           storageClass: longhorn
@@ -34,22 +53,3 @@ spec:
         limits:
           memory: 4Gi
           cpu: 1000m
-
-    - component: data
-      replicas: 1
-      diskSize: 50Gi
-      roles:
-        - data
-        - ingest
-      persistence:
-        pvc:
-          storageClass: longhorn
-          accessModes:
-            - ReadWriteOnce
-      resources:
-        requests:
-          memory: 4Gi
-          cpu: 1000m
-        limits:
-          memory: 8Gi
-          cpu: 2000m

@@ -536,15 +536,20 @@ kubectl get clusteroutput -n logging -o yaml
 
 ---
 
-## 문서
+## 📚 문서
 
-- [상세 아키텍처](docs/OPERATOR_BASED_MULTI_CLUSTER_OBSERVABILITY.md)
-- [엣지 클러스터 구성 가이드](docs/EDGE_CLUSTER_CONFIG.md) ⭐ NEW
-- [아키텍처 변경 요약](ARCHITECTURE_CHANGE_SUMMARY.md) ⭐ NEW
-- [배포 가이드](docs/DEPLOYMENT_GUIDE.md)
-- [운영 가이드](docs/OPERATIONS.md)
-- [트러블슈팅](docs/TROUBLESHOOTING.md)
-- [모범 사례](docs/BEST_PRACTICES.md)
+### 빠른 시작
+- **[빠른 시작 가이드](docs/빠른-시작-가이드.md)** - 5분 안에 시작하기
+- **[문서 전체 가이드](docs/README.md)** - 모든 문서 네비게이션
+
+### 주제별 문서 (한글 재구조화 ⭐ NEW)
+- **[01-아키텍처-개요](docs/01-아키텍처-개요/)** - 시스템 전체 이해
+- **[02-프로메테우스-사이드카-패턴](docs/02-프로메테우스-사이드카-패턴/)** - Sidecar 패턴 배포
+- **[03-프로메테우스-에이전트-패턴](docs/03-프로메테우스-에이전트-패턴/)** - Agent 패턴 배포
+- **[04-GitOps-배포](docs/04-GitOps-배포/)** - ArgoCD 기반 배포
+- **[05-운영-가이드](docs/05-운영-가이드/)** - 일상 운영 및 트러블슈팅
+- **[06-확장-아키텍처](docs/06-확장-아키텍처/)** - 대규모 환경 확장
+- **[07-참고자료](docs/07-참고자료/)** - 추가 기술 문서
 
 ---
 

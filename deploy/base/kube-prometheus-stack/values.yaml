@@ -43,7 +43,7 @@ prometheus:
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 15Gi
+              storage: 5Gi
 
     resources:
       limits:
@@ -91,7 +91,7 @@ alertmanager:
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 5Gi
+              storage: 2Gi
 
     resources:
       limits:
@@ -110,7 +110,7 @@ grafana:
   persistence:
     enabled: true
     storageClassName: longhorn
-    size: 5Gi
+    size: 2Gi
 
   # Grafana admin credentials
   adminPassword: admin123

@@ -60,7 +60,7 @@ helmCharts:
                 accessModes: ["ReadWriteOnce"]
                 resources:
                   requests:
-                    storage: 15Gi
+                    storage: 3Gi
 
           resources:
             limits:
@@ -103,7 +103,7 @@ helmCharts:
                 accessModes: ["ReadWriteOnce"]
                 resources:
                   requests:
-                    storage: 5Gi
+                    storage: 1Gi
 
           resources:
             limits:
@@ -122,7 +122,7 @@ helmCharts:
         persistence:
           enabled: true
           storageClassName: longhorn
-          size: 5Gi
+          size: 1Gi
 
         ingress:
           enabled: true

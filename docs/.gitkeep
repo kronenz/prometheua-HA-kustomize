@@ -1,0 +1,8 @@
+# 문서 재구조화 완료 (2025-10-20)
+
+이 디렉토리는 Prometheus + Thanos 아키텍처를 두 가지 패턴으로 구분하여 재정리되었습니다.
+
+- Prometheus + Thanos Sidecar 패턴: 02-프로메테우스-사이드카-패턴/
+- Prometheus Agent + Receiver 패턴: 03-프로메테우스-에이전트-패턴/
+
+자세한 내용은 README.md를 참조하세요.
