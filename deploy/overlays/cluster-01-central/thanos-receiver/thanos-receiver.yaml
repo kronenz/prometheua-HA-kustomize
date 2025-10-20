@@ -82,7 +82,8 @@ spec:
             - --label=receive="true"
             - --objstore.config-file=/etc/thanos-config/objstore.yml
             - --tsdb.retention=2h
-            - --receive.replication-factor=3
+            - --receive.replication-factor=1
+            - --receive.local-endpoint=$(POD_NAME).thanos-receiver-headless.$(POD_NAMESPACE).svc.cluster.local:10901
             - --receive.hashrings-file=/etc/thanos-hashrings/hashrings.json
             - --log.level=info
           env:
