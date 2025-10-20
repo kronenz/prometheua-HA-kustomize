@@ -27,70 +27,78 @@ After (Agent Mode + Thanos Receiver):
 
 ---
 
-## 🏗️ C4 Container Diagram (Thanos Receiver 상세)
+## 🏗️ Thanos Receiver 패턴 상세 아키텍처
 
 ```mermaid
-C4Container
-    title Container Diagram - Thanos Receiver Pattern (Central Cluster)
+graph TB
+    SRE[👤 SRE/DevOps<br/>Grafana 사용자]
 
-    Person(sre, "SRE", "시스템 운영자")
+    subgraph EdgeClusters["📡 Edge Clusters"]
+        AGENT02["Prometheus Agent<br/>Cluster-02<br/>메트릭 수집 및 Remote Write"]
+        AGENT03["Prometheus Agent<br/>Cluster-03"]
+        AGENT04["Prometheus Agent<br/>Cluster-04"]
+    end
 
-    System_Boundary(edge, "Edge Clusters") {
-        Container(agent02, "Prometheus Agent", "Agent Mode", "Cluster-02<br/>메트릭 수집 및 Remote Write")
-        Container(agent03, "Prometheus Agent", "Agent Mode", "Cluster-03")
-        Container(agent04, "Prometheus Agent", "Agent Mode", "Cluster-04")
-    }
+    subgraph CentralCluster["🎯 Central Cluster"]
+        subgraph IngressLayer["Ingress Layer"]
+            NGINX["Nginx Ingress<br/>HTTP Router<br/>TLS 종료 + LB"]
+        end
 
-    System_Boundary(central, "Central Cluster") {
-        Container_Boundary(ingress, "Ingress Layer") {
-            Container(nginx, "Nginx Ingress", "HTTP Router", "TLS 종료<br/>로드 밸런싱")
-        }
+        subgraph ReceiverPool["Thanos Receiver Pool"]
+            RECV0[("Receiver-0<br/>StatefulSet Pod<br/>TSDB + WAL<br/>PVC: 100Gi")]
+            RECV1[("Receiver-1<br/>StatefulSet Pod<br/>TSDB + WAL<br/>PVC: 100Gi")]
+            RECV2[("Receiver-2<br/>StatefulSet Pod<br/>TSDB + WAL<br/>PVC: 100Gi")]
+            HASHRING["📋 Hashring Config<br/>ConfigMap<br/>Consistent Hashing<br/>Tenant Routing"]
+        end
 
-        Container_Boundary(receiver_pool, "Thanos Receiver Pool") {
-            ContainerDb(recv0, "Receiver-0", "StatefulSet Pod", "Hashring Member<br/>TSDB + WAL<br/>PVC: 100Gi")
-            ContainerDb(recv1, "Receiver-1", "StatefulSet Pod", "Hashring Member<br/>TSDB + WAL<br/>PVC: 100Gi")
-            ContainerDb(recv2, "Receiver-2", "StatefulSet Pod", "Hashring Member<br/>TSDB + WAL<br/>PVC: 100Gi")
+        subgraph QueryLayer["Query Layer"]
+            QUERY["Thanos Query<br/>PromQL Engine<br/>Deduplication<br/>StoreAPI Gateway"]
+            STORE["Thanos Store<br/>S3 Gateway<br/>Historical Data<br/>Index Cache"]
+        end
+    end
 
-            Container(hashring, "Hashring Config", "ConfigMap", "Consistent Hashing<br/>Tenant Routing")
-        }
+    S3[("💾 MinIO S3<br/>Object Storage<br/>TSDB Blocks<br/>Long-term + Erasure Coding")]
 
-        Container_Boundary(query_layer, "Query Layer") {
-            Container(query, "Thanos Query", "Query Engine", "PromQL + Deduplication<br/>StoreAPI Gateway")
-            Container(store, "Thanos Store", "S3 Gateway", "Historical Data<br/>Index Cache")
-        }
-    }
+    %% Remote Write flow
+    AGENT02 -.->|"Remote Write<br/>HTTPS POST<br/>/api/v1/receive<br/>Protobuf"| NGINX
+    AGENT03 -.->|"Remote Write<br/>HTTPS POST"| NGINX
+    AGENT04 -.->|"Remote Write<br/>HTTPS POST"| NGINX
 
-    ContainerDb(s3, "MinIO S3", "Object Storage", "TSDB Blocks<br/>Long-term Storage<br/>Erasure Coding")
+    %% Hashring routing
+    NGINX -->|"Route by Hashring<br/>Hash(tenant, series)"| RECV0
+    NGINX -->|"Route by Hashring"| RECV1
+    NGINX -->|"Route by Hashring"| RECV2
 
-    Rel(agent02, nginx, "Remote Write", "HTTPS POST<br/>/api/v1/receive<br/>Protobuf")
-    Rel(agent03, nginx, "Remote Write", "HTTPS POST")
-    Rel(agent04, nginx, "Remote Write", "HTTPS POST")
+    %% Hashring config watch
+    RECV0 -.->|"Watch ConfigMap"| HASHRING
+    RECV1 -.->|"Watch ConfigMap"| HASHRING
+    RECV2 -.->|"Watch ConfigMap"| HASHRING
 
-    Rel(nginx, recv0, "Route by Hashring", "HTTP<br/>Hash(tenant, series)")
-    Rel(nginx, recv1, "Route by Hashring", "HTTP")
-    Rel(nginx, recv2, "Route by Hashring", "HTTP")
+    %% Replication (RF=3)
+    RECV0 <-.->|"Replicate<br/>RF=3<br/>gRPC"| RECV1
+    RECV0 <-.->|"Replicate<br/>RF=3<br/>gRPC"| RECV2
+    RECV1 <-.->|"Replicate<br/>RF=3<br/>gRPC"| RECV2
 
-    Rel(recv0, hashring, "Read Config", "Watch ConfigMap")
-    Rel(recv1, hashring, "Read Config", "Watch ConfigMap")
-    Rel(recv2, hashring, "Read Config", "Watch ConfigMap")
+    %% S3 upload
+    RECV0 -->|"Upload 2h Block<br/>S3 PUT<br/>Every 2h"| S3
+    RECV1 -->|"Upload 2h Block<br/>S3 PUT"| S3
+    RECV2 -->|"Upload 2h Block<br/>S3 PUT"| S3
 
-    Rel(recv0, recv1, "Replicate (RF=3)", "gRPC<br/>Forward Write")
-    Rel(recv0, recv2, "Replicate (RF=3)", "gRPC")
-    Rel(recv1, recv2, "Replicate (RF=3)", "gRPC")
+    %% Query flow
+    SRE -->|"PromQL Query<br/>HTTP:9090<br/>Grafana"| QUERY
+    QUERY -->|"Query Recent<br/>gRPC StoreAPI<br/>Last 2 hours"| RECV0
+    QUERY -->|"Query Recent<br/>gRPC StoreAPI"| RECV1
+    QUERY -->|"Query Recent<br/>gRPC StoreAPI"| RECV2
+    QUERY -->|"Query Historical<br/>gRPC StoreAPI<br/>>2 hours ago"| STORE
+    STORE <-->|"Read Blocks<br/>S3 GET<br/>Index + Chunks"| S3
 
-    Rel(recv0, s3, "Upload 2h Block", "S3 PUT<br/>Every 2 hours")
-    Rel(recv1, s3, "Upload 2h Block", "S3 PUT")
-    Rel(recv2, s3, "Upload 2h Block", "S3 PUT")
-
-    Rel(query, recv0, "Query Recent Data", "gRPC StoreAPI<br/>Last 2 hours")
-    Rel(query, recv1, "Query Recent Data", "gRPC StoreAPI")
-    Rel(query, recv2, "Query Recent Data", "gRPC StoreAPI")
-    Rel(query, store, "Query Historical", "gRPC StoreAPI<br/>>2 hours ago")
-    Rel(store, s3, "Read Blocks", "S3 GET<br/>Index + Chunks")
-
-    Rel(sre, query, "PromQL Query", "HTTP/9090<br/>Grafana")
-
-    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+    style RECV0 fill:#4fc3f7,stroke:#0288d1,stroke-width:3px
+    style RECV1 fill:#4fc3f7,stroke:#0288d1,stroke-width:3px
+    style RECV2 fill:#4fc3f7,stroke:#0288d1,stroke-width:3px
+    style HASHRING fill:#ffd54f,stroke:#f57f17,stroke-width:2px
+    style QUERY fill:#66bb6a,stroke:#388e3c,stroke-width:2px
+    style STORE fill:#66bb6a,stroke:#388e3c,stroke-width:2px
+    style S3 fill:#ff7043,stroke:#d84315,stroke-width:3px
 ```
 
 ---
