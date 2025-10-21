@@ -20,3 +20,4 @@ resources:
   - grafana-dashboard-ops-nav-kubernetes.yaml
   - grafana-dashboard-ops-nav-monitoring.yaml
   - grafana-dashboard-ops-nav-dataplatform.yaml
+  - grafana-dashboard-multi-cluster-overview.yaml
