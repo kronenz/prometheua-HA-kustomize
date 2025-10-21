@@ -7,17 +7,20 @@ metadata:
   labels:
     app: thanos-receiver
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
     - name: http
       port: 10902
       targetPort: 10902
+      nodePort: 30902
     - name: grpc
       port: 10901
       targetPort: 10901
+      nodePort: 30901
     - name: remote-write
       port: 19291
       targetPort: 19291
+      nodePort: 31291
   selector:
     app: thanos-receiver
 
@@ -46,28 +49,6 @@ spec:
     app: thanos-receiver
 
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: thanos-receiver-ingress
-  namespace: monitoring
-  annotations:
-    io.cilium/lb-ipam-ips: "192.168.101.211"
-spec:
-  ingressClassName: cilium
-  rules:
-    - host: thanos-receiver.k8s-cluster-01.miribit.lab
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: thanos-receiver
-                port:
-                  number: 19291
-
----
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -77,7 +58,7 @@ metadata:
     app: thanos-receiver
 spec:
   serviceName: thanos-receiver-headless
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: thanos-receiver
@@ -87,6 +68,8 @@ spec:
         app: thanos-receiver
     spec:
       serviceAccountName: thanos-receiver
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       securityContext:
         fsGroup: 65534
         runAsUser: 65534
@@ -120,10 +103,13 @@ spec:
           ports:
             - name: http
               containerPort: 10902
+              hostPort: 10902
             - name: grpc
               containerPort: 10901
+              hostPort: 10901
             - name: remote-write
               containerPort: 19291
+              hostPort: 19291
           volumeMounts:
             - name: data
               mountPath: /var/thanos/receive
@@ -176,21 +162,3 @@ kind: ServiceAccount
 metadata:
   name: thanos-receiver
   namespace: monitoring
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: thanos-receiver-hashrings
-  namespace: monitoring
-data:
-  hashrings.json: |
-    [
-      {
-        "hashring": "default",
-        "tenants": ["default-tenant"],
-        "endpoints": [
-          "thanos-receiver-0.thanos-receiver-headless.monitoring.svc.cluster.local:10901"
-        ]
-      }
-    ]
