@@ -4,497 +4,111 @@ metadata:
   name: grafana-dashboard-multi-cluster-overview
   namespace: monitoring
   labels:
-    grafana_dashboard: "1"
+    grafana_dashboard: '1'
 data:
-  multi-cluster-overview.json: |-
-    {
-      "dashboard": {
-        "uid": "multi-cluster-overview",
-        "title": "🌐 멀티클러스터 통합 모니터링",
-        "tags": ["multi-cluster", "thanos", "overview"],
-        "timezone": "browser",
-        "schemaVersion": 27,
-        "version": 1,
-        "refresh": "30s",
-        "templating": {
-          "list": [
-            {
-              "name": "cluster",
-              "type": "query",
-              "label": "Cluster",
-              "datasource": "Prometheus",
-              "query": "label_values(kube_node_info, cluster)",
-              "refresh": 1,
-              "multi": true,
-              "includeAll": true,
-              "current": {
-                "text": "All",
-                "value": "$__all"
-              }
-            },
-            {
-              "name": "node",
-              "type": "query",
-              "label": "Node",
-              "datasource": "Prometheus",
-              "query": "label_values(kube_node_info{cluster=~\"$cluster\"}, node)",
-              "refresh": 1,
-              "multi": true,
-              "includeAll": true,
-              "current": {
-                "text": "All",
-                "value": "$__all"
-              }
-            }
-          ]
-        },
-        "panels": [
-          {
-            "id": 1,
-            "type": "text",
-            "title": "",
-            "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3},
-            "options": {
-              "mode": "html",
-              "content": "<div style=\"text-align: center; padding: 24px; background: linear-gradient(135deg, #1a1d29 0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid rgba(100,210,255,0.15);\">\n  <h1 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 36px; font-weight: 700; color: #ffffff; margin: 0 0 8px 0;\">🌐 멀티클러스터 통합 모니터링</h1>\n  <p style=\"font-size: 14px; color: #a0aec0; margin: 0;\">Multi-Cluster Unified Monitoring Dashboard</p>\n</div>"
-            }
-          },
-          {
-            "id": 2,
-            "type": "stat",
-            "title": "총 클러스터 수",
-            "gridPos": {"x": 0, "y": 3, "w": 6, "h": 4},
-            "targets": [
-              {
-                "expr": "count(count by (cluster) (kube_node_info))",
-                "refId": "A"
-              }
-            ],
-            "options": {
-              "graphMode": "none",
-              "colorMode": "value",
-              "orientation": "auto",
-              "textMode": "value_and_name"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "short",
-                "color": {"mode": "thresholds"},
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {"value": null, "color": "green"},
-                    {"value": 3, "color": "yellow"},
-                    {"value": 5, "color": "red"}
-                  ]
-                }
-              }
-            }
-          },
-          {
-            "id": 3,
-            "type": "stat",
-            "title": "총 노드 수",
-            "gridPos": {"x": 6, "y": 3, "w": 6, "h": 4},
-            "targets": [
-              {
-                "expr": "count(kube_node_info{cluster=~\"$cluster\"})",
-                "refId": "A"
-              }
-            ],
-            "options": {
-              "graphMode": "none",
-              "colorMode": "value",
-              "orientation": "auto",
-              "textMode": "value_and_name"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "short",
-                "color": {"mode": "thresholds"},
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {"value": null, "color": "green"}
-                  ]
-                }
-              }
-            }
-          },
-          {
-            "id": 4,
-            "type": "stat",
-            "title": "총 Pod 수",
-            "gridPos": {"x": 12, "y": 3, "w": 6, "h": 4},
-            "targets": [
-              {
-                "expr": "sum(kube_pod_info{cluster=~\"$cluster\"})",
-                "refId": "A"
-              }
-            ],
-            "options": {
-              "graphMode": "area",
-              "colorMode": "value",
-              "orientation": "auto",
-              "textMode": "value_and_name"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "short",
-                "color": {"mode": "palette-classic"}
-              }
-            }
-          },
-          {
-            "id": 5,
-            "type": "stat",
-            "title": "총 Namespace 수",
-            "gridPos": {"x": 18, "y": 3, "w": 6, "h": 4},
-            "targets": [
-              {
-                "expr": "count(count by (namespace, cluster) (kube_namespace_labels{cluster=~\"$cluster\"}))",
-                "refId": "A"
-              }
-            ],
-            "options": {
-              "graphMode": "none",
-              "colorMode": "value",
-              "orientation": "auto",
-              "textMode": "value_and_name"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "short",
-                "color": {"mode": "thresholds"},
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {"value": null, "color": "blue"}
-                  ]
-                }
-              }
-            }
-          },
-          {
-            "id": 6,
-            "type": "timeseries",
-            "title": "클러스터별 CPU 사용률",
-            "gridPos": {"x": 0, "y": 7, "w": 12, "h": 8},
-            "targets": [
-              {
-                "expr": "sum by (cluster) (rate(container_cpu_usage_seconds_total{cluster=~\"$cluster\", container!=\"\"}[5m])) / sum by (cluster) (machine_cpu_cores{cluster=~\"$cluster\"}) * 100",
-                "refId": "A",
-                "legendFormat": "{{cluster}}"
-              }
-            ],
-            "fieldConfig": {
-              "defaults": {
-                "unit": "percent",
-                "color": {"mode": "palette-classic"},
-                "custom": {
-                  "axisLabel": "CPU Usage %",
-                  "drawStyle": "line",
-                  "lineInterpolation": "smooth",
-                  "fillOpacity": 10,
-                  "showPoints": "never"
-                }
-              }
-            },
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {"mode": "multi"}
-            }
-          },
-          {
-            "id": 7,
-            "type": "timeseries",
-            "title": "클러스터별 메모리 사용률",
-            "gridPos": {"x": 12, "y": 7, "w": 12, "h": 8},
-            "targets": [
-              {
-                "expr": "sum by (cluster) (container_memory_working_set_bytes{cluster=~\"$cluster\", container!=\"\"}) / sum by (cluster) (machine_memory_bytes{cluster=~\"$cluster\"}) * 100",
-                "refId": "A",
-                "legendFormat": "{{cluster}}"
-              }
-            ],
-            "fieldConfig": {
-              "defaults": {
-                "unit": "percent",
-                "color": {"mode": "palette-classic"},
-                "custom": {
-                  "axisLabel": "Memory Usage %",
-                  "drawStyle": "line",
-                  "lineInterpolation": "smooth",
-                  "fillOpacity": 10,
-                  "showPoints": "never"
-                }
-              }
-            },
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              },
-              "tooltip": {"mode": "multi"}
-            }
-          },
-          {
-            "id": 8,
-            "type": "table",
-            "title": "클러스터별 노드 상태",
-            "gridPos": {"x": 0, "y": 15, "w": 12, "h": 8},
-            "targets": [
-              {
-                "expr": "kube_node_info{cluster=~\"$cluster\"}",
-                "refId": "A",
-                "format": "table",
-                "instant": true
-              },
-              {
-                "expr": "kube_node_status_condition{cluster=~\"$cluster\", condition=\"Ready\", status=\"true\"}",
-                "refId": "B",
-                "format": "table",
-                "instant": true
-              }
-            ],
-            "transformations": [
-              {
-                "id": "merge",
-                "options": {}
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {
-                    "Time": true,
-                    "__name__": true,
-                    "container": true,
-                    "endpoint": true,
-                    "instance": true,
-                    "job": true,
-                    "namespace": true,
-                    "pod": true,
-                    "service": true
-                  },
-                  "indexByName": {
-                    "cluster": 0,
-                    "node": 1,
-                    "kernel_version": 2,
-                    "kubelet_version": 3,
-                    "os_image": 4,
-                    "condition": 5,
-                    "status": 6
-                  },
-                  "renameByName": {
-                    "cluster": "Cluster",
-                    "node": "Node",
-                    "kernel_version": "Kernel",
-                    "kubelet_version": "Kubelet",
-                    "os_image": "OS",
-                    "condition": "Condition",
-                    "status": "Status"
-                  }
-                }
-              }
-            ],
-            "options": {
-              "showHeader": true,
-              "sortBy": [{"displayName": "Cluster", "desc": false}]
-            }
-          },
-          {
-            "id": 9,
-            "type": "bargauge",
-            "title": "클러스터별 Pod 수",
-            "gridPos": {"x": 12, "y": 15, "w": 12, "h": 8},
-            "targets": [
-              {
-                "expr": "sum by (cluster) (kube_pod_info{cluster=~\"$cluster\"})",
-                "refId": "A",
-                "legendFormat": "{{cluster}}"
-              }
-            ],
-            "options": {
-              "orientation": "horizontal",
-              "displayMode": "gradient",
-              "showUnfilled": true
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "short",
-                "color": {"mode": "palette-classic"},
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {"value": null, "color": "green"},
-                    {"value": 50, "color": "yellow"},
-                    {"value": 100, "color": "red"}
-                  ]
-                }
-              }
-            }
-          },
-          {
-            "id": 10,
-            "type": "timeseries",
-            "title": "클러스터별 네트워크 수신 (Bytes/s)",
-            "gridPos": {"x": 0, "y": 23, "w": 12, "h": 8},
-            "targets": [
-              {
-                "expr": "sum by (cluster) (rate(container_network_receive_bytes_total{cluster=~\"$cluster\"}[5m]))",
-                "refId": "A",
-                "legendFormat": "{{cluster}}"
-              }
-            ],
-            "fieldConfig": {
-              "defaults": {
-                "unit": "Bps",
-                "color": {"mode": "palette-classic"},
-                "custom": {
-                  "axisLabel": "Receive Bytes/s",
-                  "drawStyle": "line",
-                  "lineInterpolation": "smooth",
-                  "fillOpacity": 10
-                }
-              }
-            },
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              }
-            }
-          },
-          {
-            "id": 11,
-            "type": "timeseries",
-            "title": "클러스터별 네트워크 송신 (Bytes/s)",
-            "gridPos": {"x": 12, "y": 23, "w": 12, "h": 8},
-            "targets": [
-              {
-                "expr": "sum by (cluster) (rate(container_network_transmit_bytes_total{cluster=~\"$cluster\"}[5m]))",
-                "refId": "A",
-                "legendFormat": "{{cluster}}"
-              }
-            ],
-            "fieldConfig": {
-              "defaults": {
-                "unit": "Bps",
-                "color": {"mode": "palette-classic"},
-                "custom": {
-                  "axisLabel": "Transmit Bytes/s",
-                  "drawStyle": "line",
-                  "lineInterpolation": "smooth",
-                  "fillOpacity": 10
-                }
-              }
-            },
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
-              }
-            }
-          },
-          {
-            "id": 12,
-            "type": "table",
-            "title": "클러스터별 리소스 현황",
-            "gridPos": {"x": 0, "y": 31, "w": 24, "h": 8},
-            "targets": [
-              {
-                "expr": "sum by (cluster) (machine_cpu_cores{cluster=~\"$cluster\"})",
-                "refId": "A",
-                "format": "table",
-                "instant": true
-              },
-              {
-                "expr": "sum by (cluster) (machine_memory_bytes{cluster=~\"$cluster\"})",
-                "refId": "B",
-                "format": "table",
-                "instant": true
-              },
-              {
-                "expr": "sum by (cluster) (kube_node_info{cluster=~\"$cluster\"})",
-                "refId": "C",
-                "format": "table",
-                "instant": true
-              },
-              {
-                "expr": "sum by (cluster) (kube_pod_info{cluster=~\"$cluster\"})",
-                "refId": "D",
-                "format": "table",
-                "instant": true
-              },
-              {
-                "expr": "sum by (cluster) (rate(container_cpu_usage_seconds_total{cluster=~\"$cluster\", container!=\"\"}[5m]))",
-                "refId": "E",
-                "format": "table",
-                "instant": true
-              },
-              {
-                "expr": "sum by (cluster) (container_memory_working_set_bytes{cluster=~\"$cluster\", container!=\"\"})",
-                "refId": "F",
-                "format": "table",
-                "instant": true
-              }
-            ],
-            "transformations": [
-              {
-                "id": "merge",
-                "options": {}
-              },
-              {
-                "id": "organize",
-                "options": {
-                  "excludeByName": {
-                    "Time": true
-                  },
-                  "indexByName": {
-                    "cluster": 0,
-                    "Value #A": 1,
-                    "Value #B": 2,
-                    "Value #C": 3,
-                    "Value #D": 4,
-                    "Value #E": 5,
-                    "Value #F": 6
-                  },
-                  "renameByName": {
-                    "cluster": "Cluster",
-                    "Value #A": "Total CPU Cores",
-                    "Value #B": "Total Memory",
-                    "Value #C": "Nodes",
-                    "Value #D": "Pods",
-                    "Value #E": "CPU Usage",
-                    "Value #F": "Memory Usage"
-                  }
-                }
-              }
-            ],
-            "options": {
-              "showHeader": true,
-              "sortBy": [{"displayName": "Cluster", "desc": false}]
-            },
-            "fieldConfig": {
-              "overrides": [
-                {
-                  "matcher": {"id": "byName", "options": "Total Memory"},
-                  "properties": [{"id": "unit", "value": "bytes"}]
-                },
-                {
-                  "matcher": {"id": "byName", "options": "Memory Usage"},
-                  "properties": [{"id": "unit", "value": "bytes"}]
-                }
-              ]
-            }
-          }
-        ]
-      }
-    }
+  multi-cluster-overview.json: '{"uid": "multi-cluster-overview", "title": "🌐 멀티클러스터
+    통합 모니터링", "tags": ["multi-cluster", "thanos", "overview"], "timezone": "browser",
+    "schemaVersion": 27, "version": 1, "refresh": "30s", "templating": {"list": [{"name":
+    "cluster", "type": "query", "label": "Cluster", "datasource": "Prometheus", "query":
+    "label_values(kube_node_info, cluster)", "refresh": 1, "multi": true, "includeAll":
+    true, "current": {"text": "All", "value": "$__all"}}, {"name": "node", "type":
+    "query", "label": "Node", "datasource": "Prometheus", "query": "label_values(kube_node_info{cluster=~\"$cluster\"},
+    node)", "refresh": 1, "multi": true, "includeAll": true, "current": {"text": "All",
+    "value": "$__all"}}]}, "panels": [{"id": 1, "type": "text", "title": "", "gridPos":
+    {"x": 0, "y": 0, "w": 24, "h": 3}, "options": {"mode": "html", "content": "<div
+    style=\"text-align: center; padding: 24px; background: linear-gradient(135deg,
+    #1a1d29 0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    border: 1px solid rgba(100,210,255,0.15);\">\n  <h1 style=\"font-family: ''BMDOHYEON'',
+    sans-serif; font-size: 36px; font-weight: 700; color: #ffffff; margin: 0 0 8px
+    0;\">🌐 멀티클러스터 통합 모니터링</h1>\n  <p style=\"font-size: 14px; color: #a0aec0; margin:
+    0;\">Multi-Cluster Unified Monitoring Dashboard</p>\n</div>"}}, {"id": 2, "type":
+    "stat", "title": "총 클러스터 수", "gridPos": {"x": 0, "y": 3, "w": 6, "h": 4}, "targets":
+    [{"expr": "count(count by (cluster) (kube_node_info))", "refId": "A"}], "options":
+    {"graphMode": "none", "colorMode": "value", "orientation": "auto", "textMode":
+    "value_and_name"}, "fieldConfig": {"defaults": {"unit": "short", "color": {"mode":
+    "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color":
+    "green"}, {"value": 3, "color": "yellow"}, {"value": 5, "color": "red"}]}}}},
+    {"id": 3, "type": "stat", "title": "총 노드 수", "gridPos": {"x": 6, "y": 3, "w":
+    6, "h": 4}, "targets": [{"expr": "count(kube_node_info{cluster=~\"$cluster\"})",
+    "refId": "A"}], "options": {"graphMode": "none", "colorMode": "value", "orientation":
+    "auto", "textMode": "value_and_name"}, "fieldConfig": {"defaults": {"unit": "short",
+    "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value":
+    null, "color": "green"}]}}}}, {"id": 4, "type": "stat", "title": "총 Pod 수", "gridPos":
+    {"x": 12, "y": 3, "w": 6, "h": 4}, "targets": [{"expr": "sum(kube_pod_info{cluster=~\"$cluster\"})",
+    "refId": "A"}], "options": {"graphMode": "area", "colorMode": "value", "orientation":
+    "auto", "textMode": "value_and_name"}, "fieldConfig": {"defaults": {"unit": "short",
+    "color": {"mode": "palette-classic"}}}}, {"id": 5, "type": "stat", "title": "총
+    Namespace 수", "gridPos": {"x": 18, "y": 3, "w": 6, "h": 4}, "targets": [{"expr":
+    "count(count by (namespace, cluster) (kube_namespace_labels{cluster=~\"$cluster\"}))",
+    "refId": "A"}], "options": {"graphMode": "none", "colorMode": "value", "orientation":
+    "auto", "textMode": "value_and_name"}, "fieldConfig": {"defaults": {"unit": "short",
+    "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value":
+    null, "color": "blue"}]}}}}, {"id": 6, "type": "timeseries", "title": "클러스터별 CPU
+    사용률", "gridPos": {"x": 0, "y": 7, "w": 12, "h": 8}, "targets": [{"expr": "sum
+    by (cluster) (rate(container_cpu_usage_seconds_total{cluster=~\"$cluster\", container!=\"\"}[5m]))
+    / sum by (cluster) (machine_cpu_cores{cluster=~\"$cluster\"}) * 100", "refId":
+    "A", "legendFormat": "{{cluster}}"}], "fieldConfig": {"defaults": {"unit": "percent",
+    "color": {"mode": "palette-classic"}, "custom": {"axisLabel": "CPU Usage %", "drawStyle":
+    "line", "lineInterpolation": "smooth", "fillOpacity": 10, "showPoints": "never"}}},
+    "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend":
+    true}, "tooltip": {"mode": "multi"}}}, {"id": 7, "type": "timeseries", "title":
+    "클러스터별 메모리 사용률", "gridPos": {"x": 12, "y": 7, "w": 12, "h": 8}, "targets": [{"expr":
+    "sum by (cluster) (container_memory_working_set_bytes{cluster=~\"$cluster\", container!=\"\"})
+    / sum by (cluster) (machine_memory_bytes{cluster=~\"$cluster\"}) * 100", "refId":
+    "A", "legendFormat": "{{cluster}}"}], "fieldConfig": {"defaults": {"unit": "percent",
+    "color": {"mode": "palette-classic"}, "custom": {"axisLabel": "Memory Usage %",
+    "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "showPoints":
+    "never"}}}, "options": {"legend": {"displayMode": "list", "placement": "bottom",
+    "showLegend": true}, "tooltip": {"mode": "multi"}}}, {"id": 8, "type": "table",
+    "title": "클러스터별 노드 상태", "gridPos": {"x": 0, "y": 15, "w": 12, "h": 8}, "targets":
+    [{"expr": "kube_node_info{cluster=~\"$cluster\"}", "refId": "A", "format": "table",
+    "instant": true}, {"expr": "kube_node_status_condition{cluster=~\"$cluster\",
+    condition=\"Ready\", status=\"true\"}", "refId": "B", "format": "table", "instant":
+    true}], "transformations": [{"id": "merge", "options": {}}, {"id": "organize",
+    "options": {"excludeByName": {"Time": true, "__name__": true, "container": true,
+    "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true,
+    "service": true}, "indexByName": {"cluster": 0, "node": 1, "kernel_version": 2,
+    "kubelet_version": 3, "os_image": 4, "condition": 5, "status": 6}, "renameByName":
+    {"cluster": "Cluster", "node": "Node", "kernel_version": "Kernel", "kubelet_version":
+    "Kubelet", "os_image": "OS", "condition": "Condition", "status": "Status"}}}],
+    "options": {"showHeader": true, "sortBy": [{"displayName": "Cluster", "desc":
+    false}]}}, {"id": 9, "type": "bargauge", "title": "클러스터별 Pod 수", "gridPos": {"x":
+    12, "y": 15, "w": 12, "h": 8}, "targets": [{"expr": "sum by (cluster) (kube_pod_info{cluster=~\"$cluster\"})",
+    "refId": "A", "legendFormat": "{{cluster}}"}], "options": {"orientation": "horizontal",
+    "displayMode": "gradient", "showUnfilled": true}, "fieldConfig": {"defaults":
+    {"unit": "short", "color": {"mode": "palette-classic"}, "thresholds": {"mode":
+    "absolute", "steps": [{"value": null, "color": "green"}, {"value": 50, "color":
+    "yellow"}, {"value": 100, "color": "red"}]}}}}, {"id": 10, "type": "timeseries",
+    "title": "클러스터별 네트워크 수신 (Bytes/s)", "gridPos": {"x": 0, "y": 23, "w": 12, "h":
+    8}, "targets": [{"expr": "sum by (cluster) (rate(container_network_receive_bytes_total{cluster=~\"$cluster\"}[5m]))",
+    "refId": "A", "legendFormat": "{{cluster}}"}], "fieldConfig": {"defaults": {"unit":
+    "Bps", "color": {"mode": "palette-classic"}, "custom": {"axisLabel": "Receive
+    Bytes/s", "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}}},
+    "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend":
+    true}}}, {"id": 11, "type": "timeseries", "title": "클러스터별 네트워크 송신 (Bytes/s)",
+    "gridPos": {"x": 12, "y": 23, "w": 12, "h": 8}, "targets": [{"expr": "sum by (cluster)
+    (rate(container_network_transmit_bytes_total{cluster=~\"$cluster\"}[5m]))", "refId":
+    "A", "legendFormat": "{{cluster}}"}], "fieldConfig": {"defaults": {"unit": "Bps",
+    "color": {"mode": "palette-classic"}, "custom": {"axisLabel": "Transmit Bytes/s",
+    "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}}}, "options":
+    {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}}},
+    {"id": 12, "type": "table", "title": "클러스터별 리소스 현황", "gridPos": {"x": 0, "y":
+    31, "w": 24, "h": 8}, "targets": [{"expr": "sum by (cluster) (machine_cpu_cores{cluster=~\"$cluster\"})",
+    "refId": "A", "format": "table", "instant": true}, {"expr": "sum by (cluster)
+    (machine_memory_bytes{cluster=~\"$cluster\"})", "refId": "B", "format": "table",
+    "instant": true}, {"expr": "sum by (cluster) (kube_node_info{cluster=~\"$cluster\"})",
+    "refId": "C", "format": "table", "instant": true}, {"expr": "sum by (cluster)
+    (kube_pod_info{cluster=~\"$cluster\"})", "refId": "D", "format": "table", "instant":
+    true}, {"expr": "sum by (cluster) (rate(container_cpu_usage_seconds_total{cluster=~\"$cluster\",
+    container!=\"\"}[5m]))", "refId": "E", "format": "table", "instant": true}, {"expr":
+    "sum by (cluster) (container_memory_working_set_bytes{cluster=~\"$cluster\", container!=\"\"})",
+    "refId": "F", "format": "table", "instant": true}], "transformations": [{"id":
+    "merge", "options": {}}, {"id": "organize", "options": {"excludeByName": {"Time":
+    true}, "indexByName": {"cluster": 0, "Value #A": 1, "Value #B": 2, "Value #C":
+    3, "Value #D": 4, "Value #E": 5, "Value #F": 6}, "renameByName": {"cluster": "Cluster",
+    "Value #A": "Total CPU Cores", "Value #B": "Total Memory", "Value #C": "Nodes",
+    "Value #D": "Pods", "Value #E": "CPU Usage", "Value #F": "Memory Usage"}}}], "options":
+    {"showHeader": true, "sortBy": [{"displayName": "Cluster", "desc": false}]}, "fieldConfig":
+    {"overrides": [{"matcher": {"id": "byName", "options": "Total Memory"}, "properties":
+    [{"id": "unit", "value": "bytes"}]}, {"matcher": {"id": "byName", "options": "Memory
+    Usage"}, "properties": [{"id": "unit", "value": "bytes"}]}]}}]}'

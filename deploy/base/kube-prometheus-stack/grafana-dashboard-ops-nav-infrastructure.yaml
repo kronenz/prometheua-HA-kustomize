@@ -4,96 +4,135 @@ metadata:
   name: grafana-dashboard-ops-nav-infrastructure
   namespace: monitoring
   labels:
-    grafana_dashboard: "1"
+    grafana_dashboard: '1'
 data:
-  ops-nav-infrastructure.json: |-
-    {
-      "dashboard": {
-        "uid": "ops-nav-infrastructure",
-        "title": "🖥️ 인프라 운영 대시보드",
-        "tags": ["operations", "infrastructure", "drilldown"],
-        "timezone": "browser",
-        "schemaVersion": 27,
-        "version": 1,
-        "refresh": "30s",
-        "panels": [
-          {
-            "id": 1,
-            "type": "text",
-            "title": "",
-            "gridPos": {
-              "x": 0,
-              "y": 0,
-              "w": 24,
-              "h": 3
-            },
-            "options": {
-              "mode": "html",
-              "content": "<div style=\"padding: 20px; background: linear-gradient(135deg, #1a1d29 0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-bottom: 12px; border: 1px solid rgba(66,153,225,0.3);\">\n  <div style=\"display: flex; align-items: center; justify-content: space-between;\">\n    <div style=\"display: flex; align-items: center;\">\n      <a href=\"/d/ops-nav-main\" style=\"padding: 8px 12px; background: rgba(66,153,225,0.2); border: 1px solid #4299e1; border-radius: 8px; color: #63b3ed; text-decoration: none; font-weight: 600; font-size: 13px; margin-right: 20px;\">← 메인</a>\n      <div style=\"width: 48px; height: 48px; background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-right: 16px;\">🖥️</div>\n      <div>\n        <h1 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 32px; color: #ffffff; margin: 0; letter-spacing: -0.5px;\">인프라 운영 대시보드</h1>\n        <p style=\"font-size: 13px; color: #a0aec0; margin: 4px 0 0 0;\">Infrastructure Operations & Performance Metrics</p>\n      </div>\n    </div>\n  </div>\n</div>"
-            }
-          },
-          {
-            "id": 2,
-            "type": "text",
-            "title": "노드 성능 메트릭",
-            "gridPos": {
-              "x": 0,
-              "y": 3,
-              "w": 12,
-              "h": 9
-            },
-            "options": {
-              "mode": "html",
-              "content": "<div style=\"padding: 16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(66,153,225,0.1); border-left: 4px solid #4299e1; border-radius: 8px;\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #63b3ed; margin: 0 0 8px 0;\">📊 성능 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height: 1.6;\">물리 노드의 실시간 성능 메트릭을 모니터링합니다</p>\n  </div>\n  <a href=\"/d/node-cpu-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">CPU 사용률 & 로드</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">코어별 사용률, 로드 평균, 컨텍스트 스위칭</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/node-memory-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">메모리 사용률 & 스왑</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">사용 메모리, 캐시, 버퍼, 스왑 활동</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/node-system-metrics\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">시스템 메트릭</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">프로세스 수, 파일 디스크립터, 업타임</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"
-            }
-          },
-          {
-            "id": 3,
-            "type": "text",
-            "title": "네트워크 성능",
-            "gridPos": {
-              "x": 12,
-              "y": 3,
-              "w": 12,
-              "h": 9
-            },
-            "options": {
-              "mode": "html",
-              "content": "<div style=\"padding: 16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(66,153,225,0.1); border-left: 4px solid #4299e1; border-radius: 8px;\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #63b3ed; margin: 0 0 8px 0;\">🌐 네트워크 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height: 1.6;\">네트워크 처리량, 지연시간, 에러율을 추적합니다</p>\n  </div>\n  <a href=\"/d/network-throughput\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">네트워크 대역폭</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">인터페이스별 송수신 대역폭, 패킷 수</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/network-latency\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">네트워크 지연시간</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">RTT, 핑 응답시간, 연결 지연</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/network-errors\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">패킷 드롭 & 에러</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">드롭 패킷, 전송 에러, 재전송률</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"
-            }
-          },
-          {
-            "id": 4,
-            "type": "text",
-            "title": "디스크 I/O 성능",
-            "gridPos": {
-              "x": 0,
-              "y": 12,
-              "w": 12,
-              "h": 9
-            },
-            "options": {
-              "mode": "html",
-              "content": "<div style=\"padding: 16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(66,153,225,0.1); border-left: 4px solid #4299e1; border-radius: 8px;\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #63b3ed; margin: 0 0 8px 0;\">💿 디스크 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height: 1.6;\">디스크 I/O 성능과 처리량을 모니터링합니다</p>\n  </div>\n  <a href=\"/d/disk-iops\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">IOPS (초당 입출력)</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">읽기/쓰기 IOPS, 대기 큐, 지연시간</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/disk-throughput\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">디스크 처리량</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">MB/s 처리량, 사용률, 포화도</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/disk-usage\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">디스크 용량 사용률</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">파일시스템별 사용량, Inode 사용률</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"
-            }
-          },
-          {
-            "id": 5,
-            "type": "text",
-            "title": "스토리지 운영",
-            "gridPos": {
-              "x": 12,
-              "y": 12,
-              "w": 12,
-              "h": 9
-            },
-            "options": {
-              "mode": "html",
-              "content": "<div style=\"padding: 16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(66,153,225,0.1); border-left: 4px solid #4299e1; border-radius: 8px;\">\n    <h4 style=\"font-family: 'BMDOHYEON', sans-serif; font-size: 16px; color: #63b3ed; margin: 0 0 8px 0;\">💾 스토리지 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height: 1.6;\">스토리지 백업, 복제, 용량 관리를 추적합니다</p>\n  </div>\n  <a href=\"/d/longhorn-performance\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Longhorn 볼륨 성능</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">볼륨 I/O, 복제 상태, 건강도</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/longhorn-backup\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">백업 운영</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">백업 성공률, 복원 시간, S3 동기화</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/minio-operations\" style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">MinIO S3 운영</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">API 성능, 오브젝트 수, 대역폭 사용량</div>\n      </div>\n      <div style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"
-            }
-          }
-        ]
-      },
-      "overwrite": true,
-      "message": "Infrastructure operations drill-down dashboard"
-    }
+  ops-nav-infrastructure.json: '{"uid": "ops-nav-infrastructure", "title": "🖥️ 인프라
+    운영 대시보드", "tags": ["operations", "infrastructure", "drilldown"], "timezone": "browser",
+    "schemaVersion": 27, "version": 1, "refresh": "30s", "panels": [{"id": 1, "type":
+    "text", "title": "", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3}, "options":
+    {"mode": "html", "content": "<div style=\"padding: 20px; background: linear-gradient(135deg,
+    #1a1d29 0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    margin-bottom: 12px; border: 1px solid rgba(66,153,225,0.3);\">\n  <div style=\"display:
+    flex; align-items: center; justify-content: space-between;\">\n    <div style=\"display:
+    flex; align-items: center;\">\n      <a href=\"/d/ops-nav-main\" style=\"padding:
+    8px 12px; background: rgba(66,153,225,0.2); border: 1px solid #4299e1; border-radius:
+    8px; color: #63b3ed; text-decoration: none; font-weight: 600; font-size: 13px;
+    margin-right: 20px;\">← 메인</a>\n      <div style=\"width: 48px; height: 48px;
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); border-radius:
+    12px; display: flex; align-items: center; justify-content: center; font-size:
+    28px; margin-right: 16px;\">🖥️</div>\n      <div>\n        <h1 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 32px; color: #ffffff; margin: 0; letter-spacing:
+    -0.5px;\">인프라 운영 대시보드</h1>\n        <p style=\"font-size: 13px; color: #a0aec0;
+    margin: 4px 0 0 0;\">Infrastructure Operations & Performance Metrics</p>\n      </div>\n    </div>\n  </div>\n</div>"}},
+    {"id": 2, "type": "text", "title": "노드 성능 메트릭", "gridPos": {"x": 0, "y": 3, "w":
+    12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding: 16px;\">\n  <div
+    style=\"margin-bottom: 16px; padding: 12px; background: rgba(66,153,225,0.1);
+    border-left: 4px solid #4299e1; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #63b3ed; margin: 0 0 8px 0;\">📊
+    성능 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">물리 노드의 실시간 성능 메트릭을 모니터링합니다</p>\n  </div>\n  <a href=\"/d/node-cpu-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">CPU 사용률 & 로드</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">코어별 사용률, 로드 평균, 컨텍스트 스위칭</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/node-memory-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">메모리 사용률 & 스왑</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">사용 메모리, 캐시, 버퍼, 스왑 활동</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/node-system-metrics\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">시스템 메트릭</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">프로세스 수, 파일 디스크립터, 업타임</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}},
+    {"id": 3, "type": "text", "title": "네트워크 성능", "gridPos": {"x": 12, "y": 3, "w":
+    12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding: 16px;\">\n  <div
+    style=\"margin-bottom: 16px; padding: 12px; background: rgba(66,153,225,0.1);
+    border-left: 4px solid #4299e1; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #63b3ed; margin: 0 0 8px 0;\">🌐
+    네트워크 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">네트워크 처리량, 지연시간, 에러율을 추적합니다</p>\n  </div>\n  <a href=\"/d/network-throughput\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">네트워크 대역폭</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">인터페이스별 송수신 대역폭, 패킷 수</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/network-latency\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">네트워크 지연시간</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">RTT, 핑 응답시간, 연결 지연</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/network-errors\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">패킷 드롭 & 에러</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">드롭 패킷, 전송 에러, 재전송률</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}},
+    {"id": 4, "type": "text", "title": "디스크 I/O 성능", "gridPos": {"x": 0, "y": 12,
+    "w": 12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding:
+    16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(66,153,225,0.1);
+    border-left: 4px solid #4299e1; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #63b3ed; margin: 0 0 8px 0;\">💿
+    디스크 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">디스크 I/O 성능과 처리량을 모니터링합니다</p>\n  </div>\n  <a href=\"/d/disk-iops\" style=\"display:
+    block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748; border: 1px
+    solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none; color:
+    #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">IOPS (초당 입출력)</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">읽기/쓰기 IOPS, 대기 큐, 지연시간</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/disk-throughput\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">디스크 처리량</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">MB/s 처리량, 사용률, 포화도</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/disk-usage\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">디스크 용량 사용률</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">파일시스템별 사용량, Inode 사용률</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}},
+    {"id": 5, "type": "text", "title": "스토리지 운영", "gridPos": {"x": 12, "y": 12, "w":
+    12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding: 16px;\">\n  <div
+    style=\"margin-bottom: 16px; padding: 12px; background: rgba(66,153,225,0.1);
+    border-left: 4px solid #4299e1; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #63b3ed; margin: 0 0 8px 0;\">💾
+    스토리지 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">스토리지 백업, 복제, 용량 관리를 추적합니다</p>\n  </div>\n  <a href=\"/d/longhorn-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Longhorn 볼륨 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">볼륨 I/O, 복제 상태, 건강도</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/longhorn-backup\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">백업 운영</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">백업 성공률, 복원 시간, S3 동기화</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/minio-operations\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(66,153,225,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">MinIO S3 운영</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">API 성능, 오브젝트 수, 대역폭 사용량</div>\n      </div>\n      <div
+    style=\"color: #4299e1; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}}]}'
