@@ -1,4 +1,31 @@
+# ============================================================================
+# Thanos Query - 통합 쿼리 계층
+# ============================================================================
+#
+# 목적:
+#   - 모든 Thanos 데이터 소스(Receiver, Store, Ruler)를 통합 쿼리
+#   - Grafana에 단일 Prometheus 호환 엔드포인트 제공
+#   - 중복된 메트릭 자동 제거 (Deduplication)
+#   - 고가용성 및 부하 분산
+#
+# 데이터 소스:
+#   1. Thanos Receiver: 실시간 Edge 클러스터 메트릭
+#   2. Thanos Store: S3 장기 저장 데이터
+#   3. Thanos Ruler: Recording/Alerting Rule 결과
+#   4. Prometheus Operator: 중앙 클러스터 Full Prometheus
+#
+# 쿼리 흐름:
+#   Grafana → Thanos Query → [Receiver|Store|Ruler|Prometheus] → 결과 병합
+#
+# ============================================================================
+
 ---
+# ----------------------------------------------------------------------------
+# Service: Thanos Query
+# ----------------------------------------------------------------------------
+# 목적: Query Pod에 대한 내부 서비스 엔드포인트 제공
+# 타입: ClusterIP (클러스터 내부 통신용)
+# ----------------------------------------------------------------------------
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,9 +36,16 @@ metadata:
 spec:
   type: ClusterIP
   ports:
+    # HTTP 포트 (Prometheus API 호환)
+    # - Grafana가 이 포트로 PromQL 쿼리 전송
+    # - 포트 9090은 Prometheus 표준 포트와 호환
     - name: http
-      port: 9090
-      targetPort: 10902
+      port: 9090           # 외부 노출 포트
+      targetPort: 10902    # 실제 컨테이너 포트 (Thanos 기본값)
+
+    # gRPC 포트 (내부 Store 통신용)
+    # - 다른 Thanos Query가 이 Query를 Store로 사용할 때 필요
+    # - Federation 구성 시 사용
     - name: grpc
       port: 10901
       targetPort: 10901
@@ -19,6 +53,14 @@ spec:
     app: thanos-query
 
 ---
+# ----------------------------------------------------------------------------
+# Deployment: Thanos Query
+# ----------------------------------------------------------------------------
+# 배포 전략:
+#   - Stateless이므로 Deployment 사용
+#   - 수평 확장 가능 (replicas 증가)
+#   - Rolling Update로 무중단 배포
+# ----------------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,10 +69,16 @@ metadata:
   labels:
     app: thanos-query
 spec:
+  # Replica 설정
+  # - 기본 1개: 개발/테스트 환경
+  # - 권장 2-3개: 프로덕션 환경 (고가용성)
+  # - 5개 이상: 높은 쿼리 부하 환경
   replicas: 1
+
   selector:
     matchLabels:
       app: thanos-query
+
   template:
     metadata:
       labels:
@@ -38,45 +86,144 @@ spec:
     spec:
       containers:
         - name: thanos-query
+          # Thanos 공식 이미지
+          # - v0.37.2: 안정 버전
+          # - 최신 버전 확인: https://github.com/thanos-io/thanos/releases
           image: quay.io/thanos/thanos:v0.37.2
+
+          # ================================================================
+          # Thanos Query 실행 인자
+          # ================================================================
           args:
+            # 서브커맨드: query 모드로 실행
             - query
+
+            # 로그 레벨
+            # - debug: 상세 디버깅 (개발용)
+            # - info: 일반 운영 (권장)
+            # - warn: 경고만 표시
+            # - error: 에러만 표시
             - --log.level=info
+
+            # ============================================================
+            # Deduplication 설정
+            # ============================================================
+            # Replica 라벨: 동일 데이터의 여러 복제본 구분
+            # - Thanos는 이 라벨로 중복을 판단하고 자동 제거
+            # - 쿼리 결과에서 가장 최신 데이터만 반환
+
+            # Prometheus Agent replica 라벨
             - --query.replica-label=prometheus_replica
+
+            # Thanos Ruler replica 라벨
             - --query.replica-label=rule_replica
+
+            # Thanos Receiver replica 라벨
             - --query.replica-label=receive_replica
-            # Store endpoints for central cluster
+
+            # ============================================================
+            # Store Endpoints (데이터 소스)
+            # ============================================================
+            # Thanos Query는 여러 Store로부터 데이터를 가져와 통합
+            # 각 Store는 gRPC(10901)로 통신
+
+            # 1. Central Cluster Full Prometheus (Prometheus Operator)
+            # - dnssrv: DNS SRV 레코드로 자동 발견
+            # - Prometheus Operator가 생성한 StatefulSet
+            # - 중앙 클러스터의 로컬 메트릭 제공
             - --store=dnssrv+_grpc._tcp.prometheus-operated.monitoring.svc.cluster.local
+
+            # 2. Thanos Store (S3 장기 저장 데이터)
+            # - S3에 저장된 과거 데이터 쿼리
+            # - 압축 및 다운샘플링된 데이터
+            # - 장기 트렌드 분석용
             - --store=thanos-store.monitoring.svc.cluster.local:10901
+
+            # 3. Thanos Ruler (Rule 평가 결과)
+            # - Recording Rule 결과
+            # - Alerting Rule 평가 (Alert Manager로 전송)
+            # - Pre-aggregated 메트릭
             - --store=thanos-ruler.monitoring.svc.cluster.local:10901
-            # Thanos Receiver (receives from edge Prometheus Agents)
+
+            # 4. Thanos Receiver (Edge 실시간 데이터)
+            # - Edge Prometheus Agent로부터 수신한 실시간 메트릭
+            # - dnssrv로 모든 Receiver Pod 자동 발견
+            # - Hashring으로 분산된 데이터 통합 조회
             - --store=dnssrv+_grpc._tcp.thanos-receiver-headless.monitoring.svc.cluster.local
+
+          # ================================================================
+          # 포트 설정
+          # ================================================================
           ports:
+            # HTTP API 포트 (Prometheus 호환)
+            # - Grafana가 /api/v1/* 엔드포인트로 접근
+            # - PromQL 쿼리 처리
             - name: http
               containerPort: 10902
+
+            # gRPC 포트 (Store API)
+            # - 다른 Thanos Query와의 Federation용
+            # - 계층적 구조 가능 (Query → Query → Store)
             - name: grpc
               containerPort: 10901
+
+          # ================================================================
+          # 리소스 제한
+          # ================================================================
+          # 환경별 권장 설정:
+          #   소규모 (1-5 클러스터):
+          #     requests: cpu=250m, memory=512Mi
+          #     limits: cpu=500m, memory=1Gi
+          #
+          #   중규모 (5-20 클러스터):
+          #     requests: cpu=500m, memory=1Gi
+          #     limits: cpu=1000m, memory=2Gi
+          #
+          #   대규모 (20+ 클러스터):
+          #     requests: cpu=1000m, memory=2Gi
+          #     limits: cpu=2000m, memory=4Gi
           resources:
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 500m       # 복잡한 쿼리 시 더 필요
+              memory: 1Gi     # 큰 결과셋은 더 필요
             requests:
               cpu: 250m
               memory: 512Mi
+
+          # ================================================================
+          # Health Checks
+          # ================================================================
+          # Liveness Probe: Pod 재시작 여부 결정
+          # - /-/healthy 엔드포인트 확인
+          # - 실패 시 Pod 재시작
           livenessProbe:
             httpGet:
               path: /-/healthy
               port: 10902
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 30    # 초기 시작 대기 시간
+            periodSeconds: 10          # 확인 주기
+
+          # Readiness Probe: 트래픽 수신 여부 결정
+          # - /-/ready 엔드포인트 확인
+          # - Store 연결 완료 후 Ready
+          # - 실패 시 Service에서 제외 (트래픽 차단)
           readinessProbe:
             httpGet:
               path: /-/ready
               port: 10902
-            initialDelaySeconds: 15
-            periodSeconds: 5
+            initialDelaySeconds: 15    # Liveness보다 빠르게 시작
+            periodSeconds: 5           # 더 자주 확인
 
 ---
+# ----------------------------------------------------------------------------
+# ServiceMonitor: Prometheus Operator 통합
+# ----------------------------------------------------------------------------
+# 목적: Thanos Query 자체의 메트릭 수집
+# 수집 메트릭:
+#   - thanos_query_gate_queries_total: 쿼리 요청 수
+#   - thanos_query_gate_duration_seconds: 쿼리 처리 시간
+#   - thanos_query_concurrent_selects: 동시 쿼리 수
+# ----------------------------------------------------------------------------
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -90,4 +237,46 @@ spec:
       app: thanos-query
   endpoints:
     - port: http
-      interval: 30s
+      interval: 30s    # 30초마다 메트릭 수집
+
+# ============================================================================
+# 운영 가이드
+# ============================================================================
+#
+# 1. 배포 및 업데이트:
+#    kubectl apply -f thanos-query.yaml
+#    kubectl rollout status deployment/thanos-query -n monitoring
+#
+# 2. Store 연결 확인:
+#    kubectl port-forward -n monitoring svc/thanos-query 9090:9090
+#    # 브라우저에서 http://localhost:9090/stores 접속
+#    # 모든 Store가 "Healthy" 상태인지 확인
+#
+# 3. 쿼리 테스트:
+#    curl "http://thanos-query.monitoring.svc:9090/api/v1/query?query=up"
+#    # 또는 Grafana에서 Explore 메뉴 사용
+#
+# 4. 성능 튜닝:
+#    - 느린 쿼리: CPU/Memory 증가, Store 수 감소
+#    - 높은 동시성: replicas 증가 (수평 확장)
+#    - Store 연결 실패: Store 상태 확인
+#
+# 5. 고가용성 구성:
+#    replicas: 3
+#    # Grafana에서 로드밸런서를 통해 접근
+#
+# 6. 모니터링:
+#    # 쿼리 처리 시간
+#    histogram_quantile(0.99,
+#      rate(thanos_query_gate_duration_seconds_bucket[5m])
+#    )
+#
+#    # 초당 쿼리 수
+#    rate(thanos_query_gate_queries_total[5m])
+#
+# 7. 문제 해결:
+#    - "no StoreAPIs matched": Store 엔드포인트 확인
+#    - "context deadline exceeded": 타임아웃 증가 또는 쿼리 최적화
+#    - "out of memory": 메모리 limits 증가
+#
+# ============================================================================
