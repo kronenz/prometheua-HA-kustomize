@@ -1,4 +1,48 @@
+# ============================================================================
+# Thanos Compactor - S3 블록 압축 및 다운샘플링
+# ============================================================================
+#
+# 목적:
+#   - S3에 저장된 TSDB 블록을 압축하여 스토리지 비용 절감
+#   - 다운샘플링을 통해 장기 데이터의 쿼리 성능 향상
+#   - 오래된 데이터 자동 삭제 (Retention 정책)
+#
+# 주요 기능:
+#   1. 블록 압축 (Compaction):
+#      - 작은 블록들을 큰 블록으로 병합
+#      - 중복 데이터 제거 (Deduplication)
+#      - S3 저장 공간 절약 (압축률: 30-50%)
+#
+#   2. 다운샘플링 (Downsampling):
+#      - Raw data (15s) → 5분 해상도
+#      - 5분 해상도 → 1시간 해상도
+#      - 장기 데이터 쿼리 시 성능 10-100배 향상
+#
+#   3. Retention (보관 정책):
+#      - Raw data: 7일 (상세 데이터, 짧은 보관)
+#      - 5분 해상도: 30일 (중기 트렌드)
+#      - 1시간 해상도: 90일 (장기 트렌드)
+#      - 설정된 기간 이후 자동 삭제
+#
+#   4. 블록 정리:
+#      - 손상된 블록 감지 및 수리
+#      - 불완전한 업로드 정리
+#      - 메타데이터 무결성 검증
+#
+# 운영 특징:
+#   - 단일 인스턴스: Compactor는 반드시 1개만 실행 (중복 압축 방지)
+#   - 주기적 실행: 3분마다 S3 블록 스캔 및 압축
+#   - 리소스 집약적: CPU 및 I/O 사용량 높음
+#
+# 데이터 흐름:
+#   S3 Raw Blocks → Compactor (압축/다운샘플링) → S3 Compacted Blocks → Store
+#
+# ============================================================================
+
 ---
+# ============================================================================
+# Service - Thanos Compactor 서비스
+# ============================================================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,15 +51,27 @@ metadata:
   labels:
     app: thanos-compactor
 spec:
+  # Service 타입: ClusterIP
+  # - HTTP 포트만 노출 (메트릭, Health Check, UI)
+  # - gRPC 불필요 (Compactor는 Query와 통신하지 않음)
   type: ClusterIP
+
   ports:
+    # HTTP 포트 (10902)
+    # - 메트릭 노출: /metrics
+    # - Health check: /-/healthy, /-/ready
+    # - UI: /loaded (압축 진행 상태 확인)
     - name: http
       port: 10902
       targetPort: 10902
+
   selector:
     app: thanos-compactor
 
 ---
+# ============================================================================
+# StatefulSet - Thanos Compactor 배포
+# ============================================================================
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -24,45 +80,197 @@ metadata:
   labels:
     app: thanos-compactor
 spec:
+  # Replica 수
+  # ⚠️ 중요: 반드시 1개만 실행
+  # - 여러 Compactor가 동시 실행 시 S3 블록 충돌 발생
+  # - 데이터 손상 가능성
+  # - Compactor는 HA 구성 불가능
   replicas: 1
+
+  # Service 이름
   serviceName: thanos-compactor
+
   selector:
     matchLabels:
       app: thanos-compactor
+
   template:
     metadata:
       labels:
         app: thanos-compactor
     spec:
+      # ======================================================================
+      # 보안 컨텍스트
+      # ======================================================================
       securityContext:
+        # fsGroup: 볼륨 파일 소유 그룹
+        # - 1000: thanos 사용자 그룹
         fsGroup: 1000
+
+        # 컨테이너 실행 사용자 ID
+        # - 1000: thanos 사용자 (비 root)
+        # - 보안 강화를 위해 root 사용 금지
         runAsUser: 1000
-        runAsNonRoot: true
+        runAsNonRoot: true  # root 실행 방지
+
       containers:
         - name: thanos-compactor
+          # Thanos 이미지
+          # - v0.37.2: 현재 stable 버전
+          # - 최신 버전: https://quay.io/repository/thanos/thanos?tab=tags
           image: quay.io/thanos/thanos:v0.37.2
+
+          # ================================================================
+          # Thanos Compactor 실행 인자
+          # ================================================================
           args:
+            # Compact 컴포넌트 실행
             - compact
+
+            # 로그 레벨
+            # - debug: 상세 디버깅 (압축 문제 해결 시)
+            # - info: 일반 운영 정보 (권장)
+            # - warn: 경고만 (프로덕션)
+            # - error: 에러만
             - --log.level=info
+
+            # 데이터 디렉토리
+            # - 임시 블록 다운로드 및 압축 작업 공간
+            # - PVC에 마운트된 경로
+            # - 충분한 용량 필요 (블록 크기의 2-3배)
             - --data-dir=/var/thanos/compactor
+
+            # S3 설정 파일
+            # - Secret에서 마운트한 objstore.yml
+            # - S3 접근 정보 (bucket, endpoint, credentials)
             - --objstore.config-file=/etc/thanos/objstore.yml
+
+            # ==============================================================
+            # Retention (데이터 보관 정책)
+            # ==============================================================
+
+            # Raw data (원본 데이터) 보관 기간
+            # - 7일: 최근 일주일의 상세 데이터
+            # - 권장값:
+            #   * 소규모: 7-14일
+            #   * 중규모: 14-30일
+            #   * 대규모: 30-90일
+            # - 짧게 설정할수록 스토리지 비용 절감
+            # - 디버깅이 필요한 환경에서는 길게 설정
             - --retention.resolution-raw=7d   # 7 days raw data (optimized)
+
+            # 5분 해상도 데이터 보관 기간
+            # - 30일: 최근 한 달의 5분 단위 데이터
+            # - Raw data에서 다운샘플링한 결과
+            # - 권장값:
+            #   * 소규모: 30-60일
+            #   * 중규모: 60-90일
+            #   * 대규모: 90-180일
+            # - 중기 트렌드 분석용
             - --retention.resolution-5m=30d   # 30 days 5m resolution
+
+            # 1시간 해상도 데이터 보관 기간
+            # - 90일: 최근 3개월의 1시간 단위 데이터
+            # - 5분 해상도에서 다운샘플링한 결과
+            # - 권장값:
+            #   * 소규모: 90-180일
+            #   * 중규모: 180-365일
+            #   * 대규모: 365일 이상 (무제한)
+            # - 장기 트렌드 분석 및 연간 비교용
             - --retention.resolution-1h=90d   # 90 days 1h resolution
+
+            # ==============================================================
+            # 성능 최적화 설정
+            # ==============================================================
+
+            # 다운샘플링 동시성
+            # - 1: 순차 처리 (안전, 낮은 리소스)
+            # - 2-4: 병렬 처리 (빠름, 높은 리소스)
+            # - CPU 및 메모리 충분 시 증가 고려
+            # ⚠️ 주의: 높을수록 메모리 및 I/O 부하 증가
             - --downsample.concurrency=1      # Downsampling concurrency
+
+            # 블록 삭제 지연 시간
+            # - 48시간: 블록 삭제 표시 후 실제 삭제까지 대기
+            # - 안전장치: 실수로 삭제된 블록 복구 가능
+            # - 권장값: 24-72시간
+            # - 짧으면 빠른 정리, 길면 안전성 향상
             - --delete-delay=48h              # Delay before deleting blocks
+
+            # 압축 동시성
+            # - 1: 순차 처리 (안전, 낮은 리소스)
+            # - 2-4: 병렬 처리 (빠름, 높은 리소스)
+            # - CPU 및 메모리 충분 시 증가 고려
+            # ⚠️ 주의: 높을수록 S3 API 호출 및 메모리 증가
             - --compact.concurrency=1         # Compaction concurrency
+
+            # 대기 모드
+            # - Compactor를 데몬으로 실행 (계속 실행)
+            # - false 설정 시 한 번 실행 후 종료 (CronJob 사용 시)
             - --wait
+
+            # 대기 간격
+            # - 3분: 블록 스캔 및 압축 주기
+            # - 권장값:
+            #   * 높은 쓰기: 3-5분 (빠른 압축)
+            #   * 낮은 쓰기: 10-15분 (리소스 절약)
+            # - 짧을수록 빠른 압축, 높은 CPU 사용
             - --wait-interval=3m
+
+            # 선택적 고급 설정 (필요 시 추가)
+            # - --compact.block-fetch-concurrency=1  # S3 블록 다운로드 동시성
+            # - --deduplication.replica-label=replica  # 중복 제거 레이블
+            # - --deduplication.func=penalty           # 중복 제거 함수
+            # - --compact.cleanup-interval=5m          # 정리 작업 간격
+            # - --consistency-delay=30m                # 블록 일관성 대기 시간
+
+          # ================================================================
+          # 포트 설정
+          # ================================================================
           ports:
+            # HTTP 포트
+            # - UI 및 Health Check
             - name: http
               containerPort: 10902
+
+          # ================================================================
+          # 볼륨 마운트
+          # ================================================================
           volumeMounts:
+            # 데이터 디렉토리 (PVC)
+            # - 블록 다운로드 및 압축 작업 공간
+            # - 크기: 최대 블록 크기의 2-3배 권장
             - name: data
               mountPath: /var/thanos/compactor
+
+            # S3 설정 (Secret)
+            # - objstore.yml 파일
+            # - 읽기 전용으로 마운트
             - name: s3-config
               mountPath: /etc/thanos
               readOnly: true
+
+          # ================================================================
+          # 리소스 제한
+          # ================================================================
+          # 환경별 권장 리소스:
+          #
+          # 소규모 (블록 < 500, 쓰기 낮음):
+          #   requests: cpu=250m, memory=512Mi
+          #   limits: cpu=500m, memory=1Gi
+          #
+          # 중규모 (블록 500-2000, 쓰기 보통):
+          #   requests: cpu=500m, memory=1Gi
+          #   limits: cpu=1, memory=2Gi
+          #
+          # 대규모 (블록 > 2000, 쓰기 높음):
+          #   requests: cpu=1, memory=2Gi
+          #   limits: cpu=2, memory=4Gi
+          #
+          # 참고:
+          # - CPU: 압축 및 다운샘플링 작업에 사용
+          # - 메모리: 블록 로드 및 처리에 사용
+          # - concurrency 증가 시 리소스도 함께 증가 필요
           resources:
             limits:
               cpu: 500m
@@ -70,33 +278,82 @@ spec:
             requests:
               cpu: 250m
               memory: 512Mi
+
+          # ================================================================
+          # Health Checks
+          # ================================================================
+
+          # Liveness Probe (Pod 재시작 판단)
+          # - 실패 시 Kubernetes가 Pod 재시작
+          # - /-/healthy 엔드포인트 확인
           livenessProbe:
             httpGet:
               path: /-/healthy
               port: 10902
+            # 초기 지연 시간
+            # - 30초: S3 블록 초기 스캔 시간 고려
+            # - 블록이 많으면 60초로 증가 권장
             initialDelaySeconds: 30
+            # 확인 주기
             periodSeconds: 10
+
+          # Readiness Probe (트래픽 수신 가능 여부)
+          # - Compactor는 트래픽을 받지 않지만 메트릭 수집을 위해 설정
+          # - /-/ready 엔드포인트 확인
           readinessProbe:
             httpGet:
               path: /-/ready
               port: 10902
+            # 초기 지연 시간
+            # - 15초: 초기화 대기
             initialDelaySeconds: 15
+            # 확인 주기
             periodSeconds: 5
+
+      # ====================================================================
+      # 볼륨 정의
+      # ====================================================================
       volumes:
+        # S3 설정 Secret
         - name: s3-config
           secret:
             secretName: thanos-s3-config
+
+  # ======================================================================
+  # PVC 템플릿 (StatefulSet 전용)
+  # ======================================================================
+  # Pod마다 독립적인 PVC 자동 생성
   volumeClaimTemplates:
     - metadata:
         name: data
       spec:
+        # 접근 모드
+        # - ReadWriteOnce: 단일 노드에서만 읽기/쓰기
         accessModes: ["ReadWriteOnce"]
+
+        # 스토리지 클래스
+        # - longhorn: 분산 블록 스토리지
+        # - 다른 옵션: local-path, nfs, ceph-rbd
         storageClassName: longhorn
+
+        # 스토리지 크기
+        # - 압축 작업 공간
+        # - 권장 크기:
+        #   * 소규모 (블록 < 500): 1-5Gi
+        #   * 중규모 (블록 500-2000): 5-10Gi
+        #   * 대규모 (블록 > 2000): 10-20Gi
+        # 참고:
+        # - 최대 블록 크기의 2-3배
+        # - 여러 블록 동시 압축 시 더 크게 필요
         resources:
           requests:
             storage: 1Gi
 
 ---
+# ============================================================================
+# ServiceMonitor - Thanos Compactor 메트릭 수집
+# ============================================================================
+# Prometheus Operator가 Thanos Compactor의 메트릭을 자동으로 수집하도록 설정
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -105,9 +362,171 @@ metadata:
   labels:
     app: thanos-compactor
 spec:
+  # 메트릭 수집 대상 Service
   selector:
     matchLabels:
       app: thanos-compactor
+
+  # 수집 설정
   endpoints:
+    # HTTP 포트에서 메트릭 수집
     - port: http
+      # 수집 간격
+      # - 30초: 일반적인 간격
+      # - 압축 작업 모니터링용
       interval: 30s
+
+# ============================================================================
+# 운영 가이드
+# ============================================================================
+#
+# 1. 배포 확인:
+#    kubectl get pods -n monitoring -l app=thanos-compactor
+#    kubectl get svc -n monitoring thanos-compactor
+#
+# 2. 압축 진행 상태 확인:
+#    kubectl logs -n monitoring thanos-compactor-0 | grep -i "compact"
+#    # 출력 예: level=info msg="compact blocks" duration=30s
+#
+# 3. Compactor UI 접근:
+#    kubectl port-forward -n monitoring svc/thanos-compactor 10902:10902
+#    # 브라우저: http://localhost:10902
+#    # /loaded 페이지에서 압축 상태 확인
+#
+# 4. 주요 메트릭 확인:
+#    # 압축된 블록 수
+#    thanos_compact_group_compactions_total
+#
+#    # 다운샘플링된 블록 수
+#    thanos_compact_downsample_total
+#
+#    # 압축 소요 시간
+#    thanos_compact_group_compactions_duration_seconds
+#
+#    # 삭제 대기 중인 블록
+#    thanos_compact_blocks_marked_for_deletion_total
+#
+#    # S3 블록 총 개수
+#    thanos_blocks_meta_synced{state="loaded"}
+#
+# 5. S3 블록 확인:
+#    kubectl exec -n monitoring thanos-compactor-0 -- \
+#      thanos tools bucket ls --objstore.config-file=/etc/thanos/objstore.yml
+#
+# 6. Retention 정책 확인:
+#    kubectl exec -n monitoring thanos-compactor-0 -- \
+#      thanos tools bucket inspect --objstore.config-file=/etc/thanos/objstore.yml
+#    # 출력: 블록별 해상도 및 시간 범위
+#
+# 7. 수동 압축 트리거 (재시작):
+#    kubectl rollout restart statefulset -n monitoring thanos-compactor
+#
+# 8. 리소스 스케일링:
+#    # 메모리 부족 시 리소스 증가
+#    # thanos-compactor.yaml에서 resources 수정 후 재배포
+#
+# ============================================================================
+# 문제 해결
+# ============================================================================
+#
+# 1. "compaction failed" 에러:
+#    원인: 블록 손상 또는 S3 접근 문제
+#    해결:
+#      - Compactor 로그에서 상세 에러 확인
+#      - S3 credentials 확인
+#      - 손상된 블록 수동 삭제 (thanos tools bucket cleanup)
+#
+# 2. "out of disk space":
+#    원인: PVC 공간 부족
+#    해결:
+#      - PVC 크기 증가
+#      - compact.concurrency 감소 (동시 압축 블록 수 감소)
+#      - 임시 파일 정리
+#
+# 3. OOMKilled (메모리 부족):
+#    원인: 큰 블록 압축 시 메모리 부족
+#    해결:
+#      - resources.limits.memory 증가
+#      - downsample.concurrency, compact.concurrency 감소
+#      - 블록 크기 제한 (Prometheus retention 조정)
+#
+# 4. "multiple compactors running":
+#    원인: 여러 Compactor가 동시 실행
+#    해결:
+#      ⚠️ 즉시 중단: kubectl delete pod -n monitoring thanos-compactor-0
+#      - replicas가 1인지 확인
+#      - 다른 클러스터에 Compactor가 없는지 확인
+#
+# 5. 압축이 너무 느림:
+#    원인: 많은 블록 또는 낮은 리소스
+#    해결:
+#      - compact.concurrency 증가 (2-4)
+#      - CPU 및 메모리 리소스 증가
+#      - wait-interval 증가 (CPU 부담 감소)
+#
+# 6. "retention resolution not applied":
+#    원인: 블록이 아직 retention 기간 미달
+#    해결:
+#      - 시간이 지나면 자동 삭제됨
+#      - 수동 삭제: thanos tools bucket retention
+#
+# ============================================================================
+# 성능 최적화
+# ============================================================================
+#
+# 1. Retention 정책 최적화:
+#    - Raw data: 최소 7-14일 (디버깅 필요 시 길게)
+#    - 5분 해상도: 30-60일 (중기 트렌드)
+#    - 1시간 해상도: 90-365일 (장기 분석)
+#    - 불필요한 데이터는 짧게 설정하여 비용 절감
+#
+# 2. 동시성 조정:
+#    - downsample.concurrency: CPU 코어 수의 50%
+#    - compact.concurrency: 1-2 (안전성 우선)
+#    - 높은 리소스 환경에서만 증가
+#
+# 3. PVC 크기:
+#    - 최대 블록 크기 확인 후 2-3배로 설정
+#    - 여유 공간 확보 (압축 실패 방지)
+#
+# 4. 압축 주기:
+#    - wait-interval: 높은 쓰기 → 3-5분, 낮은 쓰기 → 10-15분
+#    - 너무 짧으면 CPU 낭비, 너무 길면 블록 누적
+#
+# 5. 삭제 지연:
+#    - delete-delay: 안전성 우선 → 48-72시간
+#    - 빠른 정리 → 24시간
+#    - S3 스토리지 비용과 안전성의 균형
+#
+# 6. 다운샘플링 우선순위:
+#    - 다운샘플링을 먼저 활성화하여 쿼리 성능 향상
+#    - 압축보다 다운샘플링이 더 큰 성능 효과
+#
+# 7. 모니터링:
+#    - 압축 소요 시간 추적 (thanos_compact_group_compactions_duration_seconds)
+#    - 메모리 사용량 모니터링 (process_resident_memory_bytes)
+#    - S3 블록 수 증가 추세 확인
+#
+# ============================================================================
+# 데이터 Lifecycle
+# ============================================================================
+#
+# 1. Raw Data (원본):
+#    Prometheus/Receiver → S3 (2시간 블록) → Compactor 압축 → 큰 블록 생성
+#    → 7일 후 삭제
+#
+# 2. 5분 해상도:
+#    Compactor 다운샘플링 → S3 (5m 블록) → 30일 후 삭제
+#    - 쿼리 시 5분 이상 범위에 자동 사용
+#
+# 3. 1시간 해상도:
+#    Compactor 다운샘플링 → S3 (1h 블록) → 90일 후 삭제
+#    - 쿼리 시 1시간 이상 범위에 자동 사용
+#
+# 4. 자동 최적화:
+#    - Thanos Query가 쿼리 범위에 따라 자동으로 적절한 해상도 선택
+#    - 짧은 범위: Raw data 사용
+#    - 중간 범위: 5m 해상도 사용
+#    - 긴 범위: 1h 해상도 사용
+#
+# ============================================================================

@@ -1,4 +1,32 @@
+# ============================================================================
+# Thanos Store Gateway - S3 장기 저장 데이터 쿼리 게이트웨이
+# ============================================================================
+#
+# 목적:
+#   - S3에 저장된 장기 메트릭 데이터를 Thanos Query에 제공
+#   - 과거 데이터 조회 및 장기 트렌드 분석
+#   - Prometheus의 로컬 보관 기간을 넘어서는 데이터 접근
+#
+# 데이터 흐름:
+#   S3 Bucket → Thanos Store → Thanos Query → Grafana
+#
+# 주요 기능:
+#   1. S3 블록 인덱싱: 저장된 TSDB 블록의 메타데이터 인덱스 생성
+#   2. 블록 캐싱: 자주 조회하는 블록을 메모리에 캐싱 (성능 향상)
+#   3. gRPC 제공: Thanos Query가 StoreAPI를 통해 데이터 조회
+#   4. 다운샘플링 데이터 제공: Compactor가 생성한 5m/1h 다운샘플 블록
+#
+# 운영 특징:
+#   - 읽기 전용: S3에서 데이터를 읽기만 함 (쓰기 없음)
+#   - 확장 가능: 여러 Store 인스턴스로 수평 확장 가능
+#   - 메모리 집약적: 인덱스 캐싱으로 메모리 많이 사용
+#
+# ============================================================================
+
 ---
+# ============================================================================
+# Service - Thanos Store Gateway 서비스
+# ============================================================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,19 +35,36 @@ metadata:
   labels:
     app: thanos-store
 spec:
+  # Service 타입: Headless (ClusterIP: None)
+  # - gRPC Store Discovery를 위해 Headless Service 사용
+  # - Thanos Query가 DNS SRV 레코드로 모든 Store Pod 자동 발견
+  # - 각 Pod에 직접 연결하여 부하 분산
   type: ClusterIP
-  clusterIP: None  # Headless service for gRPC
+  clusterIP: None  # Headless service for gRPC discovery
+
   ports:
+    # HTTP 포트 (10902)
+    # - 메트릭 노출: /metrics
+    # - Health check: /-/healthy, /-/ready
+    # - UI: /stores (Store 상태 확인)
     - name: http
       port: 10902
       targetPort: 10902
+
+    # gRPC 포트 (10901)
+    # - Thanos Query가 StoreAPI를 통해 데이터 조회
+    # - 쿼리 요청 수신 및 S3 블록 데이터 제공
     - name: grpc
       port: 10901
       targetPort: 10901
+
   selector:
     app: thanos-store
 
 ---
+# ============================================================================
+# StatefulSet - Thanos Store Gateway 배포
+# ============================================================================
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -28,41 +73,150 @@ metadata:
   labels:
     app: thanos-store
 spec:
+  # Replica 수
+  # - 기본: 1개 (소규모 환경)
+  # - 권장: 2-3개 (고가용성 및 부하 분산)
+  # - 대규모: 4개 이상 (대량 S3 블록 처리)
+  # 참고: 각 Store는 모든 S3 블록을 인덱싱하므로 많을수록 메모리 사용량 증가
   replicas: 1
+
+  # Service 이름 (Headless Service 연결)
   serviceName: thanos-store
+
   selector:
     matchLabels:
       app: thanos-store
+
   template:
     metadata:
       labels:
         app: thanos-store
     spec:
+      # ======================================================================
+      # 보안 컨텍스트
+      # ======================================================================
       securityContext:
+        # fsGroup: 볼륨 파일 소유 그룹
+        # - 1000: thanos 사용자 그룹
+        # - PVC 볼륨의 모든 파일이 이 그룹 소유
         fsGroup: 1000
+
+        # 컨테이너 실행 사용자 ID
+        # - 1000: thanos 사용자 (비 root)
+        # - 보안 강화를 위해 root 사용 금지
         runAsUser: 1000
-        runAsNonRoot: true
+        runAsNonRoot: true  # root 실행 방지
+
       containers:
         - name: thanos-store
+          # Thanos 이미지
+          # - v0.37.2: 현재 stable 버전
+          # - 최신 버전: https://quay.io/repository/thanos/thanos?tab=tags
           image: quay.io/thanos/thanos:v0.37.2
+
+          # ================================================================
+          # Thanos Store 실행 인자
+          # ================================================================
           args:
+            # Store 컴포넌트 실행
             - store
+
+            # 로그 레벨
+            # - debug: 상세 디버깅 (개발/문제 해결)
+            # - info: 일반 운영 정보 (권장)
+            # - warn: 경고만 (프로덕션)
+            # - error: 에러만
             - --log.level=info
+
+            # 데이터 디렉토리
+            # - 인덱스 캐시 파일 저장 위치
+            # - PVC에 마운트된 경로
+            # - 재시작 시 인덱스 재생성 시간 절약
             - --data-dir=/var/thanos/store
+
+            # S3 설정 파일
+            # - Secret에서 마운트한 objstore.yml
+            # - S3 접근 정보 (bucket, endpoint, credentials)
             - --objstore.config-file=/etc/thanos/objstore.yml
+
+            # 인덱스 캐시 크기
+            # - 메타데이터 및 블록 인덱스 캐싱
+            # - 크기별 권장값:
+            #   * 소규모 (블록 < 1000): 500MB
+            #   * 중규모 (블록 1000-5000): 1-2GB
+            #   * 대규모 (블록 > 5000): 3-5GB
+            # - 메모리 제한 내에서 최대한 크게 설정 (성능 향상)
             - --index-cache-size=500MB
+
+            # 청크 풀 크기
+            # - 청크 데이터를 미리 할당하여 메모리 재사용
+            # - GC 부담 감소 및 성능 향상
+            # - 크기별 권장값:
+            #   * 소규모: 500MB
+            #   * 중규모: 1-2GB
+            #   * 대규모: 2-4GB
             - --chunk-pool-size=500MB
+
+            # 선택적 고급 설정 (필요 시 추가)
+            # - --sync-block-duration=3m          # 블록 동기화 간격 (기본: 3분)
+            # - --block-sync-concurrency=20       # 블록 동기화 동시성
+            # - --store.grpc.series-sample-limit=0  # 쿼리당 최대 샘플 수 (0=무제한)
+            # - --store.grpc.series-max-concurrency=20  # 동시 Series 요청 수
+            # - --min-time=-6w                    # 최소 시간 범위 (6주 전부터)
+            # - --max-time=-1h                    # 최대 시간 범위 (1시간 전까지)
+
+          # ================================================================
+          # 포트 설정
+          # ================================================================
           ports:
+            # HTTP 포트
+            # - UI 및 Health Check
             - name: http
               containerPort: 10902
+
+            # gRPC 포트
+            # - StoreAPI (Query가 데이터 요청)
             - name: grpc
               containerPort: 10901
+
+          # ================================================================
+          # 볼륨 마운트
+          # ================================================================
           volumeMounts:
+            # 데이터 디렉토리 (PVC)
+            # - 인덱스 캐시 저장
+            # - 재시작 시 캐시 재사용으로 초기화 시간 단축
             - name: data
               mountPath: /var/thanos/store
+
+            # S3 설정 (Secret)
+            # - objstore.yml 파일
+            # - 읽기 전용으로 마운트
             - name: s3-config
               mountPath: /etc/thanos
               readOnly: true
+
+          # ================================================================
+          # 리소스 제한
+          # ================================================================
+          # 환경별 권장 리소스:
+          #
+          # 소규모 (블록 < 1000, 쿼리 낮음):
+          #   requests: cpu=250m, memory=1Gi
+          #   limits: cpu=500m, memory=2Gi
+          #
+          # 중규모 (블록 1000-5000, 쿼리 보통):
+          #   requests: cpu=500m, memory=2Gi
+          #   limits: cpu=1, memory=4Gi
+          #
+          # 대규모 (블록 > 5000, 쿼리 많음):
+          #   requests: cpu=1, memory=4Gi
+          #   limits: cpu=2, memory=8Gi
+          #
+          # 참고:
+          # - 메모리는 인덱스 캐시 + 청크 풀 + 오버헤드
+          # - S3 블록 수가 증가하면 메모리 요구량 증가
+          # - 쿼리가 많을수록 CPU 요구량 증가
           resources:
             limits:
               cpu: 500m
@@ -70,33 +224,81 @@ spec:
             requests:
               cpu: 250m
               memory: 1Gi
+
+          # ================================================================
+          # Health Checks
+          # ================================================================
+
+          # Liveness Probe (Pod 재시작 판단)
+          # - 실패 시 Kubernetes가 Pod 재시작
+          # - /-/healthy 엔드포인트 확인
           livenessProbe:
             httpGet:
               path: /-/healthy
               port: 10902
+            # 초기 지연 시간
+            # - 30초: S3 블록 초기 동기화 시간 고려
+            # - 블록이 많으면 60초로 증가 권장
             initialDelaySeconds: 30
+            # 확인 주기
             periodSeconds: 10
+
+          # Readiness Probe (트래픽 수신 가능 여부)
+          # - 실패 시 Service에서 트래픽 제외
+          # - /-/ready 엔드포인트 확인
           readinessProbe:
             httpGet:
               path: /-/ready
               port: 10902
+            # 초기 지연 시간
+            # - 15초: 블록 동기화 대기
             initialDelaySeconds: 15
+            # 확인 주기
             periodSeconds: 5
+
+      # ====================================================================
+      # 볼륨 정의
+      # ====================================================================
       volumes:
+        # S3 설정 Secret
         - name: s3-config
           secret:
             secretName: thanos-s3-config
+
+  # ======================================================================
+  # PVC 템플릿 (StatefulSet 전용)
+  # ======================================================================
+  # 각 Pod마다 독립적인 PVC 자동 생성
   volumeClaimTemplates:
     - metadata:
         name: data
       spec:
+        # 접근 모드
+        # - ReadWriteOnce: 단일 노드에서만 읽기/쓰기
+        # - Store는 하나의 Pod만 PVC에 접근
         accessModes: ["ReadWriteOnce"]
+
+        # 스토리지 클래스
+        # - longhorn: 분산 블록 스토리지
+        # - 다른 옵션: local-path, nfs, ceph-rbd
         storageClassName: longhorn
+
+        # 스토리지 크기
+        # - 인덱스 캐시 파일 저장용
+        # - 권장 크기:
+        #   * 소규모: 1Gi
+        #   * 중규모: 5Gi
+        #   * 대규모: 10-20Gi
+        # 참고: S3 블록 수에 비례하여 증가
         resources:
           requests:
             storage: 1Gi
 
 ---
+# ============================================================================
+# ServiceMonitor - Thanos Store 메트릭 수집
+# ============================================================================
+# Prometheus Operator가 Thanos Store의 메트릭을 자동으로 수집하도록 설정
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -105,9 +307,129 @@ metadata:
   labels:
     app: thanos-store
 spec:
+  # 메트릭 수집 대상 Service
   selector:
     matchLabels:
       app: thanos-store
+
+  # 수집 설정
   endpoints:
+    # HTTP 포트에서 메트릭 수집
     - port: http
+      # 수집 간격
+      # - 30초: 일반적인 간격
+      # - 15초: 더 자주 수집 (높은 해상도)
       interval: 30s
+
+# ============================================================================
+# 운영 가이드
+# ============================================================================
+#
+# 1. 배포 확인:
+#    kubectl get pods -n monitoring -l app=thanos-store
+#    kubectl get svc -n monitoring thanos-store
+#
+# 2. S3 블록 동기화 확인:
+#    kubectl logs -n monitoring thanos-store-0 | grep -i "blocks loaded"
+#    # 출력 예: level=info msg="successfully synchronized block metadata"
+#
+# 3. Store UI 접근:
+#    kubectl port-forward -n monitoring svc/thanos-store 10902:10902
+#    # 브라우저: http://localhost:10902
+#    # /stores 페이지에서 블록 정보 확인
+#
+# 4. 메트릭 확인:
+#    # 블록 수
+#    thanos_blocks_meta_synced{state="loaded"}
+#
+#    # 동기화 소요 시간
+#    thanos_blocks_meta_sync_duration_seconds
+#
+#    # 메모리 사용량
+#    process_resident_memory_bytes
+#
+# 5. Query에서 Store 연결 확인:
+#    kubectl logs -n monitoring thanos-query-xxx | grep "thanos-store"
+#    # Store가 발견되면: "adding new storeAPI"
+#
+# 6. 리소스 스케일링:
+#    # Replica 증가 (부하 분산)
+#    kubectl scale statefulset -n monitoring thanos-store --replicas=2
+#
+#    # 메모리 부족 시 리소스 증가
+#    # thanos-store.yaml에서 resources.limits.memory 수정 후 재배포
+#
+# 7. 인덱스 캐시 최적화:
+#    # 블록 수 확인
+#    kubectl exec -n monitoring thanos-store-0 -- \
+#      thanos tools bucket ls --objstore.config-file=/etc/thanos/objstore.yml | wc -l
+#
+#    # 블록이 많으면 index-cache-size 증가
+#    # 예: --index-cache-size=2GB
+#
+# ============================================================================
+# 문제 해결
+# ============================================================================
+#
+# 1. "context deadline exceeded" 에러:
+#    원인: S3 연결 타임아웃
+#    해결:
+#      - S3 엔드포인트 접근 확인
+#      - 네트워크 연결 확인
+#      - objstore.yml의 http_config 타임아웃 증가
+#
+# 2. "failed to sync blocks from object storage":
+#    원인: S3 권한 문제 또는 버킷 접근 실패
+#    해결:
+#      - S3 credentials 확인 (Access Key, Secret Key)
+#      - 버킷 존재 여부 확인
+#      - 버킷 정책 확인 (s3:ListBucket, s3:GetObject 권한)
+#
+# 3. OOMKilled (메모리 부족):
+#    원인: 블록 수에 비해 메모리 부족
+#    해결:
+#      - resources.limits.memory 증가
+#      - index-cache-size, chunk-pool-size 감소
+#      - Store replica 증가하여 블록 분산
+#
+# 4. "no store matches time range":
+#    원인: 쿼리 시간 범위에 해당하는 블록 없음
+#    해결:
+#      - Compactor가 블록을 업로드했는지 확인
+#      - S3 버킷에 블록이 있는지 확인
+#      - Store 로그에서 블록 동기화 확인
+#
+# 5. 느린 쿼리 성능:
+#    원인: 캐시 부족 또는 많은 블록 스캔
+#    해결:
+#      - index-cache-size 증가
+#      - Compactor의 다운샘플링 활성화
+#      - 쿼리 시간 범위 축소
+#      - Store replica 증가
+#
+# ============================================================================
+# 성능 최적화
+# ============================================================================
+#
+# 1. 캐시 크기 최적화:
+#    - index-cache-size: 전체 메모리의 40-50%
+#    - chunk-pool-size: 전체 메모리의 30-40%
+#    - 나머지: 시스템 오버헤드
+#
+# 2. 블록 필터링:
+#    - --min-time, --max-time으로 블록 범위 제한
+#    - 오래된 블록 제외하여 동기화 시간 단축
+#
+# 3. 다운샘플링 활용:
+#    - Compactor의 다운샘플링 활성화
+#    - 5m, 1h 다운샘플 블록으로 쿼리 성능 향상
+#
+# 4. 수평 확장:
+#    - Replica 증가하여 쿼리 부하 분산
+#    - 각 Store가 모든 블록 인덱싱 (중복 없음)
+#
+# 5. PVC 크기 조정:
+#    - 블록이 많으면 인덱스 캐시 파일 크기 증가
+#    - 여유 공간 확보 (권장: 블록 수 * 10MB)
+#
+# ============================================================================
