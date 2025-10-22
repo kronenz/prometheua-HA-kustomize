@@ -1,0 +1,329 @@
+# ============================================================================
+# ArgoCD Application - kube-prometheus-stack (Cluster-01 Central)
+# ============================================================================
+#
+# 목적:
+#   - 중앙 클러스터에 kube-prometheus-stack 배포
+#   - Prometheus Full Mode + Thanos Sidecar
+#   - Grafana + Alertmanager 활성화
+#   - Thanos 통합 모니터링 허브
+#
+# 배포 아키텍처:
+#   Prometheus (Full) + Thanos Sidecar → S3 (장기 저장)
+#   Thanos Query ← (Sidecar + Receiver + Store)
+#   Grafana → Thanos Query (통합 데이터 소스)
+#
+# GitOps 워크플로우:
+#   Git Push → ArgoCD Sync → Kustomize + Helm → Kubernetes
+#
+# ============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  # Application 이름
+  # - ArgoCD UI에서 표시되는 이름
+  # - 명명 규칙: <component>-<cluster>
+  name: kube-prometheus-stack-cluster-01
+
+  # ArgoCD가 설치된 네임스페이스
+  # - 보통 'argocd' 네임스페이스
+  namespace: argocd
+
+  # Finalizer 설정
+  # - Application 삭제 시 배포된 리소스도 함께 삭제
+  # - cascade: Application이 관리하는 모든 리소스 삭제
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+  # 레이블
+  # - 분류 및 필터링용
+  labels:
+    cluster: cluster-01-central
+    component: monitoring
+    environment: production
+
+  # 어노테이션
+  annotations:
+    # 알림 설정 (선택사항)
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: monitoring-alerts
+
+    # 문서 링크 (선택사항)
+    link.argocd.argoproj.io/external-link: https://grafana.k8s-cluster-01.miribit.lab
+
+spec:
+  # ==========================================================================
+  # 프로젝트 설정
+  # ==========================================================================
+  # ArgoCD Project
+  # - 리소스 접근 제어 및 정책 관리
+  # - 'default' 또는 별도 생성한 project 사용
+  project: default
+
+  # ==========================================================================
+  # Source 설정 (Git 저장소)
+  # ==========================================================================
+  source:
+    # Git 저장소 URL
+    # - HTTPS 또는 SSH
+    # - ⚠️ 주의: 실제 Git 저장소 URL로 변경 필요
+    repoURL: https://github.com/your-org/thanos-multi-cluster.git
+
+    # 브랜치/태그/커밋
+    # - main, develop, v1.0.0 등
+    # - HEAD: 최신 커밋
+    targetRevision: HEAD
+
+    # Kustomize 오버레이 경로
+    # - Git 저장소 루트 기준 상대 경로
+    path: deploy/overlays/cluster-01-central/kube-prometheus-stack-new
+
+    # Kustomize 설정
+    kustomize:
+      # Helm 지원 활성화
+      # - kustomization.yaml의 helmCharts 처리
+      # - Helm Chart를 Kustomize로 렌더링
+      enableHelm: true
+
+      # 네임스페이스 강제 지정 (선택사항)
+      # - 모든 리소스에 네임스페이스 추가
+      # namespace: monitoring
+
+      # CommonLabels 추가 (선택사항)
+      # - 모든 리소스에 레이블 추가
+      # commonLabels:
+      #   managed-by: argocd
+      #   cluster: cluster-01-central
+
+      # CommonAnnotations 추가 (선택사항)
+      # commonAnnotations:
+      #   argocd.argoproj.io/tracking-id: kube-prometheus-stack-cluster-01
+
+  # ==========================================================================
+  # Destination 설정 (배포 대상 클러스터)
+  # ==========================================================================
+  destination:
+    # 대상 클러스터
+    # - 'in-cluster': ArgoCD가 실행 중인 클러스터
+    # - 또는 ArgoCD에 등록된 클러스터 이름/URL
+    server: https://kubernetes.default.svc
+
+    # 또는 클러스터 이름 사용 (ArgoCD에 등록된 이름)
+    # name: cluster-01-central
+
+    # 배포 네임스페이스
+    # - kube-prometheus-stack이 배포될 네임스페이스
+    # - kustomization.yaml의 namespace와 일치
+    namespace: monitoring
+
+  # ==========================================================================
+  # Sync 정책
+  # ==========================================================================
+  syncPolicy:
+    # 자동 동기화 설정
+    automated:
+      # 자동 Sync 활성화
+      # - Git 변경 감지 시 자동 배포
+      # - 폴링 간격: 기본 3분 (ArgoCD 설정에서 변경 가능)
+      prune: true        # Git에서 삭제된 리소스 자동 제거
+      selfHeal: true     # 클러스터에서 수동 변경된 리소스 자동 복구
+      allowEmpty: false  # 빈 매니페스트 적용 방지
+
+    # Sync 옵션
+    syncOptions:
+      # 리소스 생성 순서 및 동작 제어
+      - CreateNamespace=true    # 네임스페이스 자동 생성
+      - PrunePropagationPolicy=foreground  # 리소스 삭제 정책 (foreground: 순차 삭제)
+      - PruneLast=true          # Sync 완료 후 prune 실행
+
+      # Helm 관련 옵션
+      - RespectIgnoreDifferences=true  # ignoreDifferences 설정 존중
+
+      # 서버 사이드 적용 (권장)
+      # - kubectl apply --server-side
+      # - 대규모 리소스 처리 향상
+      # - CRD 충돌 방지
+      - ServerSideApply=true
+
+      # Validate
+      # - 리소스 유효성 검사
+      # - false: 빠른 배포, true: 안전한 배포
+      - Validate=true
+
+    # 재시도 정책
+    # - Sync 실패 시 재시도
+    retry:
+      # 최대 재시도 횟수
+      limit: 5
+
+      # 백오프 설정
+      backoff:
+        # 초기 대기 시간
+        duration: 5s
+
+        # 최대 대기 시간
+        maxDuration: 3m
+
+        # 백오프 배수
+        # - 5s → 10s → 20s → 40s → 3m (max)
+        factor: 2
+
+  # ==========================================================================
+  # 무시할 차이점 설정 (선택사항)
+  # ==========================================================================
+  # Git과 클러스터 간 차이를 무시할 필드
+  # - 자동 생성 필드, 동적 값 등
+  ignoreDifferences:
+    # Prometheus Operator가 자동으로 추가하는 필드 무시
+    - group: monitoring.coreos.com
+      kind: Prometheus
+      jsonPointers:
+        - /status
+
+    - group: monitoring.coreos.com
+      kind: Alertmanager
+      jsonPointers:
+        - /status
+
+    # ServiceMonitor 상태 무시
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+      jsonPointers:
+        - /status
+
+    # Secret의 데이터 필드 무시 (민감 정보)
+    # - S3 credentials 등
+    # - ⚠️ 주의: 보안 고려 필요
+    # - group: ""
+    #   kind: Secret
+    #   name: thanos-s3-config
+    #   jsonPointers:
+    #     - /data
+
+  # ==========================================================================
+  # Health Assessment (상태 확인)
+  # ==========================================================================
+  # ArgoCD가 리소스 상태를 확인하는 방법
+  # - 기본 동작으로 충분하므로 보통 설정 불필요
+  # - 필요 시 커스텀 health check 추가 가능
+
+  # ==========================================================================
+  # Info (추가 정보)
+  # ==========================================================================
+  info:
+    # Application 상세 정보
+    # - ArgoCD UI에 표시
+    - name: Description
+      value: |
+        Prometheus Full Mode + Thanos Sidecar
+        중앙 클러스터 통합 모니터링 허브
+
+    - name: Cluster
+      value: cluster-01-central (192.168.101.194)
+
+    - name: Components
+      value: |
+        - Prometheus Operator
+        - Prometheus (Full Mode)
+        - Thanos Sidecar
+        - Thanos Query
+        - Thanos Receiver
+        - Thanos Store
+        - Thanos Compactor
+        - Thanos Ruler
+        - Grafana
+        - Alertmanager
+        - node-exporter
+        - kube-state-metrics
+
+    - name: Grafana URL
+      value: http://grafana.k8s-cluster-01.miribit.lab
+
+    - name: Documentation
+      value: https://github.com/your-org/thanos-multi-cluster/blob/main/docs/README.md
+
+# ============================================================================
+# 배포 방법
+# ============================================================================
+#
+# 1. Git 저장소 URL 수정:
+#    - spec.source.repoURL을 실제 Git 저장소로 변경
+#
+# 2. Application 생성:
+#    kubectl apply -f argocd/apps/cluster-01-central/kube-prometheus-stack.yaml
+#
+# 3. ArgoCD UI에서 확인:
+#    - https://argocd.k8s-cluster-01.miribit.lab
+#    - Applications → kube-prometheus-stack-cluster-01
+#
+# 4. 수동 Sync (자동 Sync 비활성화 시):
+#    argocd app sync kube-prometheus-stack-cluster-01
+#
+# 5. 상태 확인:
+#    argocd app get kube-prometheus-stack-cluster-01
+#    kubectl get all -n monitoring
+#
+# ============================================================================
+# 운영 가이드
+# ============================================================================
+#
+# 1. 자동 배포:
+#    - Git Push → 3분 이내 자동 Sync
+#    - ArgoCD UI에서 진행 상황 확인
+#
+# 2. 수동 개입:
+#    - 긴급 변경 시 kubectl 사용 가능
+#    - selfHeal: true이므로 3분 후 Git 상태로 복구됨
+#    - 영구 변경은 반드시 Git에 반영
+#
+# 3. Rollback:
+#    - ArgoCD UI: History → 이전 버전 선택 → Rollback
+#    - CLI: argocd app rollback kube-prometheus-stack-cluster-01 <revision>
+#
+# 4. Sync 일시 중지:
+#    - ArgoCD UI: Disable Auto-Sync
+#    - CLI: argocd app set kube-prometheus-stack-cluster-01 --sync-policy none
+#
+# 5. 트러블슈팅:
+#    - Sync 실패: argocd app get kube-prometheus-stack-cluster-01
+#    - 로그 확인: kubectl logs -n argocd deployment/argocd-application-controller
+#    - 수동 Sync: argocd app sync kube-prometheus-stack-cluster-01 --force
+#
+# ============================================================================
+# 보안 고려사항
+# ============================================================================
+#
+# 1. S3 Secret 관리:
+#    - thanos-s3-config Secret은 Git에 평문 저장 금지
+#    - 대안:
+#      a) Sealed Secrets (bitnami-labs/sealed-secrets)
+#      b) External Secrets Operator (external-secrets/external-secrets)
+#      c) Vault (hashicorp/vault)
+#      d) ArgoCD Vault Plugin
+#
+# 2. Git 저장소 접근:
+#    - Private 저장소 권장
+#    - SSH Key 또는 Personal Access Token 사용
+#    - ArgoCD에 Credential 등록 필요
+#
+# 3. RBAC:
+#    - ArgoCD Project로 네임스페이스 접근 제한
+#    - Application 생성 권한 제한
+#
+# ============================================================================
+# 성능 최적화
+# ============================================================================
+#
+# 1. Sync 성능:
+#    - ServerSideApply=true: 대규모 리소스 처리 향상
+#    - 리소스 수가 많을 경우 폴링 간격 조정 (ArgoCD 설정)
+#
+# 2. 리소스 사용:
+#    - ArgoCD Controller 리소스 모니터링
+#    - Application 수 증가 시 Controller 스케일링
+#
+# 3. Git 폴링:
+#    - Webhook 설정으로 폴링 부하 감소
+#    - GitHub/GitLab Webhook → ArgoCD
+#
+# ============================================================================

@@ -1,0 +1,176 @@
+# ============================================================================
+# ArgoCD Application - kube-prometheus-stack (Cluster-04 Edge)
+# ============================================================================
+#
+# 목적:
+#   - 엣지 클러스터에 kube-prometheus-stack 배포
+#   - Prometheus Agent Mode + Remote Write
+#   - Grafana 및 Alertmanager 비활성화 (경량화)
+#   - 중앙 클러스터로 메트릭 전송
+#
+# 배포 아키텍처:
+#   Prometheus (Agent) → Remote Write → Thanos Receiver (중앙)
+#   ServiceMonitor (자동 감지) → Prometheus Agent
+#   중앙 Grafana에서 통합 시각화
+#
+# GitOps 워크플로우:
+#   Git Push → ArgoCD Sync → Kustomize + Helm → Kubernetes
+#
+# ============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack-cluster-04
+  namespace: argocd
+
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+  labels:
+    cluster: cluster-04-edge
+    component: monitoring
+    environment: edge
+
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: monitoring-alerts
+
+spec:
+  # ==========================================================================
+  # 프로젝트 설정
+  # ==========================================================================
+  project: default
+
+  # ==========================================================================
+  # Source 설정 (Git 저장소)
+  # ==========================================================================
+  source:
+    # Git 저장소 URL
+    # - ⚠️ 주의: 실제 Git 저장소 URL로 변경 필요
+    repoURL: https://github.com/your-org/thanos-multi-cluster.git
+
+    targetRevision: HEAD
+
+    # Kustomize 오버레이 경로
+    path: deploy/overlays/cluster-04-edge/kube-prometheus-stack-new
+
+    kustomize:
+      enableHelm: true
+
+  # ==========================================================================
+  # Destination 설정 (배포 대상 클러스터)
+  # ==========================================================================
+  destination:
+    # 대상 클러스터
+    # - 방법 1: ArgoCD에 등록된 클러스터 이름 사용 (권장)
+    # name: cluster-04-edge
+
+    # - 방법 2: 클러스터 API 서버 URL 직접 지정
+    server: https://192.168.101.198:6443
+
+    namespace: monitoring
+
+  # ==========================================================================
+  # Sync 정책
+  # ==========================================================================
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+      - ServerSideApply=true
+      - Validate=true
+
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        maxDuration: 3m
+        factor: 2
+
+  # ==========================================================================
+  # 무시할 차이점 설정
+  # ==========================================================================
+  ignoreDifferences:
+    - group: monitoring.coreos.com
+      kind: Prometheus
+      jsonPointers:
+        - /status
+
+    - group: monitoring.coreos.com
+      kind: ServiceMonitor
+      jsonPointers:
+        - /status
+
+    - group: monitoring.coreos.com
+      kind: PodMonitor
+      jsonPointers:
+        - /status
+
+  # ==========================================================================
+  # Info (추가 정보)
+  # ==========================================================================
+  info:
+    - name: Description
+      value: |
+        Prometheus Agent Mode + Remote Write
+        엣지 클러스터 경량 모니터링
+
+    - name: Cluster
+      value: cluster-04-edge (192.168.101.198)
+
+    - name: Components
+      value: |
+        - Prometheus Operator
+        - Prometheus (Agent Mode)
+        - node-exporter
+        - kube-state-metrics
+
+    - name: Remote Write Target
+      value: http://thanos-receiver.k8s-cluster-01.miribit.lab/api/v1/receive
+
+    - name: Central Grafana
+      value: http://grafana.k8s-cluster-01.miribit.lab
+
+# ============================================================================
+# 엣지 클러스터 배포 가이드
+# ============================================================================
+#
+# 1. ArgoCD에 엣지 클러스터 등록:
+#
+#    a) Kubeconfig 준비:
+#       sshpass -p "123qwe" ssh -o StrictHostKeyChecking=no bsh@192.168.101.198 \
+#         "echo '123qwe' | sudo -S cp /etc/kubernetes/admin.conf /tmp/admin.conf && \
+#          echo '123qwe' | sudo -S chmod 644 /tmp/admin.conf"
+#
+#       sshpass -p "123qwe" scp -o StrictHostKeyChecking=no \
+#         bsh@192.168.101.198:/tmp/admin.conf ~/.kube/cluster-04.conf
+#
+#    b) ArgoCD에 클러스터 등록:
+#       argocd cluster add cluster-04 \
+#         --kubeconfig ~/.kube/cluster-04.conf \
+#         --name cluster-04-edge
+#
+#    c) 등록 확인:
+#       argocd cluster list
+#
+# 2. Application 생성:
+#    kubectl apply -f argocd/apps/cluster-04-edge/kube-prometheus-stack.yaml
+#
+# 3. 배포 확인:
+#    argocd app get kube-prometheus-stack-cluster-04
+#    argocd app sync kube-prometheus-stack-cluster-04
+#
+# 4. 원격 클러스터에서 확인:
+#    export KUBECONFIG=~/.kube/cluster-04.conf
+#    kubectl get pods -n monitoring
+#    kubectl logs -n monitoring prometheus-kube-prometheus-stack-prometheus-0 \
+#      | grep "remote_write"
+#
+# ============================================================================

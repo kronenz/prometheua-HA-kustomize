@@ -1,0 +1,105 @@
+# ============================================================================
+# 엣지 클러스터 (Cluster-02) - Kustomization
+# ============================================================================
+#
+# 목적:
+#   - Base + 엣지 클러스터 전용 설정
+#   - kube-prometheus-stack Helm Chart 배포
+#   - Prometheus Agent 모드
+#
+# 배포 구성:
+#   1. kube-prometheus-stack (Helm)
+#      - Prometheus Operator
+#      - Prometheus (Agent 모드 + Remote Write)
+#      - node-exporter
+#      - kube-state-metrics
+#
+#   2. 비활성화 컴포넌트:
+#      - Grafana (중앙에서만)
+#      - Alertmanager (중앙에서만)
+#      - Thanos Sidecar (Agent 모드 사용)
+#
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ============================================================================
+# 네임스페이스
+# ============================================================================
+namespace: monitoring
+
+# ============================================================================
+# Base 참조
+# ============================================================================
+# Base kube-prometheus-stack 설정 가져오기
+bases:
+  - ../../../base/kube-prometheus-stack-new
+
+# ============================================================================
+# Helm Charts
+# ============================================================================
+# Base의 Helm Chart를 오버라이드
+helmCharts:
+  - name: kube-prometheus-stack
+    repo: https://prometheus-community.github.io/helm-charts
+    version: "78.2.1"
+    releaseName: kube-prometheus-stack
+    namespace: monitoring
+
+    # Values 파일
+    # - Base values.yaml 먼저 적용
+    # - values-edge.yaml로 오버라이드
+    valuesFile: values-edge.yaml
+
+    # CRD 포함
+    includeCRDs: true
+
+# ============================================================================
+# 추가 리소스
+# ============================================================================
+resources:
+  # 네임스페이스
+  - namespace.yaml
+
+# ============================================================================
+# 레이블 및 어노테이션
+# ============================================================================
+commonLabels:
+  cluster: cluster-03-edge
+  environment: edge
+
+commonAnnotations:
+  deployment: kustomize-helm
+  managed-by: argocd
+
+# ============================================================================
+# 배포 방법
+# ============================================================================
+#
+# 1. Kustomize 빌드:
+#    kustomize build deploy/overlays/cluster-03-edge/kube-prometheus-stack-new
+#
+# 2. 직접 배포:
+#    kustomize build deploy/overlays/cluster-03-edge/kube-prometheus-stack-new | kubectl apply -f -
+#
+# 3. ArgoCD 배포 (권장):
+#    argocd/apps/cluster-03-edge/kube-prometheus-stack.yaml 생성
+#
+# ============================================================================
+# 엣지 클러스터 특징
+# ============================================================================
+#
+# 1. 경량화:
+#    - Prometheus Agent 모드 (메모리 50-70% 절감)
+#    - Grafana/Alertmanager 비활성화
+#
+# 2. Remote Write:
+#    - Thanos Receiver로 메트릭 전송
+#    - Queue 설정으로 안정성 확보
+#
+# 3. ServiceMonitor 자동 감지:
+#    - Base 설정 상속
+#    - 새 서비스 추가 시 ServiceMonitor만 생성
+#
+# ============================================================================

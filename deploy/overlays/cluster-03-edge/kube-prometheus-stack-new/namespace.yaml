@@ -1,0 +1,16 @@
+# ============================================================================
+# Monitoring 네임스페이스 (Cluster-02 Edge)
+# ============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+    cluster: cluster-03-edge
+    prometheus: enabled
+    pod-security.kubernetes.io/enforce: baseline
+  annotations:
+    description: "Prometheus Agent + Thanos Remote Write - Edge Cluster 03"
+    team: "infrastructure"

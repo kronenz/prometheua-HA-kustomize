@@ -1,0 +1,37 @@
+# ============================================================================
+# Monitoring 네임스페이스
+# ============================================================================
+#
+# 목적:
+#   - 모든 모니터링 컴포넌트가 배포될 네임스페이스
+#   - Prometheus, Grafana, Alertmanager, Thanos 등
+#
+# ============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    # 네임스페이스 식별
+    name: monitoring
+
+    # Prometheus Operator가 이 네임스페이스의 ServiceMonitor를 감지
+    prometheus: enabled
+
+    # Pod Security Standards
+    # - baseline: 기본 보안 정책
+    # - 필요 시 restricted로 변경
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline
+
+  annotations:
+    # 설명
+    description: "Prometheus + Thanos Multi-Cluster Monitoring"
+
+    # 관리 팀
+    team: "infrastructure"
+
+    # 문서 링크
+    documentation: "https://github.com/kronenz/prometheua-HA-kustomize"

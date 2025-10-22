@@ -1,0 +1,301 @@
+# ============================================================================
+# 중앙 클러스터 (Cluster-01) - Kustomization
+# ============================================================================
+#
+# 목적:
+#   - Base + 중앙 클러스터 전용 설정
+#   - kube-prometheus-stack Helm Chart 배포
+#   - Thanos 컴포넌트 추가 배포
+#
+# 배포 구성:
+#   1. kube-prometheus-stack (Helm)
+#      - Prometheus Operator
+#      - Prometheus (Full 모드 + Thanos Sidecar)
+#      - Grafana
+#      - Alertmanager
+#      - node-exporter
+#      - kube-state-metrics
+#
+#   2. Thanos 컴포넌트 (수동 YAML)
+#      - Thanos Receiver (엣지 메트릭 수신)
+#      - Thanos Query (통합 쿼리)
+#      - Thanos Store (S3 데이터 조회)
+#      - Thanos Compactor (압축/다운샘플링)
+#      - Thanos Ruler (글로벌 Rule)
+#
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ============================================================================
+# 네임스페이스
+# ============================================================================
+namespace: monitoring
+
+# ============================================================================
+# Base 참조
+# ============================================================================
+# Base kube-prometheus-stack 설정 가져오기
+# - 공통 values.yaml 포함
+# - 모든 기본 설정 상속
+bases:
+  - ../../../base/kube-prometheus-stack-new
+
+# ============================================================================
+# Helm Charts
+# ============================================================================
+# Base의 Helm Chart를 오버라이드
+# - values-central.yaml 추가 적용
+helmCharts:
+  - name: kube-prometheus-stack
+    # Repository
+    repo: https://prometheus-community.github.io/helm-charts
+
+    # 버전 (Base와 동일)
+    version: "78.2.1"
+
+    # Release 이름
+    releaseName: kube-prometheus-stack
+
+    # 네임스페이스
+    namespace: monitoring
+
+    # Values 파일
+    # - Base values.yaml이 먼저 적용됨
+    # - 그 다음 values-central.yaml이 오버라이드
+    # - Helm의 values 병합 규칙 적용
+    valuesFile: values-central.yaml
+
+    # Additional Values (인라인)
+    # - 간단한 오버라이드용
+    # - 필요 시 사용
+    # valuesInline:
+    #   prometheus:
+    #     prometheusSpec:
+    #       retention: 30d
+
+    # CRD 포함
+    includeCRDs: true
+
+# ============================================================================
+# 추가 리소스
+# ============================================================================
+# Thanos 컴포넌트 및 추가 설정
+resources:
+  # 네임스페이스
+  # - monitoring 네임스페이스 생성
+  - namespace.yaml
+
+  # Thanos S3 Secret
+  # - S3 접근 정보
+  # - Thanos Sidecar, Store, Compactor, Ruler가 사용
+  - ../../cluster-01-central/kube-prometheus-stack/thanos-s3-secret.yaml
+
+  # Thanos Receiver
+  # - 엣지 클러스터 메트릭 수신
+  # - Hashring 기반 분산 수신
+  # - Remote Write 엔드포인트 제공
+  - ../../cluster-01-central/kube-prometheus-stack/thanos-receiver.yaml
+
+  # Thanos Query
+  # - 모든 데이터 소스 통합 쿼리
+  # - Grafana의 기본 데이터소스
+  # - Deduplication 수행
+  - ../../cluster-01-central/kube-prometheus-stack/thanos-query.yaml
+
+  # Thanos Store
+  # - S3에 저장된 장기 데이터 조회
+  # - 블록 인덱싱 및 캐싱
+  - ../../cluster-01-central/kube-prometheus-stack/thanos-store.yaml
+
+  # Thanos Compactor
+  # - S3 블록 압축
+  # - 다운샘플링 (5m, 1h)
+  # - Retention 정책 적용
+  - ../../cluster-01-central/kube-prometheus-stack/thanos-compactor.yaml
+
+  # Thanos Ruler
+  # - 글로벌 Recording Rule
+  # - 글로벌 Alerting Rule
+  # - 모든 클러스터 데이터 대상
+  - ../../cluster-01-central/kube-prometheus-stack/thanos-ruler.yaml
+
+# ============================================================================
+# ConfigMap Generator
+# ============================================================================
+# 추가 ConfigMap 생성
+# - Grafana 대시보드
+# - Prometheus Rules
+# - 기타 설정
+configMapGenerator: []
+  # 예시:
+  # - name: grafana-dashboards
+  #   files:
+  #     - dashboards/overview.json
+  #     - dashboards/pods.json
+
+# ============================================================================
+# Secret Generator
+# ============================================================================
+# 추가 Secret 생성
+# - S3 credentials는 별도 YAML로 관리 (GitOps 보안)
+secretGenerator: []
+
+# ============================================================================
+# 패치
+# ============================================================================
+# 특정 리소스 패치
+# - Helm Chart 출력을 추가 수정
+patchesStrategicMerge: []
+  # 예시:
+  # - prometheus-patch.yaml  # Prometheus 리소스 제한 증가
+
+# JSON 패치
+patchesJson6902: []
+
+# ============================================================================
+# 이미지
+# ============================================================================
+# 이미지 태그 오버라이드
+# - 특정 버전 사용 시
+images: []
+  # 예시:
+  # - name: quay.io/prometheus/prometheus
+  #   newTag: v2.48.0
+
+# ============================================================================
+# 레이블 및 어노테이션
+# ============================================================================
+# 공통 레이블
+commonLabels:
+  cluster: cluster-01-central
+  environment: production
+
+# 공통 어노테이션
+commonAnnotations:
+  deployment: kustomize-helm
+  managed-by: argocd
+
+# ============================================================================
+# 배포 방법
+# ============================================================================
+#
+# 1. Kustomize 빌드 (로컬 테스트):
+#    kustomize build deploy/overlays/cluster-01-central/kube-prometheus-stack-new
+#
+# 2. 직접 배포:
+#    kustomize build deploy/overlays/cluster-01-central/kube-prometheus-stack-new | kubectl apply -f -
+#
+# 3. ArgoCD 배포 (권장):
+#    # argocd/apps/cluster-01-central/kube-prometheus-stack.yaml 생성
+#    apiVersion: argoproj.io/v1alpha1
+#    kind: Application
+#    metadata:
+#      name: kube-prometheus-stack
+#      namespace: argocd
+#    spec:
+#      project: monitoring
+#      source:
+#        repoURL: https://github.com/kronenz/prometheua-HA-kustomize
+#        targetRevision: main
+#        path: deploy/overlays/cluster-01-central/kube-prometheus-stack-new
+#      destination:
+#        server: https://kubernetes.default.svc
+#        namespace: monitoring
+#      syncPolicy:
+#        automated:
+#          prune: true
+#          selfHeal: true
+#        syncOptions:
+#          - CreateNamespace=true
+#
+# 4. Helm dependency 업데이트 (필요 시):
+#    # Kustomize가 자동으로 처리하므로 보통 불필요
+#    helm dependency update deploy/overlays/cluster-01-central/kube-prometheus-stack-new
+#
+# ============================================================================
+# 배포 순서
+# ============================================================================
+#
+# 1. 네임스페이스 생성:
+#    kubectl create namespace monitoring
+#
+# 2. S3 Secret 생성:
+#    kubectl apply -f thanos-s3-secret.yaml
+#
+# 3. kube-prometheus-stack 배포:
+#    kustomize build . | kubectl apply -f -
+#    # Prometheus Operator, Prometheus, Grafana, Alertmanager 배포
+#
+# 4. Prometheus Operator CRD 대기:
+#    kubectl wait --for condition=established crd/prometheuses.monitoring.coreos.com
+#
+# 5. Thanos 컴포넌트 배포:
+#    # kustomize build가 모든 리소스 포함하므로 자동 배포
+#
+# 6. 상태 확인:
+#    kubectl get pods -n monitoring
+#    kubectl get prometheus -n monitoring
+#    kubectl get servicemonitor -A
+#
+# ============================================================================
+# values 병합 규칙
+# ============================================================================
+#
+# Helm values 병합 순서:
+#   1. Base values.yaml (기본값)
+#   2. values-central.yaml (오버라이드)
+#   3. valuesInline (최종 오버라이드)
+#
+# 병합 예시:
+#   Base:
+#     prometheus:
+#       prometheusSpec:
+#         retention: 15d
+#         resources:
+#           limits:
+#             memory: 2Gi
+#
+#   Central:
+#     prometheus:
+#       prometheusSpec:
+#         retention: 30d  # 오버라이드
+#         thanos:         # 추가
+#           enabled: true
+#
+#   결과:
+#     prometheus:
+#       prometheusSpec:
+#         retention: 30d        # Central이 Base 오버라이드
+#         resources:            # Base 유지
+#           limits:
+#             memory: 2Gi
+#         thanos:               # Central에서 추가
+#           enabled: true
+#
+# ============================================================================
+# 주의사항
+# ============================================================================
+#
+# 1. Base 참조 경로:
+#    - 상대 경로 사용
+#    - ../../../base/kube-prometheus-stack-new
+#
+# 2. Thanos 컴포넌트 경로:
+#    - 기존 kube-prometheus-stack 디렉토리 참조
+#    - 기존 파일 재사용
+#
+# 3. values 파일 위치:
+#    - values-central.yaml은 같은 디렉토리
+#    - valuesFile: values-central.yaml
+#
+# 4. CRD 설치:
+#    - includeCRDs: true 유지
+#    - Prometheus Operator CRD 필수
+#
+# 5. 배포 순서:
+#    - Operator → CRD → Prometheus → ServiceMonitor
+#    - Kustomize가 자동 정렬하지 않으므로 주의
+#
+# ============================================================================

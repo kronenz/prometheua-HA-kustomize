@@ -1,0 +1,167 @@
+# ============================================================================
+# kube-prometheus-stack Base Kustomization
+# ============================================================================
+#
+# 목적:
+#   - Helm Chart를 Kustomize로 관리
+#   - 모든 클러스터의 기본 설정
+#   - Overlay에서 이 Base를 참조
+#
+# 사용 방법:
+#   - 직접 사용하지 않음
+#   - Overlay (cluster-01-central, cluster-02-edge 등)에서 참조
+#
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ============================================================================
+# 네임스페이스
+# ============================================================================
+# 모든 리소스가 배포될 네임스페이스
+# - Overlay에서 재정의 가능
+namespace: monitoring
+
+# ============================================================================
+# Helm Charts
+# ============================================================================
+# Helm Chart를 Kustomize에서 사용
+# - Kustomize build 시 Helm Chart를 렌더링
+# - values.yaml 적용
+helmCharts:
+  - name: kube-prometheus-stack
+    # Helm Repository
+    # - prometheus-community 공식 Repository
+    repo: https://prometheus-community.github.io/helm-charts
+
+    # Chart 버전
+    # - 78.2.1: 2024년 최신 안정 버전
+    # - Prometheus Operator 0.77.2 포함
+    # - Prometheus v2.54.1 포함
+    version: "78.2.1"
+
+    # Release 이름
+    # - Helm Release 이름
+    # - Kubernetes 리소스 이름의 접두사로 사용
+    releaseName: kube-prometheus-stack
+
+    # 네임스페이스
+    # - Chart가 배포될 네임스페이스
+    # - 위의 namespace와 동일해야 함
+    namespace: monitoring
+
+    # Values 파일
+    # - 기본 설정 파일
+    # - 모든 클러스터의 공통 설정
+    valuesFile: values.yaml
+
+    # Values Inline (선택사항)
+    # - values.yaml을 덮어쓰는 설정
+    # - 간단한 설정 변경 시 사용
+    # - 복잡한 설정은 valuesFile 사용 권장
+    # valuesInline:
+    #   prometheus:
+    #     enabled: true
+
+    # Skip CRDs
+    # - false: CRD도 함께 설치 (기본값, 권장)
+    # - true: CRD 건너뛰기 (이미 설치된 경우)
+    # 참고: Prometheus Operator CRD는 반드시 설치되어야 함
+    includeCRDs: true
+
+# ============================================================================
+# 공통 레이블
+# ============================================================================
+# 모든 리소스에 추가되는 레이블
+commonLabels:
+  # 관리 도구
+  app.kubernetes.io/managed-by: kustomize
+
+  # 컴포넌트
+  app.kubernetes.io/component: monitoring
+
+# ============================================================================
+# 공통 어노테이션
+# ============================================================================
+# 모든 리소스에 추가되는 어노테이션
+commonAnnotations:
+  # 문서 링크
+  documentation: "https://github.com/kronenz/prometheua-HA-kustomize"
+
+  # 관리 팀
+  team: "infrastructure"
+
+# ============================================================================
+# 리소스
+# ============================================================================
+# Helm Chart 외에 추가로 배포할 리소스
+# - Base에서는 공통 리소스만 정의
+# - 클러스터별 리소스는 Overlay에서 정의
+resources: []
+  # 예시:
+  # - namespace.yaml          # monitoring 네임스페이스
+  # - configmap.yaml          # 추가 설정
+
+# ============================================================================
+# 사용 방법
+# ============================================================================
+#
+# 1. 단독으로 빌드 (테스트용):
+#    kustomize build deploy/base/kube-prometheus-stack-new
+#
+# 2. Overlay에서 참조:
+#    # deploy/overlays/cluster-01-central/kube-prometheus-stack/kustomization.yaml
+#    bases:
+#      - ../../../base/kube-prometheus-stack-new
+#
+# 3. ArgoCD에서 사용:
+#    # argocd/apps/cluster-01-central/kube-prometheus-stack.yaml
+#    spec:
+#      source:
+#        path: deploy/overlays/cluster-01-central/kube-prometheus-stack
+#
+# ============================================================================
+# Helm vs Kustomize
+# ============================================================================
+#
+# 왜 Helm을 Kustomize로 감싸는가?
+#
+# 1. 통합 관리:
+#    - Helm Chart와 수동 YAML을 함께 관리
+#    - 하나의 Kustomize로 통합
+#
+# 2. Overlay 패턴:
+#    - Base (공통) + Overlay (환경별)
+#    - 중복 제거, 유지보수 용이
+#
+# 3. GitOps 친화적:
+#    - ArgoCD가 Kustomize 네이티브 지원
+#    - Git Repository 기반 배포
+#
+# 4. 선언적 관리:
+#    - values.yaml로 설정 관리
+#    - Kustomize로 리소스 조합
+#
+# ============================================================================
+# 주의사항
+# ============================================================================
+#
+# 1. Helm Chart 버전 변경:
+#    - version 업데이트
+#    - values.yaml 호환성 확인
+#    - 테스트 후 배포
+#
+# 2. includeCRDs:
+#    - 반드시 true로 유지
+#    - CRD 없으면 ServiceMonitor 등 사용 불가
+#
+# 3. valuesFile 경로:
+#    - kustomization.yaml 기준 상대 경로
+#    - values.yaml이 같은 디렉토리에 있어야 함
+#
+# 4. Helm Repository 접근:
+#    - 인터넷 연결 필요
+#    - Offline 환경에서는 Chart를 로컬에 다운로드 후 사용
+#
+# ============================================================================

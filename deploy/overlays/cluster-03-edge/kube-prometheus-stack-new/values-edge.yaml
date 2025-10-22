@@ -1,0 +1,372 @@
+# ============================================================================
+# 엣지 클러스터 (Cluster-02) - kube-prometheus-stack Values
+# ============================================================================
+#
+# 목적:
+#   - Base values.yaml에 추가되는 엣지 클러스터 전용 설정
+#   - Prometheus Agent 모드
+#   - Remote Write → Thanos Receiver
+#   - Grafana 및 Alertmanager 비활성화 (중앙에서 관리)
+#
+# 사용 방법:
+#   - Base values.yaml + 이 파일
+#   - Helm이 두 파일을 병합하여 적용
+#
+# 배포 아키텍처:
+#   Prometheus (Agent) → Remote Write → Thanos Receiver (중앙)
+#   Prometheus ← ServiceMonitor (자동 감지)
+#   중앙 Grafana에서 모든 데이터 시각화
+#
+# ============================================================================
+
+# ============================================================================
+# Prometheus 설정 (엣지 클러스터)
+# ============================================================================
+prometheus:
+  # Service 비활성화 (Agent 모드에서는 쿼리 불필요)
+  # - Agent 모드는 Remote Write만 수행
+  # - 로컬 쿼리 API 불필요
+  service:
+    type: ClusterIP
+    port: 9090
+
+  # Prometheus 상세 설정
+  prometheusSpec:
+    # ========================================================================
+    # Agent 모드 활성화 (핵심!)
+    # ========================================================================
+    # Prometheus Agent 모드
+    # - 로컬 TSDB 없음 (WAL만 사용)
+    # - Remote Write 전용
+    # - 메모리 효율적
+    # - 쿼리 API 비활성화
+    #
+    # 참고: --enable-feature=agent 플래그로 실행
+    additionalArgs:
+      - name: enable-feature
+        value: agent
+
+    # ========================================================================
+    # 외부 레이블
+    # ========================================================================
+    # 모든 메트릭에 추가되는 레이블
+    # - Thanos에서 클러스터 구분용
+    # - ⚠️ 주의: cluster 레이블을 클러스터별로 다르게 설정
+    externalLabels:
+      cluster: cluster-03-edge  # cluster-03, cluster-04는 변경 필요
+      environment: edge
+      region: kr-edge-03
+
+    # ========================================================================
+    # Remote Write 설정 (핵심!)
+    # ========================================================================
+    # Thanos Receiver로 메트릭 전송
+    # - 엣지 클러스터의 핵심 기능
+    # - 모든 수집 메트릭을 중앙으로 전송
+    remoteWrite:
+      # Thanos Receiver 엔드포인트
+      - url: http://thanos-receiver.k8s-cluster-01.miribit.lab/api/v1/receive
+
+        # Queue 설정
+        # - Agent 모드에서 매우 중요
+        # - 네트워크 불안정 시 메트릭 손실 방지
+        queueConfig:
+          # Queue 용량 (샘플 수)
+          # - 엣지: 10000-50000
+          # - 네트워크 불안정 시 더 크게
+          capacity: 10000
+
+          # 최대 샤드 수
+          # - 병렬 전송 스트림 수
+          # - 엣지: 5-10
+          maxShards: 10
+
+          # 최소 샤드 수
+          # - 항상 유지할 최소 스트림
+          minShards: 1
+
+          # 샤드당 최대 샘플 수
+          # - 배치 크기
+          maxSamplesPerSend: 1000
+
+          # 배치 전송 대기 시간
+          # - 배치가 꽉 차지 않아도 이 시간 후 전송
+          batchSendDeadline: 5s
+
+          # 최대 재시도 횟수
+          # - 전송 실패 시 재시도
+          maxRetries: 3
+
+          # 최소 백오프 시간
+          # - 재시도 간격 최소값
+          minBackoff: 30ms
+
+          # 최대 백오프 시간
+          # - 재시도 간격 최대값
+          maxBackoff: 5s
+
+        # Write Relabel 설정 (선택사항)
+        # - Remote Write 전에 메트릭 필터링/변환
+        # writeRelabelConfigs:
+        #   # 불필요한 메트릭 제거
+        #   - sourceLabels: [__name__]
+        #     regex: 'etcd_.*'
+        #     action: drop
+
+    # ========================================================================
+    # 저장소 설정 (엣지 클러스터)
+    # ========================================================================
+    # Retention (WAL 보관 기간)
+    # - Agent 모드: 최소값 사용 (2-6시간)
+    # - WAL만 사용하므로 짧게 설정
+    # - Remote Write 실패 시 재전송용
+    retention: 6h
+
+    # 스토리지 크기
+    # - Agent 모드: 작은 용량 (WAL만)
+    # - 권장: 5-10Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
+
+    # ========================================================================
+    # 리소스 설정 (엣지 클러스터)
+    # ========================================================================
+    # 엣지는 리소스 제약이 있을 수 있음
+    # - Agent 모드는 메모리 효율적
+    # - Full 모드보다 50-70% 적은 리소스
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    # ========================================================================
+    # Replica 설정
+    # ========================================================================
+    # 엣지 클러스터
+    # - 1개 권장 (리소스 절약)
+    # - 중복 메트릭은 Thanos Receiver에서 처리
+    replicas: 1
+
+    # ========================================================================
+    # Thanos Sidecar 비활성화
+    # ========================================================================
+    # Agent 모드에서는 Sidecar 불필요
+    # - Remote Write 사용
+    # - S3 직접 업로드 안 함
+    thanos:
+      enabled: false
+
+    # ========================================================================
+    # Scrape 설정
+    # ========================================================================
+    # Base와 동일하게 ServiceMonitor 자동 감지
+    # - 설정 변경 불필요 (Base에서 이미 설정됨)
+    scrapeInterval: 30s
+    scrapeTimeout: 10s
+    evaluationInterval: 30s
+
+# ============================================================================
+# Alertmanager 설정 (엣지 클러스터)
+# ============================================================================
+# 엣지에서는 Alertmanager 비활성화
+# - 모든 Alert는 중앙에서 관리
+alertmanager:
+  enabled: false
+
+# ============================================================================
+# Grafana 설정 (엣지 클러스터)
+# ============================================================================
+# 엣지에서는 Grafana 비활성화
+# - 중앙 Grafana에서 모든 클러스터 시각화
+grafana:
+  enabled: false
+
+# ============================================================================
+# node-exporter 설정 (엣지 클러스터)
+# ============================================================================
+prometheus-node-exporter:
+  # 활성화 (Base와 동일)
+  enabled: true
+
+  # 엣지 클러스터는 리소스 제약
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# ============================================================================
+# kube-state-metrics 설정 (엣지 클러스터)
+# ============================================================================
+kube-state-metrics:
+  # 활성화 (Base와 동일)
+  enabled: true
+
+  # 리소스 설정
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 256Mi
+
+# ============================================================================
+# Kubernetes 컴포넌트 모니터링 (엣지 클러스터)
+# ============================================================================
+# 엣지 클러스터는 필요한 컴포넌트만 모니터링
+
+# kube-apiserver
+kubeApiServer:
+  enabled: true
+
+# kubelet (cAdvisor 포함)
+kubelet:
+  enabled: true
+
+# kube-controller-manager
+# - 엣지에서는 선택사항
+kubeControllerManager:
+  enabled: true
+
+# coreDNS
+coreDns:
+  enabled: true
+
+# kube-etcd
+# - 엣지에서는 선택사항
+# - 단일 노드 클러스터에서는 비활성화 고려
+kubeEtcd:
+  enabled: false  # 엣지에서는 보통 불필요
+
+# kube-scheduler
+# - 엣지에서는 선택사항
+kubeScheduler:
+  enabled: true
+
+# kube-proxy
+kubeProxy:
+  enabled: true
+
+# ============================================================================
+# PrometheusRules (Alert 및 Recording Rules)
+# ============================================================================
+defaultRules:
+  # 기본 Rule 생성
+  # - 엣지에서도 로컬 Alert 가능
+  # - Alertmanager는 중앙으로 전송
+  create: true
+
+  # Rule 그룹별 활성화
+  # - 필요한 것만 활성화 (리소스 절약)
+  rules:
+    alertmanager: false  # Alertmanager 비활성화
+    etcd: false          # etcd 모니터링 비활성화
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesSystem: true
+    node: true
+    prometheus: true
+
+# ============================================================================
+# 추가 설정
+# ============================================================================
+
+# Prometheus Operator 설정
+# - Base와 동일하게 유지
+prometheusOperator:
+  enabled: true
+
+  # 리소스 제한 (엣지용)
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# ============================================================================
+# 엣지 클러스터 특화 설정 요약
+# ============================================================================
+#
+# 1. Prometheus Agent 모드:
+#    - 로컬 TSDB 없음
+#    - 6시간 WAL retention
+#    - 5Gi 스토리지 (최소)
+#
+# 2. Remote Write:
+#    - Thanos Receiver로 전송
+#    - Queue 설정으로 안정성 확보
+#
+# 3. Grafana/Alertmanager 비활성화:
+#    - 중앙에서 통합 관리
+#    - 리소스 절약
+#
+# 4. 리소스 최적화:
+#    - Prometheus: 512Mi 메모리
+#    - node-exporter: 128Mi 메모리
+#    - kube-state-metrics: 256Mi 메모리
+#
+# 5. ServiceMonitor 자동 감지:
+#    - Base 설정 상속
+#    - 자동으로 모든 ServiceMonitor 감지
+#
+# ============================================================================
+# 클러스터별 변경 필요 사항
+# ============================================================================
+#
+# Cluster-03 (cluster-03-edge):
+#   externalLabels:
+#     cluster: cluster-03-edge  # 변경
+#     region: kr-edge-03         # 변경
+#
+# Cluster-04 (cluster-04-edge):
+#   externalLabels:
+#     cluster: cluster-04-edge  # 변경
+#     region: kr-edge-04         # 변경
+#
+# 나머지 설정은 모두 동일
+#
+# ============================================================================
+# 배포 후 확인 사항
+# ============================================================================
+#
+# 1. Prometheus Agent 상태:
+#    kubectl get prometheus -n monitoring
+#    kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus
+#
+# 2. Remote Write 확인:
+#    kubectl logs -n monitoring prometheus-kube-prometheus-stack-prometheus-0 \
+#      | grep "remote_write"
+#    # 성공 메시지 확인
+#
+# 3. Thanos Receiver에서 확인:
+#    # 중앙 클러스터에서
+#    kubectl logs -n monitoring thanos-receiver-0 \
+#      | grep "cluster-03-edge"
+#    # 메트릭 수신 확인
+#
+# 4. 중앙 Grafana에서 확인:
+#    # Thanos Query로 쿼리
+#    up{cluster="cluster-03-edge"}
+#    # 엣지 클러스터 메트릭 확인
+#
+# 5. ServiceMonitor 자동 감지:
+#    kubectl get servicemonitor -A
+#    # Prometheus UI (port-forward)
+#    # Status → Targets에서 자동 감지 확인
+#
+# ============================================================================

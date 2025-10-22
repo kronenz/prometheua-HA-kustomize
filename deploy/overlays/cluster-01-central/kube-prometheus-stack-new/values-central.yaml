@@ -1,0 +1,446 @@
+# ============================================================================
+# 중앙 클러스터 (Cluster-01) - kube-prometheus-stack Values
+# ============================================================================
+#
+# 목적:
+#   - Base values.yaml에 추가되는 중앙 클러스터 전용 설정
+#   - Full Prometheus 모드
+#   - Thanos Sidecar 활성화 (S3 업로드)
+#   - Grafana 및 Alertmanager 활성화
+#
+# 사용 방법:
+#   - Base values.yaml + 이 파일
+#   - Helm이 두 파일을 병합하여 적용
+#
+# 배포 아키텍처:
+#   Prometheus (Full) → Thanos Sidecar → S3
+#   Prometheus ← ServiceMonitor (자동 감지)
+#   Grafana → Thanos Query → 통합 데이터
+#
+# ============================================================================
+
+# ============================================================================
+# Prometheus 설정 (중앙 클러스터)
+# ============================================================================
+prometheus:
+  # Ingress 설정
+  # - 외부에서 Prometheus UI 접근
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - prometheus.k8s-cluster-01.miribit.lab
+    paths:
+      - /
+    pathType: Prefix
+
+  # Prometheus 상세 설정
+  prometheusSpec:
+    # ========================================================================
+    # 실행 모드
+    # ========================================================================
+    # Prometheus 실행 모드
+    # - 중앙 클러스터: Full 모드 (기본값)
+    # - Agent 모드 아님 (로컬 저장소 사용)
+    # mode: ""  # 비워두면 Full 모드
+
+    # ========================================================================
+    # 외부 레이블
+    # ========================================================================
+    # 모든 메트릭에 추가되는 레이블
+    # - Thanos에서 클러스터 구분용
+    # - Grafana 대시보드에서 필터링용
+    externalLabels:
+      cluster: cluster-01-central
+      environment: production
+      region: kr-central
+
+    # ========================================================================
+    # Thanos Sidecar 설정 (핵심!)
+    # ========================================================================
+    # Thanos Sidecar 활성화
+    # - Prometheus 데이터를 S3에 업로드
+    # - Thanos Query에 gRPC StoreAPI 제공
+    # - 2시간마다 TSDB 블록을 S3에 업로드
+    thanos:
+      # Sidecar 활성화
+      enabled: true
+
+      # Sidecar 이미지
+      image: quay.io/thanos/thanos:v0.37.2
+
+      # Object Storage 설정
+      # - S3 버킷 정보
+      # - Secret으로 관리
+      objectStorageConfig:
+        # Secret 이름
+        # - thanos-s3-config Secret 참조
+        # - 별도로 생성 필요
+        name: thanos-s3-config
+        key: objstore.yml
+
+      # 리소스 제한
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+
+    # ========================================================================
+    # 저장소 설정 (중앙 클러스터)
+    # ========================================================================
+    # Retention (로컬 보관 기간)
+    # - 중앙 클러스터: 15일
+    # - Thanos Sidecar가 S3에 업로드하므로 짧게 설정 가능
+    # - 장기 데이터는 S3에서 조회
+    retention: 15d
+
+    # 스토리지 크기
+    # - 중앙 클러스터는 더 많은 메트릭 수집
+    # - 권장: 50-100Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 50Gi
+
+    # ========================================================================
+    # 리소스 설정 (중앙 클러스터)
+    # ========================================================================
+    # 중앙 클러스터는 더 많은 리소스 필요
+    # - 로컬 메트릭 + 모든 클러스터 쿼리
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 2
+        memory: 4Gi
+
+    # ========================================================================
+    # Replica 설정
+    # ========================================================================
+    # HA 구성
+    # - 2개 Replica 권장
+    # - Thanos Query가 Deduplication 수행
+    replicas: 1  # 소규모: 1, 프로덕션: 2
+
+    # ========================================================================
+    # Remote Write 설정 (선택사항)
+    # ========================================================================
+    # 중앙 클러스터도 필요 시 다른 시스템으로 전송 가능
+    # remoteWrite:
+    #   - url: http://other-prometheus:9090/api/v1/write
+    #     queueConfig:
+    #       capacity: 10000
+    #       maxShards: 10
+
+# ============================================================================
+# Alertmanager 설정 (중앙 클러스터)
+# ============================================================================
+# Alert 관리 (중앙에서만 활성화)
+alertmanager:
+  # Alertmanager 활성화
+  # - 중앙 클러스터에서만 true
+  enabled: true
+
+  # Ingress 설정
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - alertmanager.k8s-cluster-01.miribit.lab
+    paths:
+      - /
+    pathType: Prefix
+
+  # Alertmanager 상세 설정
+  alertmanagerSpec:
+    # 리소스 설정
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+    # 저장소 설정
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
+
+    # Replica 수
+    # - HA: 2-3개
+    replicas: 1
+
+    # Alertmanager 설정
+    # - config Secret으로 관리
+    # - 별도 생성 필요
+    # configSecret: alertmanager-config
+
+# ============================================================================
+# Grafana 설정 (중앙 클러스터)
+# ============================================================================
+# 시각화 대시보드 (중앙에서만 활성화)
+grafana:
+  # Grafana 활성화
+  # - 중앙 클러스터에서만 true
+  enabled: true
+
+  # Admin 계정
+  adminPassword: admin123
+
+  # Ingress 설정
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - grafana.k8s-cluster-01.miribit.lab
+    path: /
+    pathType: Prefix
+
+  # Persistence
+  persistence:
+    enabled: true
+    storageClassName: longhorn
+    size: 10Gi  # 중앙은 더 많은 대시보드 저장
+
+  # 리소스 설정
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # 데이터소스 설정
+  # - Thanos Query를 기본 데이터소스로 사용
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        # Thanos Query (기본)
+        # - 모든 클러스터 통합 데이터
+        - name: Thanos Query
+          type: prometheus
+          url: http://thanos-query.monitoring.svc.cluster.local:9090
+          access: proxy
+          isDefault: true
+          editable: true
+          jsonData:
+            timeInterval: 30s
+
+        # 로컬 Prometheus
+        # - 중앙 클러스터 로컬 데이터만
+        - name: Prometheus (Local)
+          type: prometheus
+          url: http://kube-prometheus-stack-prometheus:9090
+          access: proxy
+          isDefault: false
+          editable: true
+
+  # 대시보드 자동 import
+  # - ConfigMap으로 대시보드 정의
+  # - 자동으로 Grafana에 로드
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+  # 사전 설정 대시보드
+  # - kube-prometheus-stack 기본 대시보드 포함
+  defaultDashboardsEnabled: true
+  defaultDashboardsTimezone: Asia/Seoul
+
+# ============================================================================
+# node-exporter 설정 (중앙 클러스터)
+# ============================================================================
+prometheus-node-exporter:
+  # 활성화 (Base와 동일)
+  enabled: true
+
+  # 중앙 클러스터는 리소스 여유 있음
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# ============================================================================
+# kube-state-metrics 설정 (중앙 클러스터)
+# ============================================================================
+kube-state-metrics:
+  # 활성화 (Base와 동일)
+  enabled: true
+
+  # 리소스 설정
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+
+# ============================================================================
+# Kubernetes 컴포넌트 모니터링 (중앙 클러스터)
+# ============================================================================
+# 중앙 클러스터는 모든 컴포넌트 모니터링 활성화
+
+# kube-apiserver
+kubeApiServer:
+  enabled: true
+
+# kubelet (cAdvisor 포함)
+kubelet:
+  enabled: true
+
+# kube-controller-manager
+kubeControllerManager:
+  enabled: true
+
+# coreDNS
+coreDns:
+  enabled: true
+
+# kube-etcd
+kubeEtcd:
+  enabled: true
+
+# kube-scheduler
+kubeScheduler:
+  enabled: true
+
+# kube-proxy
+kubeProxy:
+  enabled: true
+
+# ============================================================================
+# PrometheusRules (Alert 및 Recording Rules)
+# ============================================================================
+defaultRules:
+  # 모든 기본 Rule 활성화
+  create: true
+
+  # Rule 그룹별 활성화
+  rules:
+    alertmanager: true
+    etcd: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesSystem: true
+    node: true
+    prometheus: true
+
+# ============================================================================
+# 추가 설정
+# ============================================================================
+
+# 네임스페이스 생성
+# - kustomize에서 처리하므로 비활성화
+namespaceOverride: ""
+
+# Release 이름 재정의
+# - 기본값 사용
+fullnameOverride: ""
+nameOverride: ""
+
+# ============================================================================
+# 중앙 클러스터 특화 설정 요약
+# ============================================================================
+#
+# 1. Full Prometheus 모드:
+#    - 로컬 TSDB 저장소 사용
+#    - 15일 retention
+#    - 50Gi 스토리지
+#
+# 2. Thanos Sidecar 활성화:
+#    - S3에 블록 업로드
+#    - Thanos Query에 StoreAPI 제공
+#
+# 3. Grafana 활성화:
+#    - Thanos Query를 기본 데이터소스
+#    - 모든 클러스터 데이터 시각화
+#
+# 4. Alertmanager 활성화:
+#    - 모든 Alert 중앙 관리
+#
+# 5. Ingress 설정:
+#    - Prometheus: prometheus.k8s-cluster-01.miribit.lab
+#    - Grafana: grafana.k8s-cluster-01.miribit.lab
+#    - Alertmanager: alertmanager.k8s-cluster-01.miribit.lab
+#
+# 6. 리소스 크기:
+#    - Prometheus: 2Gi 메모리
+#    - 중앙에서 더 많은 쿼리 처리
+#
+# ============================================================================
+# 배포 후 확인 사항
+# ============================================================================
+#
+# 1. Prometheus 상태:
+#    kubectl get prometheus -n monitoring
+#    kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus
+#
+# 2. Thanos Sidecar 확인:
+#    kubectl logs -n monitoring prometheus-kube-prometheus-stack-prometheus-0 thanos-sidecar
+#    # "uploaded block" 메시지 확인
+#
+# 3. S3 블록 확인:
+#    # MinIO/S3에서 thanos-bucket 확인
+#    # 2시간마다 새 블록 업로드
+#
+# 4. Grafana 접속:
+#    http://grafana.k8s-cluster-01.miribit.lab
+#    # Thanos Query 데이터소스 확인
+#    # 모든 클러스터 메트릭 조회 가능
+#
+# 5. ServiceMonitor 자동 감지:
+#    # Prometheus UI → Status → Targets
+#    # 모든 ServiceMonitor 자동 표시
+#
+# ============================================================================
+# 함께 배포할 리소스
+# ============================================================================
+#
+# 이 values 파일과 함께 다음 리소스들을 배포해야 함:
+#
+# 1. thanos-s3-secret.yaml
+#    - S3 접근 정보
+#    - Thanos Sidecar가 사용
+#
+# 2. Thanos 컴포넌트 (수동 배포):
+#    - thanos-receiver.yaml
+#    - thanos-query.yaml
+#    - thanos-store.yaml
+#    - thanos-compactor.yaml
+#    - thanos-ruler.yaml
+#
+# 3. 추가 ServiceMonitor:
+#    - 사용자 정의 애플리케이션용
+#
+# ============================================================================
