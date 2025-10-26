@@ -47,7 +47,6 @@ data:
       external_labels:
         cluster: cluster-02           # 클러스터 식별자 (고유해야 함)
         region: edge                  # 리전 구분 (central/edge)
-        prometheus_replica: $(POD_NAME)  # HA 구성 시 replica 구분용
 
     # ========================================================================
     # Remote Write 설정 (Thanos Receiver로 전송)

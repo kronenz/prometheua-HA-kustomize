@@ -25,3 +25,5 @@ kubeconfig*
 # Local values
 local-values.yaml
 gitea-values.yaml
+*_old_backup
+*_backup_*

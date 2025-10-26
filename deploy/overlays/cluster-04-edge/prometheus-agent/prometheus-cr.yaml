@@ -1,0 +1,104 @@
+# ============================================================================
+# Prometheus Custom Resource - Agent Mode (Cluster-02 Edge)
+# ============================================================================
+#
+# Prometheus Operator CRD를 사용하여 Prometheus Agent 배포
+# - externalLabels가 자동으로 적용됨
+# - ConfigMap 대신 CRD 사용 (표준 방식)
+#
+# ============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus-agent
+  namespace: monitoring
+  labels:
+    app: prometheus-agent
+    cluster: cluster-04-edge
+spec:
+  # ========================================================================
+  # Agent 모드 활성화
+  # ========================================================================
+  # - 로컬 TSDB 없이 remote_write만 수행
+  # - 메모리 사용량 감소
+  # - 쿼리 API 비활성화
+  # - 모든 메트릭에 자동으로 추가되는 레이블
+  # - Thanos에서 멀티클러스터 구분에 사용
+  externalLabels:
+    cluster: cluster-04
+    region: edge
+
+  # ========================================================================
+  # Remote Write 설정
+  # ========================================================================
+  # - Thanos Receiver로 메트릭 전송
+  remoteWrite:
+    - url: http://thanos-receiver.k8s-cluster-01.miribit.lab/api/v1/receive
+      queueConfig:
+        capacity: 10000
+        maxShards: 10
+        minShards: 1
+        maxSamplesPerSend: 5000
+        batchSendDeadline: 5s
+      writeRelabelConfigs: []
+
+  # ========================================================================
+  # ServiceMonitor 선택기
+  # ========================================================================
+  # - 모든 네임스페이스의 모든 ServiceMonitor 자동 감지
+  serviceMonitorSelector: {}
+  serviceMonitorNamespaceSelector: {}
+
+  # - 모든 PodMonitor 자동 감지
+  podMonitorSelector: {}
+  podMonitorNamespaceSelector: {}
+
+  # ========================================================================
+  # 리소스 설정
+  # ========================================================================
+  replicas: 1
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 200Mi
+    limits:
+      cpu: 500m
+      memory: 500Mi
+
+  # ========================================================================
+  # 스토리지 (WAL용)
+  # ========================================================================
+  # - Agent 모드에서는 WAL만 저장
+  # - 6시간 retention
+  retention: 6h
+
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 5Gi
+
+  # ========================================================================
+  # 보안 설정
+  # ========================================================================
+  securityContext:
+    fsGroup: 65534
+    runAsNonRoot: true
+    runAsUser: 65534
+
+  # ========================================================================
+  # ServiceAccount
+  # ========================================================================
+  serviceAccountName: prometheus-agent
+
+  # ========================================================================
+  # Scrape 설정
+  # ========================================================================
+  # - scrape_interval: 30초 (기본값)
+  # - evaluation_interval: Agent 모드에서는 사용 안 함

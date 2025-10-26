@@ -1,0 +1,22 @@
+# ============================================================================
+# Cluster-02 Edge Kustomization
+# ============================================================================
+# 엣지 클러스터 배포 구성:
+# - Prometheus Agent Mode
+# - Remote Write to Central Cluster
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+# Helm Values 오버라이드
+helmCharts:
+  - name: kube-prometheus-stack
+    repo: https://prometheus-community.github.io/helm-charts
+    version: "78.5.0"
+    releaseName: kube-prometheus-stack
+    namespace: monitoring
+    valuesFile: values-edge.yaml
+    includeCRDs: true

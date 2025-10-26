@@ -1,0 +1,190 @@
+# ============================================================================
+# Cluster-01 Central - Prometheus Full Mode + Remote Write
+# ============================================================================
+# 중앙 클러스터 구성: 로컬 메트릭 수집 + Thanos Receiver로 Remote Write
+# 주의: Sidecar 패턴 사용 안함 (Agent + Receiver 패턴)
+# ============================================================================
+
+# ============================================================================
+# Prometheus 설정 (Full Mode)
+# ============================================================================
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    # --------------------------------------------------------------------
+    # 클러스터 식별 레이블
+    # --------------------------------------------------------------------
+    externalLabels:
+      cluster: cluster-01-central
+      environment: production
+      region: kr-central
+
+    # --------------------------------------------------------------------
+    # High Availability 구성
+    # --------------------------------------------------------------------
+    replicas: 2
+
+    # --------------------------------------------------------------------
+    # 리소스 설정 (중앙 클러스터는 더 많은 리소스 할당)
+    # --------------------------------------------------------------------
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 4Gi
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+
+    # --------------------------------------------------------------------
+    # 스토리지 설정 (중앙 클러스터는 더 큰 스토리지)
+    # --------------------------------------------------------------------
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+
+    # --------------------------------------------------------------------
+    # Remote Write 설정 (Bitnami Thanos Receiver로 전송)
+    # --------------------------------------------------------------------
+    remoteWrite:
+      - url: http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive
+        queueConfig:
+          capacity: 10000
+          maxShards: 10
+          minShards: 1
+          maxSamplesPerSend: 5000
+          batchSendDeadline: 5s
+          minBackoff: 30ms
+          maxBackoff: 100ms
+
+    # --------------------------------------------------------------------
+    # Thanos Sidecar 비활성화 (Remote Write 패턴 사용)
+    # 주의: thanos 섹션 자체를 제거하여 Sidecar 배포 방지
+    # --------------------------------------------------------------------
+
+# ============================================================================
+# Alertmanager 설정 (HA)
+# ============================================================================
+alertmanager:
+  enabled: true
+
+  alertmanagerSpec:
+    replicas: 2
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 200m
+        memory: 400Mi
+
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+
+# ============================================================================
+# Grafana 설정
+# ============================================================================
+grafana:
+  enabled: true
+
+  adminPassword: admin123
+
+  # Sidecar 설정 - additionalDataSources를 사용하여 Thanos Query를 기본으로 설정
+  sidecar:
+    datasources:
+      enabled: true
+      defaultDatasourceEnabled: false  # Chart 기본 datasource 비활성화
+
+  # 데이터소스 설정 - Thanos Query를 기본으로 사용
+  datasources:
+    "datasources.yaml":
+      apiVersion: 1
+      datasources:
+        - name: Thanos Query
+          type: prometheus
+          url: http://thanos-query.monitoring.svc.cluster.local:9090
+          access: proxy
+          uid: thanos
+          isDefault: true
+          editable: true
+          jsonData:
+            timeInterval: 30s
+            httpMethod: POST
+
+        - name: Prometheus Local
+          type: prometheus
+          url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          access: proxy
+          uid: prometheus
+          isDefault: false
+          editable: true
+
+  # Ingress 설정
+  ingress:
+    enabled: true
+    ingressClassName: cilium
+    hosts:
+      - grafana.k8s-cluster-01.miribit.lab
+    path: /
+    pathType: Prefix
+
+  # 리소스 설정
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+  # 스토리지
+  persistence:
+    enabled: true
+    storageClassName: longhorn
+    size: 2Gi
+
+# ============================================================================
+# Kube State Metrics
+# ============================================================================
+kube-state-metrics:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# ============================================================================
+# Node Exporter
+# ============================================================================
+prometheus-node-exporter:
+  enabled: true
+
+  hostNetwork: true
+  hostPID: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi

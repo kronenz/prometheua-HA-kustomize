@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: thanos-receiver
+  namespace: monitoring
+  annotations:
+    # Cilium Ingress 설정
+    ingress.cilium.io/loadbalancer-mode: dedicated
+spec:
+  ingressClassName: cilium
+  rules:
+    - host: thanos-receiver.k8s-cluster-01.miribit.lab
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: thanos-receive
+                port:
+                  number: 19291

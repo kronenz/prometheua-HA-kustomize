@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+# Helm Chart 참조
+helmCharts:
+  - name: thanos
+    repo: https://charts.bitnami.com/bitnami
+    version: 17.3.1
+    releaseName: thanos
+    namespace: monitoring
+    valuesFile: values-thanos.yaml
+
+# 추가 리소스
+resources:
+  - thanos-s3-secret.yaml
+  - thanos-receiver-ingress.yaml

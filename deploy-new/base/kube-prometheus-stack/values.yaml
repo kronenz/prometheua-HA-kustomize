@@ -1,0 +1,279 @@
+# ============================================================================
+# kube-prometheus-stack Base Configuration
+# ============================================================================
+# 모든 클러스터에 공통으로 적용되는 기본 설정
+# Overlay에서 클러스터별 특성에 맞게 오버라이드
+# ============================================================================
+
+# ============================================================================
+# Prometheus Operator 설정
+# ============================================================================
+prometheusOperator:
+  enabled: true
+
+  # Operator 리소스 제한
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Admission Webhook 설정
+  admissionWebhooks:
+    enabled: true
+    patch:
+      enabled: true
+
+# ============================================================================
+# Prometheus 설정
+# ============================================================================
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    # --------------------------------------------------------------------
+    # 자동 감지 설정 (핵심!)
+    # --------------------------------------------------------------------
+    # ServiceMonitor 자동 감지 - 모든 네임스페이스의 모든 ServiceMonitor 자동 발견
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+
+    # PodMonitor 자동 감지 - 모든 네임스페이스의 모든 PodMonitor 자동 발견
+    podMonitorSelectorNilUsesHelmValues: false
+    podMonitorNamespaceSelector: {}
+    podMonitorSelector: {}
+
+    # Probe 자동 감지
+    probeSelectorNilUsesHelmValues: false
+    probeNamespaceSelector: {}
+    probeSelector: {}
+
+    # ScrapeConfig 자동 감지
+    scrapeConfigSelectorNilUsesHelmValues: false
+    scrapeConfigNamespaceSelector: {}
+    scrapeConfigSelector: {}
+
+    # PrometheusRule 자동 감지
+    ruleSelectorNilUsesHelmValues: false
+    ruleNamespaceSelector: {}
+    ruleSelector: {}
+
+    # --------------------------------------------------------------------
+    # 리소스 제한 (Overlay에서 조정 가능)
+    # --------------------------------------------------------------------
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+    # --------------------------------------------------------------------
+    # 데이터 보관 설정
+    # --------------------------------------------------------------------
+    retention: 7d  # 로컬 데이터 보관 기간
+    retentionSize: ""  # 크기 제한 (비활성화)
+
+    # --------------------------------------------------------------------
+    # 스토리지 설정
+    # --------------------------------------------------------------------
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+
+    # --------------------------------------------------------------------
+    # 보안 설정
+    # --------------------------------------------------------------------
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      fsGroup: 2000
+      runAsGroup: 2000
+
+    # --------------------------------------------------------------------
+    # WAL Compression (성능 최적화)
+    # --------------------------------------------------------------------
+    walCompression: true
+
+    # --------------------------------------------------------------------
+    # 포트 설정
+    # --------------------------------------------------------------------
+    portName: http-web
+
+    # --------------------------------------------------------------------
+    # 추가 스크랩 설정 (기본 Kubernetes 메트릭)
+    # --------------------------------------------------------------------
+    additionalScrapeConfigs: []
+
+# ============================================================================
+# Alertmanager 설정
+# ============================================================================
+alertmanager:
+  enabled: true  # Overlay에서 비활성화 가능
+
+  alertmanagerSpec:
+    # 리소스 제한
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 200m
+        memory: 400Mi
+
+    # 스토리지
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+
+    # 보안
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      fsGroup: 2000
+      runAsGroup: 2000
+
+# ============================================================================
+# Grafana 설정
+# ============================================================================
+grafana:
+  enabled: true  # Overlay에서 비활성화 가능
+
+  # 관리자 설정
+  adminPassword: admin123
+
+  # 리소스 제한
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+  # 스토리지
+  persistence:
+    enabled: true
+    storageClassName: longhorn
+    size: 1Gi
+
+  # 보안
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 472
+    fsGroup: 472
+
+# ============================================================================
+# Kube State Metrics 설정
+# ============================================================================
+kube-state-metrics:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# ============================================================================
+# Node Exporter 설정
+# ============================================================================
+prometheus-node-exporter:
+  enabled: true
+
+  # DaemonSet으로 모든 노드에 배포
+  hostNetwork: true
+  hostPID: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+
+# ============================================================================
+# Default Rules 설정
+# ============================================================================
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: true
+    configReloaders: true
+    general: true
+    k8s: true
+    kubeApiserverAvailability: true
+    kubeApiserverBurnrate: true
+    kubeApiserverHistogram: true
+    kubeApiserverSlos: true
+    kubeControllerManager: true
+    kubelet: true
+    kubeProxy: true
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    kubeSchedulerAlerting: true
+    kubeSchedulerRecording: true
+    kubeStateMetrics: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true
+
+# ============================================================================
+# Kubernetes 컴포넌트 모니터링
+# ============================================================================
+kubeApiServer:
+  enabled: true
+
+kubelet:
+  enabled: true
+
+kubeControllerManager:
+  enabled: true
+
+coreDns:
+  enabled: true
+
+kubeDns:
+  enabled: false
+
+kubeEtcd:
+  enabled: true
+
+kubeScheduler:
+  enabled: true
+
+kubeProxy:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true

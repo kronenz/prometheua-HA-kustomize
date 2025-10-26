@@ -1,0 +1,160 @@
+# ============================================================================
+# Prometheus Agent - Cluster-02 Edge Configuration
+# ============================================================================
+# Remote Write 전용 Prometheus Agent 구성 (쿼리 기능 없음, 메트릭 전송만)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Prometheus Operator 설정
+# ----------------------------------------------------------------------------
+prometheusOperator:
+  enabled: true
+
+  # 리소스 최소화 (엣지 클러스터)
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ----------------------------------------------------------------------------
+# Prometheus Agent 설정
+# ----------------------------------------------------------------------------
+prometheus:
+  enabled: true
+
+  prometheusSpec:
+    # Agent Mode 활성화 (쿼리/Alert 비활성화, Remote Write만)
+    # https://prometheus.io/blog/2021/11/16/agent/
+    enableFeatures:
+      - agent
+
+    # 로컬 저장소 비활성화 (Agent 모드에서는 불필요)
+    retention: 2h
+    retentionSize: ""
+
+    # WAL 압축 비활성화 (Agent 모드 최적화)
+    walCompression: false
+
+    # 복제본 수 (엣지는 단일 인스턴스)
+    replicas: 1
+
+    # 리소스 제한 (엣지 클러스터 경량화)
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+    # 로컬 스토리지 (최소한으로 설정)
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
+
+    # --------------------------------------------------------------------
+    # Remote Write 설정 (중앙 클러스터 Thanos Receiver로 전송)
+    # --------------------------------------------------------------------
+    remoteWrite:
+      - url: http://thanos-receiver.k8s-cluster-01.miribit.lab/api/v1/receive
+
+        # External Labels (클러스터 식별용)
+        writeRelabelConfigs:
+          - sourceLabels: [__address__]
+            targetLabel: cluster
+            replacement: cluster-03-edge
+
+        # Queue 설정 최적화
+        queueConfig:
+          capacity: 10000
+          maxShards: 5
+          minShards: 1
+          maxSamplesPerSend: 5000
+          batchSendDeadline: 5s
+          minBackoff: 30ms
+          maxBackoff: 100ms
+
+    # External Labels (모든 메트릭에 추가)
+    externalLabels:
+      cluster: cluster-03-edge
+      region: edge
+      environment: production
+
+# ----------------------------------------------------------------------------
+# Alertmanager 비활성화 (중앙 클러스터에서만 사용)
+# ----------------------------------------------------------------------------
+alertmanager:
+  enabled: false
+
+# ----------------------------------------------------------------------------
+# Grafana 비활성화 (중앙 클러스터에서만 사용)
+# ----------------------------------------------------------------------------
+grafana:
+  enabled: false
+
+# ----------------------------------------------------------------------------
+# Node Exporter (노드 메트릭 수집)
+# ----------------------------------------------------------------------------
+prometheus-node-exporter:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 30Mi
+    limits:
+      cpu: 100m
+      memory: 50Mi
+
+# ----------------------------------------------------------------------------
+# Kube-State-Metrics (Kubernetes 리소스 메트릭)
+# ----------------------------------------------------------------------------
+kube-state-metrics:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# ----------------------------------------------------------------------------
+# 기본 모니터링 타겟 활성화
+# ----------------------------------------------------------------------------
+kubeApiServer:
+  enabled: true
+
+kubelet:
+  enabled: true
+
+kubeControllerManager:
+  enabled: true
+
+coreDns:
+  enabled: true
+
+kubeEtcd:
+  enabled: false  # 엣지에서는 etcd 모니터링 불필요할 수 있음
+
+kubeScheduler:
+  enabled: true
+
+kubeProxy:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true

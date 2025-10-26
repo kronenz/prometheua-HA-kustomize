@@ -1,0 +1,16 @@
+# ============================================================================
+# Cluster-01 Central - Simple Kustomization
+# ============================================================================
+# Helm template + Thanos 컴포넌트 배포
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - thanos-query.yaml
+  - thanos-receiver.yaml
+  - thanos-store.yaml
+  - thanos-compactor.yaml

@@ -1,0 +1,194 @@
+# ============================================================================
+# Bitnami Thanos Chart - Cluster-01 Central Configuration
+# ============================================================================
+# Agent + Receiver 패턴을 위한 Thanos 중앙 클러스터 구성
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Global 설정
+# ----------------------------------------------------------------------------
+global:
+  storageClass: longhorn
+  security:
+    allowInsecureImages: true
+
+# ----------------------------------------------------------------------------
+# Image 설정 - 공식 Thanos 이미지 사용
+# ----------------------------------------------------------------------------
+image:
+  registry: quay.io
+  repository: thanos/thanos
+  tag: v0.38.0
+  pullPolicy: IfNotPresent
+
+# ----------------------------------------------------------------------------
+# Object Storage (S3) 설정
+# ----------------------------------------------------------------------------
+# S3 설정은 existingObjstoreSecret으로 주입
+existingObjstoreSecret: thanos-s3-config
+existingObjstoreSecretItems:
+  - key: objstore.yml
+    path: objstore.yml
+
+# ----------------------------------------------------------------------------
+# Thanos Query - 통합 쿼리 인터페이스
+# ----------------------------------------------------------------------------
+query:
+  enabled: true
+  replicaCount: 1
+
+  logLevel: info
+  logFormat: logfmt
+
+  # DNS Discovery 비활성화 (Sidecar 패턴 사용하지 않음)
+  # Remote Write 패턴이므로 Prometheus Sidecar가 없음
+  dnsDiscovery:
+    enabled: false
+
+  # Store endpoints - Receiver와 Store Gateway만 사용
+  # Receiver: Remote Write로 수신한 최신 데이터 (Service DNS 사용)
+  # Store Gateway: S3에 저장된 장기 데이터
+  stores:
+    - thanos-receive.monitoring.svc.cluster.local:10901
+    - dnssrv+_grpc._tcp.thanos-storegateway.monitoring.svc.cluster.local
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  service:
+    type: ClusterIP
+    ports:
+      http: 9090
+      grpc: 10901
+
+# ----------------------------------------------------------------------------
+# Thanos Receiver - Remote Write 수신
+# ----------------------------------------------------------------------------
+receive:
+  enabled: true
+  mode: standalone
+
+  logLevel: info
+  logFormat: logfmt
+
+  tsdbRetention: 15d
+  replicationFactor: 1
+
+  replicaCount: 1
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: 1000m
+      memory: 4Gi
+
+  persistence:
+    enabled: true
+    storageClass: longhorn
+    size: 10Gi
+
+  service:
+    type: ClusterIP
+    ports:
+      http: 10902
+      grpc: 10901
+      remote-write: 19291
+
+  # Ingress는 별도 설정 (Cilium Ingress 사용)
+  ingress:
+    enabled: false
+
+# ----------------------------------------------------------------------------
+# Thanos Store Gateway - S3 장기 데이터 쿼리
+# ----------------------------------------------------------------------------
+storegateway:
+  enabled: true
+
+  logLevel: info
+  logFormat: logfmt
+
+  replicaCount: 1
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  persistence:
+    enabled: true
+    storageClass: longhorn
+    size: 1Gi
+
+  service:
+    type: ClusterIP
+    ports:
+      http: 10902
+      grpc: 10901
+
+# ----------------------------------------------------------------------------
+# Thanos Compactor - 데이터 압축 및 다운샘플링
+# ----------------------------------------------------------------------------
+compactor:
+  enabled: true
+
+  logLevel: info
+  logFormat: logfmt
+
+  retentionResolutionRaw: 30d
+  retentionResolution5m: 90d
+  retentionResolution1h: 180d
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  persistence:
+    enabled: true
+    storageClass: longhorn
+    size: 1Gi
+
+  service:
+    type: ClusterIP
+    ports:
+      http: 10902
+
+# ----------------------------------------------------------------------------
+# Thanos Ruler - Alert/Recording Rule 평가
+# ----------------------------------------------------------------------------
+# 참고: Ruler는 Prometheus Rule 평가가 필요할 때만 활성화
+# 현재는 Prometheus에서 직접 Rule 평가하므로 비활성화
+ruler:
+  enabled: false
+
+# ----------------------------------------------------------------------------
+# Metrics (ServiceMonitor)
+# ----------------------------------------------------------------------------
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    labels:
+      release: kube-prometheus-stack
+
+# ----------------------------------------------------------------------------
+# Bitnami 공통 설정
+# ----------------------------------------------------------------------------
+commonLabels:
+  app.kubernetes.io/part-of: thanos
+  environment: production
+  cluster: cluster-01-central
