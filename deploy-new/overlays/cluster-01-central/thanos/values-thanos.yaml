@@ -1,30 +1,73 @@
 # ============================================================================
-# Bitnami Thanos Chart - Cluster-01 Central Configuration
+# Bitnami Thanos Chart - Cluster-01 중앙 클러스터 구성
 # ============================================================================
-# Agent + Receiver 패턴을 위한 Thanos 중앙 클러스터 구성
+# Prometheus Agent + Thanos Receiver 패턴을 사용한 멀티클러스터 모니터링
+#
+# 아키텍처:
+#   엣지 클러스터 (Prometheus Agent)
+#     ↓ Remote Write (HTTP)
+#   중앙 클러스터 (Thanos Receiver)
+#     ↓ S3 Upload
+#   오브젝트 스토리지 (MinIO S3)
+#     ↓ Query
+#   Thanos Query + Store Gateway
+#     ↓ PromQL API
+#   Grafana (시각화)
 # ============================================================================
 
 # ----------------------------------------------------------------------------
 # Global 설정
 # ----------------------------------------------------------------------------
 global:
+  # 스토리지 클래스: 모든 PVC에서 사용할 기본 StorageClass
+  # Longhorn: 분산 블록 스토리지 (Kubernetes 네이티브)
   storageClass: longhorn
+
   security:
+    # 비보안 이미지 허용: Bitnami 보안 체크 우회
+    # 공식 Thanos 이미지(quay.io)는 Bitnami security context와 호환되지 않을 수 있음
+    # 프로덕션 환경에서는 보안 검토 후 사용 권장
     allowInsecureImages: true
 
 # ----------------------------------------------------------------------------
 # Image 설정 - 공식 Thanos 이미지 사용
 # ----------------------------------------------------------------------------
 image:
+  # 레지스트리: Thanos 공식 이미지 저장소
+  # quay.io는 Red Hat의 컨테이너 레지스트리
   registry: quay.io
+
+  # 리포지토리: Thanos 프로젝트의 공식 이미지
   repository: thanos/thanos
+
+  # 태그: Thanos 버전
+  # v0.38.0은 안정 버전 (2024년 릴리스)
+  # 주요 기능: Remote Write 지원, 향상된 쿼리 성능
   tag: v0.38.0
+
+  # Pull Policy: 이미지가 로컬에 없을 때만 다운로드
+  # IfNotPresent: 성능 최적화 (매번 pull하지 않음)
+  # Always: 매번 최신 이미지 확인 (개발 환경 권장)
   pullPolicy: IfNotPresent
 
 # ----------------------------------------------------------------------------
 # Object Storage (S3) 설정
 # ----------------------------------------------------------------------------
-# S3 설정은 existingObjstoreSecret으로 주입
+# Thanos는 장기 메트릭 저장을 위해 오브젝트 스토리지를 사용
+# S3 호환 스토리지: MinIO, AWS S3, GCS, Azure Blob 등 지원
+#
+# 저장 데이터:
+#   - Prometheus TSDB 블록 (2시간 단위)
+#   - 압축 및 다운샘플링된 데이터
+#   - 메타데이터 (block meta.json)
+#
+# 보관 주기:
+#   - Raw (15s): 30일
+#   - 5m 해상도: 90일
+#   - 1h 해상도: 180일
+
+# S3 설정은 Kubernetes Secret으로 별도 관리
+# thanos-s3-secret.yaml 파일 참조
 existingObjstoreSecret: thanos-s3-config
 existingObjstoreSecretItems:
   - key: objstore.yml
@@ -33,162 +76,486 @@ existingObjstoreSecretItems:
 # ----------------------------------------------------------------------------
 # Thanos Query - 통합 쿼리 인터페이스
 # ----------------------------------------------------------------------------
+# Thanos Query는 멀티클러스터 메트릭을 통합 조회하는 중앙 쿼리 레이어
+#
+# 역할:
+#   1. 여러 Thanos Store API를 통합하여 PromQL 쿼리 제공
+#   2. 중복 제거 (Deduplication): 동일 메트릭의 복제본 자동 병합
+#   3. 다운샘플링된 데이터 자동 선택 (쿼리 범위에 따라)
+#   4. Grafana와 같은 시각화 도구의 데이터소스로 사용
+#
+# 데이터 소스:
+#   - Thanos Receiver: 최신 메트릭 (15일 이내)
+#   - Thanos Store Gateway: 장기 메트릭 (S3에서 조회)
+#   - Thanos Ruler: Recording/Alerting Rule 결과 (선택사항)
+#
+# 쿼리 흐름:
+#   Grafana → Thanos Query (PromQL)
+#           ↓ gRPC (StoreAPI)
+#   Thanos Receiver ← 최신 데이터 (TSDB)
+#   Thanos Store ← 장기 데이터 (S3)
 query:
+  # Query 활성화
   enabled: true
+
+  # 복제본 수: HA 구성을 위해 2개 이상 권장
+  # 현재는 단일 노드이므로 1개로 설정
+  # 프로덕션: replicaCount: 2 (고가용성)
   replicaCount: 1
 
+  # 로그 레벨: debug, info, warn, error
+  # info: 정상 작동 로그 출력 (권장)
+  # debug: 문제 해결 시 사용 (상세 로그)
   logLevel: info
+
+  # 로그 형식: logfmt (구조화된 키=값 형식) 또는 json
+  # logfmt: 사람이 읽기 쉬운 형식
+  # json: 로그 수집 시스템(ELK, Loki)과 통합 시 권장
   logFormat: logfmt
 
-  # DNS Discovery 비활성화 (Sidecar 패턴 사용하지 않음)
-  # Remote Write 패턴이므로 Prometheus Sidecar가 없음
+  # DNS Discovery 설정
+  # Prometheus Sidecar 패턴에서 사용 (자동 검색)
+  # 현재는 Remote Write 패턴이므로 비활성화
+  #
+  # Sidecar 패턴 vs Remote Write 패턴:
+  #   [Sidecar 패턴]
+  #     Prometheus ← (파일 공유) → Thanos Sidecar
+  #       ↓ gRPC StoreAPI
+  #     Thanos Query (DNS Discovery로 자동 검색)
+  #
+  #   [Remote Write 패턴] ← 현재 사용
+  #     Prometheus → (HTTP Remote Write) → Thanos Receiver
+  #       ↓ 직접 연결
+  #     Thanos Query (stores 목록에 명시)
   dnsDiscovery:
     enabled: false
 
-  # Store endpoints - Receiver와 Store Gateway만 사용
-  # Receiver: Remote Write로 수신한 최신 데이터 (Service DNS 사용)
-  # Store Gateway: S3에 저장된 장기 데이터
+  # Store Endpoints: Thanos Query가 메트릭을 조회할 Store API 목록
+  #
+  # 연결 형식:
+  #   1. 직접 주소: <service>.<namespace>.svc.cluster.local:<port>
+  #   2. DNS SRV: dnssrv+_grpc._tcp.<service>.<namespace>.svc.cluster.local
+  #
+  # DNS SRV 방식:
+  #   - StatefulSet의 모든 Pod를 자동 검색
+  #   - HA 구성에서 유용 (여러 replica)
+  #   - 예: thanos-storegateway-0, thanos-storegateway-1 자동 검색
+  #
+  # 직접 주소 방식:
+  #   - 단일 Service로 접근 (Service가 LoadBalancing)
+  #   - 간단하고 명확
   stores:
+    # Thanos Receiver: Remote Write로 수신한 최신 메트릭
+    # 보관 기간: 15일 (tsdbRetention 설정)
+    # 포트 10901: gRPC StoreAPI
     - thanos-receive.monitoring.svc.cluster.local:10901
+
+    # Thanos Store Gateway: S3에 저장된 장기 메트릭
+    # 보관 기간: 30일 (Raw) ~ 180일 (1h 해상도)
+    # DNS SRV 사용: StatefulSet의 모든 replica 자동 검색
     - dnssrv+_grpc._tcp.thanos-storegateway.monitoring.svc.cluster.local
 
+  # 리소스 할당
+  # Thanos Query는 메모리 집약적 (쿼리 결과 캐싱)
   resources:
+    # 최소 보장 리소스
     requests:
-      cpu: 500m
-      memory: 1Gi
-    limits:
-      cpu: 1000m
-      memory: 2Gi
+      cpu: 500m        # 0.5 vCPU
+      memory: 1Gi      # 1GB RAM
 
+    # 최대 사용 제한
+    # 초과 시 Pod가 OOMKilled되거나 throttle될 수 있음
+    limits:
+      cpu: 1000m       # 1 vCPU
+      memory: 2Gi      # 2GB RAM
+
+    # 튜닝 가이드:
+    #   - 많은 시계열 데이터: memory 증가
+    #   - 복잡한 PromQL 쿼리: cpu 증가
+    #   - 느린 쿼리: memory 및 cache 증가
+
+  # Kubernetes Service 설정
   service:
+    # ClusterIP: 클러스터 내부에서만 접근
+    # LoadBalancer: 외부 IP 할당 (클라우드 환경)
+    # NodePort: 노드 IP + 포트로 외부 접근
     type: ClusterIP
+
     ports:
+      # HTTP API: PromQL 쿼리 엔드포인트
+      # Grafana 데이터소스로 사용: http://<service>:9090
+      # 주요 API:
+      #   - /api/v1/query: 즉시 쿼리
+      #   - /api/v1/query_range: 범위 쿼리
+      #   - /api/v1/series: 시계열 메타데이터
+      #   - /api/v1/labels: 레이블 목록
       http: 9090
+
+      # gRPC API: 다른 Thanos 컴포넌트와 통신
+      # 내부 통신용 (일반 사용자는 사용 안 함)
       grpc: 10901
 
 # ----------------------------------------------------------------------------
 # Thanos Receiver - Remote Write 수신
 # ----------------------------------------------------------------------------
+# Thanos Receiver는 Prometheus의 Remote Write 프로토콜로 메트릭을 수신
+#
+# 역할:
+#   1. Prometheus Agent/Server로부터 메트릭 수신 (HTTP Remote Write)
+#   2. TSDB 형식으로 로컬 스토리지에 저장 (단기 보관)
+#   3. 주기적으로 S3에 업로드 (장기 보관)
+#   4. Thanos Query에 StoreAPI 제공 (최신 데이터 조회)
+#
+# Remote Write 프로토콜:
+#   - HTTP POST: /api/v1/receive
+#   - Protobuf 형식 (압축 효율 높음)
+#   - 배치 전송 (네트워크 효율)
+#   - 재시도 메커니즘 내장
+#
+# 데이터 흐름:
+#   Prometheus Agent → (Remote Write) → Thanos Receiver
+#       ↓ 로컬 TSDB 저장
+#   주기적으로 S3 업로드 (2시간 블록)
+#       ↓
+#   Thanos Query ← StoreAPI로 조회
+#
+# 운영 모드:
+#   1. standalone: 단일 인스턴스 (현재 사용)
+#   2. ha-multihash: 다중 인스턴스 + 해시 기반 샤딩 (고가용성)
 receive:
+  # Receiver 활성화
   enabled: true
+
+  # 운영 모드: standalone (단일 인스턴스)
+  # ha-multihash: 고가용성 모드 (3개 이상 replica 권장)
+  #   - 메트릭을 여러 Receiver에 분산 저장
+  #   - 해시링 기반 샤딩
+  #   - 자동 복제 (replicationFactor)
   mode: standalone
 
+  # 로그 설정
   logLevel: info
   logFormat: logfmt
 
+  # TSDB 보관 기간: 로컬 디스크에 보관할 기간
+  # 15d: 15일 동안 로컬 보관 후 S3로만 조회
+  #
+  # 권장 설정:
+  #   - 15d: 최근 2주 데이터 빠른 조회
+  #   - 7d: 디스크 공간 절약
+  #   - 30d: 더 긴 로컬 보관 (빠른 조회)
+  #
+  # S3 업로드 후에도 로컬에 계속 유지됨
+  # tsdbRetention 이후 자동 삭제됨
   tsdbRetention: 15d
+
+  # 복제 계수: HA 모드에서 각 메트릭의 복제본 수
+  # standalone 모드에서는 무시됨
+  # ha-multihash 모드: 3 권장 (데이터 손실 방지)
   replicationFactor: 1
 
+  # Receiver 인스턴스 수
+  # standalone: 1개
+  # ha-multihash: 3개 이상 (홀수 권장)
   replicaCount: 1
 
+  # 리소스 할당
+  # Receiver는 CPU/메모리 집약적 (메트릭 처리 + TSDB 운영)
   resources:
+    # 최소 보장 리소스
     requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      cpu: 1000m
-      memory: 4Gi
+      cpu: 500m        # 0.5 vCPU
+      memory: 2Gi      # 2GB RAM (TSDB head chunk 캐싱)
 
+    # 최대 사용 제한
+    limits:
+      cpu: 1000m       # 1 vCPU
+      memory: 4Gi      # 4GB RAM
+
+    # 튜닝 가이드:
+    #   - 많은 시계열: memory 증가 (head chunk 캐싱)
+    #   - 높은 수신 속도: cpu 증가 (protobuf 디코딩)
+    #   - 느린 S3 업로드: memory 증가 (버퍼링)
+
+  # 영구 스토리지: TSDB 데이터 저장
   persistence:
     enabled: true
     storageClass: longhorn
+
+    # 스토리지 크기: 15일 보관 기준 계산
+    # 계산식: (series 수) × (데이터 포인트/초) × (15일) × (데이터 압축률)
+    #
+    # 예시:
+    #   - 10,000 시계열 × 1 포인트/초 × 15일 = 약 13GB
+    #   - 100,000 시계열 = 약 130GB
+    #
+    # 권장: 예상 크기의 1.5~2배 (버퍼 공간)
     size: 10Gi
 
+  # Kubernetes Service 설정
   service:
     type: ClusterIP
+
     ports:
+      # HTTP API: 상태 확인, 메타데이터 조회
       http: 10902
+
+      # gRPC StoreAPI: Thanos Query와 통신
+      # 최신 메트릭 제공
       grpc: 10901
+
+      # Remote Write Endpoint: Prometheus가 메트릭 전송
+      # HTTP POST /api/v1/receive
+      # Protobuf 형식
       remote-write: 19291
 
-  # Ingress는 별도 설정 (Cilium Ingress 사용)
+  # Ingress 설정
+  # 엣지 클러스터가 외부에서 접근하려면 Ingress 필요
+  # 별도 파일로 관리: thanos-receiver-ingress.yaml
+  #
+  # Ingress URL: http://thanos-receiver.k8s-cluster-01.miribit.lab/api/v1/receive
+  # Prometheus Remote Write 설정:
+  #   remoteWrite:
+  #     - url: http://thanos-receiver.k8s-cluster-01.miribit.lab/api/v1/receive
   ingress:
     enabled: false
 
 # ----------------------------------------------------------------------------
 # Thanos Store Gateway - S3 장기 데이터 쿼리
 # ----------------------------------------------------------------------------
+# Store Gateway는 S3(오브젝트 스토리지)에 저장된 장기 메트릭을 조회
+#
+# 역할:
+#   1. S3에서 TSDB 블록 메타데이터 인덱싱
+#   2. Thanos Query의 요청에 따라 S3에서 데이터 조회
+#   3. 청크(Chunk) 캐싱으로 쿼리 성능 향상
+#   4. 다운샘플링된 데이터 우선 제공
+#
+# 데이터 흐름:
+#   Thanos Query → (gRPC StoreAPI) → Store Gateway
+#       ↓ 메타데이터 캐시 확인
+#   S3 Bucket 조회 (필요 시)
+#       ↓ 청크 캐싱
+#   결과 반환
+#
+# 성능 최적화:
+#   - 메타데이터 인덱스: 빠른 블록 검색
+#   - 청크 캐싱: 반복 쿼리 성능 향상
+#   - 다운샘플링: 긴 시간 범위 쿼리 최적화
 storegateway:
+  # Store Gateway 활성화
   enabled: true
 
+  # 로그 설정
   logLevel: info
   logFormat: logfmt
 
+  # 복제본 수
+  # HA 구성: 2개 이상 (캐시 분산, 부하 분산)
+  # 단일 노드: 1개
   replicaCount: 1
 
+  # 리소스 할당
+  # Store Gateway는 I/O 집약적 (S3 읽기 + 캐싱)
   resources:
+    # 최소 보장 리소스
     requests:
-      cpu: 250m
-      memory: 512Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
+      cpu: 250m        # 0.25 vCPU
+      memory: 512Mi    # 512MB RAM (메타데이터 + 청크 캐시)
 
+    # 최대 사용 제한
+    limits:
+      cpu: 500m        # 0.5 vCPU
+      memory: 1Gi      # 1GB RAM
+
+    # 튜닝 가이드:
+    #   - 많은 블록: memory 증가 (메타데이터 인덱스)
+    #   - 높은 쿼리 빈도: memory 증가 (청크 캐시)
+    #   - 느린 S3: cpu 증가 (압축 해제)
+
+  # 영구 스토리지: 메타데이터 인덱스 캐시
+  # 재시작 시 S3 스캔 시간 단축
   persistence:
     enabled: true
     storageClass: longhorn
-    size: 1Gi
+    size: 1Gi  # 메타데이터만 저장 (작은 크기)
 
+  # Kubernetes Service 설정
   service:
     type: ClusterIP
     ports:
+      # HTTP API: 상태 확인, 메타데이터 조회
       http: 10902
+
+      # gRPC StoreAPI: Thanos Query와 통신
+      # 장기 메트릭 제공
       grpc: 10901
 
 # ----------------------------------------------------------------------------
 # Thanos Compactor - 데이터 압축 및 다운샘플링
 # ----------------------------------------------------------------------------
+# Compactor는 S3의 TSDB 블록을 압축하고 다운샘플링
+#
+# 역할:
+#   1. 작은 블록들을 큰 블록으로 병합 (Compaction)
+#   2. 다운샘플링: 5m, 1h 해상도 데이터 생성
+#   3. 보관 기간 관리: 오래된 데이터 자동 삭제
+#   4. 중복 제거: 동일 블록의 복제본 제거
+#
+# Compaction:
+#   - 작은 블록 (2h) → 중간 블록 (12h) → 큰 블록 (2w)
+#   - 쿼리 성능 향상 (블록 수 감소)
+#   - 스토리지 비용 절감 (압축률 향상)
+#
+# 다운샘플링:
+#   - Raw (15s) → 5m 해상도 → 1h 해상도
+#   - 오래된 데이터일수록 낮은 해상도
+#   - 긴 시간 범위 쿼리 최적화
+#
+# 보관 주기 예시:
+#   - Raw (15s): 30일 보관
+#   - 5m 해상도: 90일 보관
+#   - 1h 해상도: 180일 보관
+#
+# 중요: Compactor는 단일 인스턴스만 실행 (데이터 무결성)
 compactor:
+  # Compactor 활성화
   enabled: true
 
+  # 로그 설정
   logLevel: info
   logFormat: logfmt
 
+  # 보관 기간 설정: 해상도별 데이터 보관 기간
+  #
+  # Raw 데이터 (원본, 15s 해상도)
+  # 30일: 최근 한 달 데이터는 원본 해상도 유지
+  # 이후 자동 삭제됨 (5m 다운샘플링 데이터로만 조회)
   retentionResolutionRaw: 30d
+
+  # 5분 해상도 데이터
+  # 90일: 최근 3개월은 5분 단위 조회 가능
+  # 장기 트렌드 분석에 적합
   retentionResolution5m: 90d
+
+  # 1시간 해상도 데이터
+  # 180일: 최근 6개월은 1시간 단위 조회 가능
+  # 역사적 트렌드, 장기 용량 계획에 사용
   retentionResolution1h: 180d
 
-  resources:
-    requests:
-      cpu: 250m
-      memory: 512Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
+  # 보관 기간 설계 가이드:
+  #   - 규제 요구사항 (금융: 7년, 의료: 10년)
+  #   - 스토리지 비용
+  #   - 쿼리 패턴 (최근 데이터 vs 장기 트렌드)
 
+  # 리소스 할당
+  # Compactor는 I/O 및 CPU 집약적 (압축, 다운샘플링)
+  resources:
+    # 최소 보장 리소스
+    requests:
+      cpu: 250m        # 0.25 vCPU
+      memory: 512Mi    # 512MB RAM
+
+    # 최대 사용 제한
+    limits:
+      cpu: 500m        # 0.5 vCPU
+      memory: 1Gi      # 1GB RAM
+
+    # 튜닝 가이드:
+    #   - 많은 블록: memory/cpu 증가 (병합 작업)
+    #   - 높은 수집 속도: cpu 증가 (다운샘플링)
+    #   - 느린 S3: memory 증가 (버퍼링)
+
+  # 영구 스토리지: 임시 작업 공간
+  # Compaction 작업 중 블록 다운로드/업로드
   persistence:
     enabled: true
     storageClass: longhorn
-    size: 1Gi
+    size: 1Gi  # 임시 작업 공간 (블록 크기에 따라 조정)
 
+  # Kubernetes Service 설정
   service:
     type: ClusterIP
     ports:
+      # HTTP API: 상태 확인, 메트릭
       http: 10902
 
 # ----------------------------------------------------------------------------
 # Thanos Ruler - Alert/Recording Rule 평가
 # ----------------------------------------------------------------------------
-# 참고: Ruler는 Prometheus Rule 평가가 필요할 때만 활성화
-# 현재는 Prometheus에서 직접 Rule 평가하므로 비활성화
+# Thanos Ruler는 PromQL Alert/Recording Rule을 평가하고 결과를 저장
+#
+# 역할:
+#   1. Recording Rule 평가: 사전 계산된 메트릭 생성
+#   2. Alerting Rule 평가: Alert 조건 확인
+#   3. Alertmanager에 Alert 전송
+#   4. Rule 평가 결과를 TSDB에 저장 (Recording Rule)
+#
+# 사용 사례:
+#   - 멀티클러스터 Global Alert: 모든 클러스터 통합 조건
+#   - 복잡한 Recording Rule: 여러 소스 데이터 집계
+#   - 중앙 집중식 Alert 관리
+#
+# Prometheus vs Thanos Ruler:
+#   [Prometheus]
+#     - 로컬 클러스터 Alert/Rule
+#     - 빠른 평가 (로컬 TSDB)
+#     - 클러스터별 조건
+#
+#   [Thanos Ruler]
+#     - 멀티클러스터 Alert/Rule
+#     - Thanos Query 기반 (모든 클러스터 데이터)
+#     - Global 조건 (예: 전체 클러스터 CPU > 80%)
+#
+# 현재 구성: Prometheus에서 Rule 평가하므로 비활성화
+# 필요 시 활성화: enabled: true
 ruler:
   enabled: false
 
 # ----------------------------------------------------------------------------
 # Metrics (ServiceMonitor)
 # ----------------------------------------------------------------------------
+# Prometheus Operator의 ServiceMonitor를 통해 Thanos 컴포넌트 메트릭 수집
+#
+# 수집되는 메트릭:
+#   - thanos_query_*: Query 성능, 쿼리 수, 오류율
+#   - thanos_receive_*: 수신 메트릭 수, Remote Write 오류
+#   - thanos_store_*: S3 접근, 캐시 hit/miss
+#   - thanos_compact_*: Compaction 진행률, 다운샘플링
+#
+# 메트릭 활용:
+#   - Thanos 성능 모니터링
+#   - 용량 계획
+#   - 문제 해결 (디버깅)
+#   - SLO/SLA 추적
 metrics:
+  # Thanos 자체 메트릭 수집 활성화
   enabled: true
+
   serviceMonitor:
+    # Prometheus Operator ServiceMonitor 생성
     enabled: true
+
+    # ServiceMonitor가 생성될 네임스페이스
     namespace: monitoring
+
+    # Prometheus가 ServiceMonitor를 발견하기 위한 레이블
+    # kube-prometheus-stack의 serviceMonitorSelector와 일치해야 함
     labels:
       release: kube-prometheus-stack
 
 # ----------------------------------------------------------------------------
 # Bitnami 공통 설정
 # ----------------------------------------------------------------------------
+# 모든 Thanos 컴포넌트에 적용될 공통 레이블
 commonLabels:
+  # Thanos 프로젝트 소속 표시
   app.kubernetes.io/part-of: thanos
+
+  # 운영 환경 구분
+  # production, staging, development
   environment: production
+
+  # 클러스터 식별
+  # 멀티클러스터 환경에서 소속 표시
   cluster: cluster-01-central
