@@ -1865,49 +1865,52 @@ bucketweb:
   ## @param bucketweb.timeout 원격 스토리지에서 메타데이터를 다운로드하는 타임아웃
   ##
   timeout: 5m
-  ## @param bucketweb.extraEnvVars Extra environment variables for Thanos Bucket Web container
-  ## e.g:
+  ## @param bucketweb.extraEnvVars Thanos Bucket Web 컨테이너에 추가할 환경 변수
+  ## 💡 사용 예:
   ## extraEnvVars:
   ##   - name: FOO
   ##     value: "bar"
   ##
   extraEnvVars: []
-  ## @param bucketweb.extraEnvVarsCM Name of existing ConfigMap containing extra env vars for Thanos Bucket Web nodes
+  ## @param bucketweb.extraEnvVarsCM Thanos Bucket Web 노드에 추가할 환경 변수를 포함하는 기존 ConfigMap 이름
   ##
   extraEnvVarsCM: ""
-  ## @param bucketweb.extraEnvVarsSecret Name of existing Secret containing extra env vars for Thanos Bucket Web nodes
+  ## @param bucketweb.extraEnvVarsSecret Thanos Bucket Web 노드에 추가할 환경 변수를 포함하는 기존 Secret 이름
   ##
   extraEnvVarsSecret: ""
-  ## @param bucketweb.extraFlags Extra Flags to passed to Thanos Bucket Web
+  ## @param bucketweb.extraFlags Thanos Bucket Web에 전달할 추가 플래그
+  ## 💡 예: --log.level=debug
   ##
   extraFlags: []
-  ## @param bucketweb.command Override default container command (useful when using custom images)
+  ## @param bucketweb.command 기본 컨테이너 명령 재정의 (커스텀 이미지 사용 시 유용)
   ##
   command: []
-  ## @param bucketweb.args Override default container args (useful when using custom images)
+  ## @param bucketweb.args 기본 컨테이너 인자 재정의 (커스텀 이미지 사용 시 유용)
   ##
   args: []
-  ## @param bucketweb.replicaCount Number of Thanos Bucket Web replicas to deploy
+  ## @param bucketweb.replicaCount Thanos Bucket Web 레플리카 수
+  ## 💡 일반적으로 1개로 충분 (읽기 전용 컴포넌트)
   ##
   replicaCount: 1
-  ## @param bucketweb.revisionHistoryLimit The number of old history to retain to allow rollback
+  ## @param bucketweb.revisionHistoryLimit 롤백을 위해 유지할 이전 버전 수
   ##
   revisionHistoryLimit: 10
-  ## @param bucketweb.updateStrategy.type Update strategy type for Thanos Bucket Web replicas
+  ## @param bucketweb.updateStrategy.type Thanos Bucket Web 레플리카 업데이트 전략 타입
+  ## 💡 RollingUpdate: 무중단 업데이트
   ##
   updateStrategy:
     type: RollingUpdate
-  ## @param bucketweb.containerPorts.http HTTP container port
+  ## @param bucketweb.containerPorts.http HTTP 컨테이너 포트
   ##
   containerPorts:
     http: 8080
-  ## K8s Pod Security Context for Thanos Bucket Web pods
+  ## Kubernetes Pod Security Context for Thanos Bucket Web pods
   ## https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
-  ## @param bucketweb.podSecurityContext.enabled Enable security context for the Thanos Bucket Web pods
-  ## @param bucketweb.podSecurityContext.fsGroupChangePolicy Set filesystem group change policy
-  ## @param bucketweb.podSecurityContext.sysctls Set kernel settings using the sysctl interface
-  ## @param bucketweb.podSecurityContext.supplementalGroups Set filesystem extra groups
-  ## @param bucketweb.podSecurityContext.fsGroup Group ID for the filesystem used by Thanos Bucket Web pods
+  ## @param bucketweb.podSecurityContext.enabled Thanos Bucket Web 파드의 보안 컨텍스트 활성화
+  ## @param bucketweb.podSecurityContext.fsGroupChangePolicy 파일시스템 그룹 변경 정책 설정
+  ## @param bucketweb.podSecurityContext.sysctls sysctl 인터페이스를 사용한 커널 설정
+  ## @param bucketweb.podSecurityContext.supplementalGroups 파일시스템 추가 그룹 설정
+  ## @param bucketweb.podSecurityContext.fsGroup Thanos Bucket Web 파드가 사용하는 파일시스템의 그룹 ID
   ##
   podSecurityContext:
     enabled: true
@@ -1915,18 +1918,18 @@ bucketweb:
     sysctls: []
     supplementalGroups: []
     fsGroup: 1001
-  ## K8s containers' Security Context for Thanos Bucket Web containers
+  ## Kubernetes containers' Security Context for Thanos Bucket Web containers
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container
-  ## @param bucketweb.containerSecurityContext.enabled Enabled containers' Security Context
-  ## @param bucketweb.containerSecurityContext.seLinuxOptions [object,nullable] Set SELinux options in container
-  ## @param bucketweb.containerSecurityContext.runAsUser Set containers' Security Context runAsUser
-  ## @param bucketweb.containerSecurityContext.runAsGroup Set containers' Security Context runAsGroup
-  ## @param bucketweb.containerSecurityContext.runAsNonRoot Set container's Security Context runAsNonRoot
-  ## @param bucketweb.containerSecurityContext.privileged Set container's Security Context privileged
-  ## @param bucketweb.containerSecurityContext.readOnlyRootFilesystem Set container's Security Context readOnlyRootFilesystem
-  ## @param bucketweb.containerSecurityContext.allowPrivilegeEscalation Set container's Security Context allowPrivilegeEscalation
-  ## @param bucketweb.containerSecurityContext.capabilities.drop List of capabilities to be dropped
-  ## @param bucketweb.containerSecurityContext.seccompProfile.type Set container's Security Context seccomp profile
+  ## @param bucketweb.containerSecurityContext.enabled 컨테이너 보안 컨텍스트 활성화
+  ## @param bucketweb.containerSecurityContext.seLinuxOptions [object,nullable] 컨테이너의 SELinux 옵션 설정
+  ## @param bucketweb.containerSecurityContext.runAsUser 컨테이너를 실행할 사용자 ID 설정
+  ## @param bucketweb.containerSecurityContext.runAsGroup 컨테이너를 실행할 그룹 ID 설정
+  ## @param bucketweb.containerSecurityContext.runAsNonRoot 컨테이너를 비-root 사용자로 실행
+  ## @param bucketweb.containerSecurityContext.privileged 컨테이너의 특권 모드 설정
+  ## @param bucketweb.containerSecurityContext.readOnlyRootFilesystem 컨테이너의 루트 파일시스템을 읽기 전용으로 설정
+  ## @param bucketweb.containerSecurityContext.allowPrivilegeEscalation 컨테이너의 권한 상승 허용 설정
+  ## @param bucketweb.containerSecurityContext.capabilities.drop 제거할 Capability 목록
+  ## @param bucketweb.containerSecurityContext.seccompProfile.type 컨테이너의 Seccomp 프로필 타입 설정
   ##
   containerSecurityContext:
     enabled: true
@@ -1941,31 +1944,32 @@ bucketweb:
       drop: ["ALL"]
     seccompProfile:
       type: "RuntimeDefault"
-  ## Thanos Bucket Web containers' resource requests and limits
+  ## Thanos Bucket Web 컨테이너의 리소스 요청 및 제한
   ## ref: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
-  ## @param bucketweb.resourcesPreset Set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if bucketweb.resources is set (bucketweb.resources is recommended for production).
-  ## More information: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
+  ## @param bucketweb.resourcesPreset 미리 정의된 프리셋에 따라 컨테이너 리소스 설정 (허용 값: none, nano, micro, small, medium, large, xlarge, 2xlarge). bucketweb.resources가 설정되면 무시됨 (프로덕션 환경에서는 bucketweb.resources 권장)
+  ## 💡 자세한 정보: https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15
   ##
   resourcesPreset: "nano"
-  ## @param bucketweb.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
-  ## Example:
+  ## @param bucketweb.resources CPU 또는 메모리와 같은 다양한 리소스에 대한 컨테이너 요청 및 제한 설정 (프로덕션 워크로드에 필수)
+  ## 💡 Bucket Web은 경량 컴포넌트이므로 리소스 요구사항이 낮음
+  ## 예제:
   ## resources:
   ##   requests:
-  ##     cpu: 2
-  ##     memory: 512Mi
+  ##     cpu: 100m
+  ##     memory: 128Mi
   ##   limits:
-  ##     cpu: 3
-  ##     memory: 1024Mi
+  ##     cpu: 200m
+  ##     memory: 256Mi
   ##
   resources: {}
-  ## Configure extra options for Thanos Bucket Web containers' liveness and readiness probes
+  ## Thanos Bucket Web 컨테이너의 Liveness 및 Readiness Probe 추가 옵션 구성
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-  ## @param bucketweb.livenessProbe.enabled Enable livenessProbe on Thanos Bucket Web containers
-  ## @param bucketweb.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-  ## @param bucketweb.livenessProbe.periodSeconds Period seconds for livenessProbe
-  ## @param bucketweb.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-  ## @param bucketweb.livenessProbe.failureThreshold Failure threshold for livenessProbe
-  ## @param bucketweb.livenessProbe.successThreshold Success threshold for livenessProbe
+  ## @param bucketweb.livenessProbe.enabled Thanos Bucket Web 컨테이너의 livenessProbe 활성화
+  ## @param bucketweb.livenessProbe.initialDelaySeconds livenessProbe 초기 지연 시간(초)
+  ## @param bucketweb.livenessProbe.periodSeconds livenessProbe 주기(초)
+  ## @param bucketweb.livenessProbe.timeoutSeconds livenessProbe 타임아웃(초)
+  ## @param bucketweb.livenessProbe.failureThreshold livenessProbe 실패 임계값
+  ## @param bucketweb.livenessProbe.successThreshold livenessProbe 성공 임계값
   ##
   livenessProbe:
     enabled: true
@@ -1974,12 +1978,12 @@ bucketweb:
     periodSeconds: 10
     successThreshold: 1
     failureThreshold: 6
-  ## @param bucketweb.readinessProbe.enabled Enable readinessProbe on Thanos Bucket Web containers
-  ## @param bucketweb.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-  ## @param bucketweb.readinessProbe.periodSeconds Period seconds for readinessProbe
-  ## @param bucketweb.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-  ## @param bucketweb.readinessProbe.failureThreshold Failure threshold for readinessProbe
-  ## @param bucketweb.readinessProbe.successThreshold Success threshold for readinessProbe
+  ## @param bucketweb.readinessProbe.enabled Thanos Bucket Web 컨테이너의 readinessProbe 활성화
+  ## @param bucketweb.readinessProbe.initialDelaySeconds readinessProbe 초기 지연 시간(초)
+  ## @param bucketweb.readinessProbe.periodSeconds readinessProbe 주기(초)
+  ## @param bucketweb.readinessProbe.timeoutSeconds readinessProbe 타임아웃(초)
+  ## @param bucketweb.readinessProbe.failureThreshold readinessProbe 실패 임계값
+  ## @param bucketweb.readinessProbe.successThreshold readinessProbe 성공 임계값
   ##
   readinessProbe:
     enabled: true
@@ -1988,12 +1992,12 @@ bucketweb:
     periodSeconds: 10
     successThreshold: 1
     failureThreshold: 6
-  ## @param bucketweb.startupProbe.enabled Enable startupProbe on Thanos Bucket Web containers
-  ## @param bucketweb.startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
-  ## @param bucketweb.startupProbe.periodSeconds Period seconds for startupProbe
-  ## @param bucketweb.startupProbe.timeoutSeconds Timeout seconds for startupProbe
-  ## @param bucketweb.startupProbe.failureThreshold Failure threshold for startupProbe
-  ## @param bucketweb.startupProbe.successThreshold Success threshold for startupProbe
+  ## @param bucketweb.startupProbe.enabled Thanos Bucket Web 컨테이너의 startupProbe 활성화
+  ## @param bucketweb.startupProbe.initialDelaySeconds startupProbe 초기 지연 시간(초)
+  ## @param bucketweb.startupProbe.periodSeconds startupProbe 주기(초)
+  ## @param bucketweb.startupProbe.timeoutSeconds startupProbe 타임아웃(초)
+  ## @param bucketweb.startupProbe.failureThreshold startupProbe 실패 임계값
+  ## @param bucketweb.startupProbe.successThreshold startupProbe 성공 임계값
   ##
   startupProbe:
     enabled: false
@@ -2002,18 +2006,18 @@ bucketweb:
     timeoutSeconds: 1
     failureThreshold: 15
     successThreshold: 1
-  ## @param bucketweb.customLivenessProbe Custom livenessProbe that overrides the default one
+  ## @param bucketweb.customLivenessProbe 기본 livenessProbe를 재정의하는 사용자 정의 livenessProbe
   ##
   customLivenessProbe: {}
-  ## @param bucketweb.customReadinessProbe Custom readinessProbe that overrides the default one
+  ## @param bucketweb.customReadinessProbe 기본 readinessProbe를 재정의하는 사용자 정의 readinessProbe
   ##
   customReadinessProbe: {}
-  ## @param bucketweb.customStartupProbe Custom startupProbe that overrides the default one
+  ## @param bucketweb.customStartupProbe 기본 startupProbe를 재정의하는 사용자 정의 startupProbe
   ##
   customStartupProbe: {}
-  ## @param bucketweb.initContainers Add additional init containers to the Thanos Bucket Web pods
+  ## @param bucketweb.initContainers Thanos Bucket Web 파드에 추가할 초기화 컨테이너
   ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
-  ## e.g:
+  ## 예제:
   ## initContainers:
   ##  - name: your-image-name
   ##    image: your-image
@@ -2021,8 +2025,8 @@ bucketweb:
   ##    command: ['sh', '-c', 'echo "hello world"']
   ##
   initContainers: []
-  ## @param bucketweb.sidecars Extra containers running as sidecars to Thanos Bucket Web pods
-  ## e.g:
+  ## @param bucketweb.sidecars Thanos Bucket Web 파드에 사이드카로 실행할 추가 컨테이너
+  ## 예제:
   ## sidecars:
   ##   - name: your-image-name
   ##     image: your-image
@@ -2032,63 +2036,63 @@ bucketweb:
   ##         containerPort: 1234
   ##
   sidecars: []
-  ## @param bucketweb.extraVolumes Extra volumes to add to Bucket Web
+  ## @param bucketweb.extraVolumes Bucket Web에 추가할 추가 볼륨
   ##
   extraVolumes: []
-  ## @param bucketweb.extraVolumeMounts Extra volume mounts to add to the bucketweb container
+  ## @param bucketweb.extraVolumeMounts bucketweb 컨테이너에 추가할 볼륨 마운트
   ##
   extraVolumeMounts: []
-  ## @param bucketweb.podAffinityPreset Thanos Bucket Web pod affinity preset
+  ## @param bucketweb.podAffinityPreset Thanos Bucket Web 파드 어피니티 프리셋
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   ##
   podAffinityPreset: ""
-  ## @param bucketweb.podAntiAffinityPreset Thanos Bucket Web pod anti-affinity preset. Ignored if `bucketweb.affinity` is set. Allowed values: `soft` or `hard`
+  ## @param bucketweb.podAntiAffinityPreset Thanos Bucket Web 파드 안티-어피니티 프리셋. `bucketweb.affinity`가 설정되면 무시됨. 허용 값: `soft` 또는 `hard`
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   ##
   podAntiAffinityPreset: soft
-  ## Thanos Bucket Web node affinity preset
+  ## Thanos Bucket Web 노드 어피니티 프리셋
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
   ##
   nodeAffinityPreset:
-    ## @param bucketweb.nodeAffinityPreset.type Thanos Bucket Web node affinity preset type. Ignored if `bucketweb.affinity` is set. Allowed values: `soft` or `hard`
+    ## @param bucketweb.nodeAffinityPreset.type Thanos Bucket Web 노드 어피니티 프리셋 타입. `bucketweb.affinity`가 설정되면 무시됨. 허용 값: `soft` 또는 `hard`
     ##
     type: ""
-    ## @param bucketweb.nodeAffinityPreset.key Thanos Bucket Web node label key to match. Ignored if `bucketweb.affinity` is set.
-    ## e.g:
+    ## @param bucketweb.nodeAffinityPreset.key 매칭할 Thanos Bucket Web 노드 레이블 키. `bucketweb.affinity`가 설정되면 무시됨
+    ## 예제:
     ## key: "kubernetes.io/e2e-az-name"
     ##
     key: ""
-    ## @param bucketweb.nodeAffinityPreset.values Thanos Bucket Web node label values to match. Ignored if `bucketweb.affinity` is set.
-    ## e.g:
+    ## @param bucketweb.nodeAffinityPreset.values 매칭할 Thanos Bucket Web 노드 레이블 값. `bucketweb.affinity`가 설정되면 무시됨
+    ## 예제:
     ## values:
     ##   - e2e-az1
     ##   - e2e-az2
     ##
     values: []
-  ## @param bucketweb.affinity Thanos Bucket Web affinity for pod assignment
+  ## @param bucketweb.affinity Thanos Bucket Web 파드 할당을 위한 어피니티 설정
   ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-  ## Note: bucketweb.podAffinityPreset, bucketweb.podAntiAffinityPreset, and bucketweb.nodeAffinityPreset will be ignored when it's set
+  ## 참고: 이 값이 설정되면 bucketweb.podAffinityPreset, bucketweb.podAntiAffinityPreset, bucketweb.nodeAffinityPreset은 무시됨
   ##
   affinity: {}
-  ## @param bucketweb.nodeSelector Thanos Bucket Web node labels for pod assignment
+  ## @param bucketweb.nodeSelector Thanos Bucket Web 파드 할당을 위한 노드 레이블
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector: {}
-  ## @param bucketweb.tolerations Thanos Bucket Web tolerations for pod assignment
+  ## @param bucketweb.tolerations Thanos Bucket Web 파드 할당을 위한 톨러레이션
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
   tolerations: []
-  ## @param bucketweb.podLabels Thanos Bucket Web pod labels
+  ## @param bucketweb.podLabels Thanos Bucket Web 파드 레이블
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
   ##
   podLabels: {}
-  ## @param bucketweb.podAnnotations Annotations for Thanos Bucket Web pods
+  ## @param bucketweb.podAnnotations Thanos Bucket Web 파드 어노테이션
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   podAnnotations: {}
-  ## @param bucketweb.dnsConfig Deployment pod DNS config
+  ## @param bucketweb.dnsConfig Deployment 파드의 DNS 설정
   ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
-  ## E.g.
+  ## 예제:
   ## dnsConfig:
   ##   options:
   ##   - name: ndots
@@ -2096,50 +2100,50 @@ bucketweb:
   ##   - name: single-request-reopen
   ##
   dnsConfig: {}
-  ## @param bucketweb.dnsPolicy Deployment pod DNS policy
+  ## @param bucketweb.dnsPolicy Deployment 파드의 DNS 정책
   ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/
-  ## E.g.
+  ## 예제:
   ## dnsPolicy: ClusterFirstWithHostNet
   ##
   dnsPolicy: ""
-  ## @param bucketweb.hostAliases Deployment pod host aliases
+  ## @param bucketweb.hostAliases Deployment 파드의 호스트 별칭
   ## https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
   ##
   hostAliases: []
-  ## @param bucketweb.lifecycleHooks for the Thanos Bucket Web container(s) to automate configuration before or after startup
+  ## @param bucketweb.lifecycleHooks 시작 전후 구성 자동화를 위한 Thanos Bucket Web 컨테이너의 라이프사이클 훅
   ##
   lifecycleHooks: {}
-  ## @param bucketweb.priorityClassName Thanos Bucket Web priorityClassName
+  ## @param bucketweb.priorityClassName Thanos Bucket Web의 우선순위 클래스 이름
   ## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
   ##
   priorityClassName: ""
-  ## @param bucketweb.schedulerName Name of the k8s scheduler (other than default) for Thanos Bucket Web pods
+  ## @param bucketweb.schedulerName Thanos Bucket Web 파드에 사용할 쿠버네티스 스케줄러 이름 (기본값이 아닌 경우)
   ## ref: https://kubernetes.io/docs/tasks/administer-cluster/configure-multiple-schedulers/
   ##
   schedulerName: ""
-  ## @param bucketweb.topologySpreadConstraints Topology Spread Constraints for Thanos Bucket Web pods assignment spread across your cluster among failure-domains
+  ## @param bucketweb.topologySpreadConstraints 장애 도메인 간 클러스터 전체에 Thanos Bucket Web 파드 할당을 분산하기 위한 토폴로지 분산 제약 조건
   ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/#spread-constraints-for-pods
   ##
   topologySpreadConstraints: []
-  ## Network Policies
+  ## 네트워크 정책
   ## Ref: https://kubernetes.io/docs/concepts/services-networking/network-policies/
   ##
   networkPolicy:
-    ## @param bucketweb.networkPolicy.enabled Specifies whether a NetworkPolicy should be created
+    ## @param bucketweb.networkPolicy.enabled NetworkPolicy 생성 여부
     ##
     enabled: true
-    ## @param bucketweb.networkPolicy.allowExternal Don't require client label for connections
-    ## The Policy model to apply. When set to false, only pods with the correct
-    ## client label will have network access to the ports the application is listening
-    ## on. When true, the app will accept connections from any source
-    ## (with the correct destination port).
+    ## @param bucketweb.networkPolicy.allowExternal 연결 시 클라이언트 레이블 불필요
+    ## 적용할 정책 모델. false로 설정 시 올바른 클라이언트 레이블이 있는 파드만
+    ## 애플리케이션이 수신 대기 중인 포트에 네트워크 액세스 가능.
+    ## true인 경우 앱은 모든 소스로부터의 연결 허용
+    ## (올바른 대상 포트로).
     ##
     allowExternal: true
-    ## @param bucketweb.networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
+    ## @param bucketweb.networkPolicy.allowExternalEgress 파드가 모든 포트 범위 및 모든 대상에 액세스 허용
     ##
     allowExternalEgress: true
-    ## @param bucketweb.networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolicy
-    ## e.g:
+    ## @param bucketweb.networkPolicy.extraIngress [array] NetworkPolicy에 추가할 추가 인그레스 규칙
+    ## 예제:
     ## extraIngress:
     ##   - ports:
     ##       - port: 1234
@@ -2154,8 +2158,8 @@ bucketweb:
     ##                 values:
     ##                   - frontend
     extraIngress: []
-    ## @param bucketweb.networkPolicy.extraEgress [array] Add extra ingress rules to the NetworkPolicy
-    ## e.g:
+    ## @param bucketweb.networkPolicy.extraEgress [array] NetworkPolicy에 추가할 추가 이그레스 규칙
+    ## 예제:
     ## extraEgress:
     ##   - ports:
     ##       - port: 1234
@@ -2171,86 +2175,86 @@ bucketweb:
     ##                   - frontend
     ##
     extraEgress: []
-    ## @param bucketweb.networkPolicy.ingressNSMatchLabels [object] Labels to match to allow traffic from other namespaces
-    ## @param bucketweb.networkPolicy.ingressNSPodMatchLabels [object] Pod labels to match to allow traffic from other namespaces
+    ## @param bucketweb.networkPolicy.ingressNSMatchLabels [object] 다른 네임스페이스로부터의 트래픽을 허용하기 위해 매칭할 레이블
+    ## @param bucketweb.networkPolicy.ingressNSPodMatchLabels [object] 다른 네임스페이스로부터의 트래픽을 허용하기 위해 매칭할 파드 레이블
     ##
     ingressNSMatchLabels: {}
     ingressNSPodMatchLabels: {}
-  ## Service parameters
+  ## 서비스 파라미터
   ##
   service:
-    ## @param bucketweb.service.type Kubernetes service type
+    ## @param bucketweb.service.type Kubernetes 서비스 타입
     ##
     type: ClusterIP
-    ## @param bucketweb.service.ports.http Thanos Bucket Web service HTTP port
+    ## @param bucketweb.service.ports.http Thanos Bucket Web 서비스 HTTP 포트
     ##
     ports:
       http: 8080
-    ## @param bucketweb.service.nodePorts.http Specify the Thanos Bucket Web HTTP nodePort value for the LoadBalancer and NodePort service types
+    ## @param bucketweb.service.nodePorts.http LoadBalancer 및 NodePort 서비스 타입에 대한 Thanos Bucket Web HTTP nodePort 값 지정
     ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
     ##
     nodePorts:
       http: ""
-    ## @param bucketweb.service.clusterIP Thanos Bucket Web service clusterIP IP
-    ## e.g:
+    ## @param bucketweb.service.clusterIP Thanos Bucket Web 서비스 clusterIP
+    ## 예제:
     ## clusterIP: None
     ##
     clusterIP: ""
-    ## @param bucketweb.service.loadBalancerIP Load balancer IP if service type is `LoadBalancer`
+    ## @param bucketweb.service.loadBalancerIP 서비스 타입이 `LoadBalancer`인 경우 로드 밸런서 IP
     ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
     ##
     loadBalancerIP: ""
-    ## @param bucketweb.service.loadBalancerSourceRanges Address that are allowed when service is LoadBalancer
+    ## @param bucketweb.service.loadBalancerSourceRanges 서비스가 LoadBalancer일 때 허용되는 주소
     ## https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
     ##
     ## loadBalancerSourceRanges:
     ## - 10.10.10.0/24
     ##
     loadBalancerSourceRanges: []
-    ## @param bucketweb.service.externalTrafficPolicy Thanos Bucket Web service externalTrafficPolicy
+    ## @param bucketweb.service.externalTrafficPolicy Thanos Bucket Web 서비스의 외부 트래픽 정책
     ##
     externalTrafficPolicy: Cluster
-    ## @param bucketweb.service.labels Extra labels for Thanos Bucket Web service
+    ## @param bucketweb.service.labels Thanos Bucket Web 서비스에 추가할 레이블
     ##
     labels: {}
-    ## @param bucketweb.service.annotations Annotations for Thanos Bucket Web service
+    ## @param bucketweb.service.annotations Thanos Bucket Web 서비스 어노테이션
     ##
     annotations: {}
-    ## @param bucketweb.service.extraPorts Extra ports to expose in the Thanos Bucket Web service
+    ## @param bucketweb.service.extraPorts Thanos Bucket Web 서비스에서 노출할 추가 포트
     ##
     extraPorts: []
-    ## @param bucketweb.service.labelSelectorsOverride Selector for Thanos Query service
+    ## @param bucketweb.service.labelSelectorsOverride Thanos Query 서비스의 셀렉터
     ##
     labelSelectorsOverride: {}
-    ## @param bucketweb.service.ipFamilyPolicy Sets the IP family policy for the Service to be able to configure dual-stack; see [Configure dual-stack](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services).
+    ## @param bucketweb.service.ipFamilyPolicy 듀얼 스택 구성을 위한 서비스의 IP 패밀리 정책 설정; [듀얼 스택 구성](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services) 참조
     ##
     ipFamilyPolicy: ""
-    ## @param bucketweb.service.ipFamilies A list of IP families for the Service that should be supported, in the order in which they should be applied. Can be "IPv4" and/or "IPv6".
+    ## @param bucketweb.service.ipFamilies 서비스가 지원해야 하는 IP 패밀리 목록 (적용 순서대로). "IPv4" 및/또는 "IPv6" 가능
     ##
     ipFamilies: []
-  ## @param bucketweb.automountServiceAccountToken Enable/disable auto mounting of the service account token only for the deployment
+  ## @param bucketweb.automountServiceAccountToken Deployment에만 서비스 어카운트 토큰 자동 마운트 활성화/비활성화
   ##
   automountServiceAccountToken: true
-  ## ServiceAccount configuration
-  ## @param bucketweb.serviceAccount.create Specifies whether a ServiceAccount should be created
-  ## @param bucketweb.serviceAccount.name Name of the service account to use. If not set and create is true, a name is generated using the fullname template.
-  ## @param bucketweb.serviceAccount.annotations Annotations for Thanos Bucket Web Service Account
-  ## @param bucketweb.serviceAccount.automountServiceAccountToken Enable/disable auto mounting of the service account token
+  ## ServiceAccount 설정
+  ## @param bucketweb.serviceAccount.create ServiceAccount 생성 여부
+  ## @param bucketweb.serviceAccount.name 사용할 서비스 어카운트 이름. 설정되지 않고 create가 true인 경우 fullname 템플릿을 사용하여 이름 생성
+  ## @param bucketweb.serviceAccount.annotations Thanos Bucket Web Service Account 어노테이션
+  ## @param bucketweb.serviceAccount.automountServiceAccountToken 서비스 어카운트 토큰 자동 마운트 활성화/비활성화
   ##
   serviceAccount:
     create: true
     name: ""
     annotations: {}
     automountServiceAccountToken: false
-  ## Thanos Bucket Web Autoscaling configuration
+  ## Thanos Bucket Web Autoscaling 설정
   ## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
-  ## @param bucketweb.autoscaling.enabled Enable autoscaling for Thanos Bucket Web
-  ## @param bucketweb.autoscaling.minReplicas Minimum number of Thanos Bucket Web replicas
-  ## @param bucketweb.autoscaling.maxReplicas Maximum number of Thanos Bucket Web replicas
-  ## @param bucketweb.autoscaling.targetCPU Target CPU utilization percentage
-  ## @param bucketweb.autoscaling.targetMemory Target Memory utilization percentage
-  ## @param bucketweb.autoscaling.behavior HPA Behavior
-  ## @param bucketweb.externalAutoscaler Specifies whether the Thanos Bucket Web deployment is scaled by an external autoscaler
+  ## @param bucketweb.autoscaling.enabled Thanos Bucket Web 오토스케일링 활성화
+  ## @param bucketweb.autoscaling.minReplicas Thanos Bucket Web 최소 레플리카 수
+  ## @param bucketweb.autoscaling.maxReplicas Thanos Bucket Web 최대 레플리카 수
+  ## @param bucketweb.autoscaling.targetCPU 목표 CPU 사용률 백분율
+  ## @param bucketweb.autoscaling.targetMemory 목표 메모리 사용률 백분율
+  ## @param bucketweb.autoscaling.behavior HPA 동작 방식
+  ## @param bucketweb.externalAutoscaler Thanos Bucket Web 디플로이먼트가 외부 오토스케일러에 의해 확장되는지 여부
   ##
   autoscaling:
     enabled: false
@@ -2260,84 +2264,84 @@ bucketweb:
     targetMemory: ""
     behavior: {}
   externalAutoscaler: false
-  ## Thanos Bucket Web Pod Disruption Budget configuration
+  ## Thanos Bucket Web Pod Disruption Budget 설정
   ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb
-  ## @param bucketweb.pdb.create Enable/disable a Pod Disruption Budget creation for Thanos Bucket Web
-  ## @param bucketweb.pdb.minAvailable Minimum number/percentage of pods that should remain scheduled
-  ## @param bucketweb.pdb.maxUnavailable Maximum number/percentage of pods that may be made unavailable
+  ## @param bucketweb.pdb.create Thanos Bucket Web의 Pod Disruption Budget 생성 활성화/비활성화
+  ## @param bucketweb.pdb.minAvailable 스케줄링된 상태로 유지되어야 하는 최소 파드 수/백분율
+  ## @param bucketweb.pdb.maxUnavailable 사용 불가능하게 만들 수 있는 최대 파드 수/백분율
   ##
   pdb:
     create: true
     minAvailable: ""
     maxUnavailable: ""
-  ## Configure the ingress resource that allows you to access Thanos Bucketweb
+  ## Thanos Bucketweb 접속을 위한 Ingress 리소스 구성
   ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
   ##
   ingress:
-    ## @param bucketweb.ingress.enabled Enable ingress controller resource
+    ## @param bucketweb.ingress.enabled Ingress 컨트롤러 리소스 활성화
     ##
     enabled: false
-    ## @param bucketweb.ingress.hostname Default host for the ingress resource
+    ## @param bucketweb.ingress.hostname Ingress 리소스의 기본 호스트
     ##
     hostname: thanos-bucketweb.local
-    ## @param bucketweb.ingress.ingressClassName IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)
-    ## This is supported in Kubernetes 1.18+ and required if you have more than one IngressClass marked as the default for your cluster .
+    ## @param bucketweb.ingress.ingressClassName Ingress 구현에 사용될 IngressClass (Kubernetes 1.18+)
+    ## Kubernetes 1.18+에서 지원되며, 클러스터에 기본값으로 표시된 IngressClass가 둘 이상인 경우 필수
     ## ref: https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/
     ##
     ingressClassName: ""
-    ## @param bucketweb.ingress.labels Additional label for the Ingress resource.
-    ## Use this parameter to set the required labels for your needs
-    ## e.g:
+    ## @param bucketweb.ingress.labels Ingress 리소스에 추가할 레이블
+    ## 필요에 따라 필수 레이블을 설정하기 위해 이 파라미터 사용
+    ## 예제:
     ## labels:
     ##   dns-managed-by-external-dns: 'true'
     ##
     labels: {}
-    ## @param bucketweb.ingress.annotations Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations.
-    ## For a full list of possible ingress annotations, please see
+    ## @param bucketweb.ingress.annotations Ingress 리소스에 추가할 어노테이션. 인증서 자동 생성을 활성화하려면 여기에 cert-manager 어노테이션 추가
+    ## 가능한 Ingress 어노테이션의 전체 목록은 다음 참조
     ## ref: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/annotations.md
-    ## Use this parameter to set the required annotations for cert-manager, see
+    ## cert-manager에 필요한 어노테이션을 설정하려면 이 파라미터 사용, 다음 참조
     ## ref: https://cert-manager.io/docs/usage/ingress/#supported-annotations
     ##
-    ## e.g:
+    ## 예제:
     ## annotations:
     ##   kubernetes.io/ingress.class: nginx
     ##   cert-manager.io/cluster-issuer: cluster-issuer-name
     ##
     annotations: {}
-    ## @param bucketweb.ingress.extraHosts The list of additional hostnames to be covered with this ingress record.
-    ## Most likely the hostname above will be enough, but in the event more hosts are needed, this is an array
+    ## @param bucketweb.ingress.extraHosts 이 Ingress 레코드로 커버할 추가 호스트 이름 목록
+    ## 대부분의 경우 위의 호스트 이름으로 충분하지만, 추가 호스트가 필요한 경우 배열로 지정
     ## extraHosts:
     ## - name: thanos-bucketweb.local
     ##   path: /
     ##   pathType: ImplementationSpecific
     ##
     extraHosts: []
-    ## @param bucketweb.ingress.extraTls The tls configuration for additional hostnames to be covered with this ingress record.
-    ## see: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
+    ## @param bucketweb.ingress.extraTls 이 Ingress 레코드로 커버할 추가 호스트 이름에 대한 TLS 구성
+    ## 참조: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
     ## extraTls:
     ## - hosts:
     ##     - thanos-bucketweb.local
     ##   secretName: thanos-bucketweb.local-tls
     ##
     extraTls: []
-    ## @param bucketweb.ingress.secrets If you're providing your own certificates, please use this to add the certificates as secrets
-    ## key and certificate should start with -----BEGIN CERTIFICATE----- or
-    ## -----BEGIN RSA PRIVATE KEY-----
+    ## @param bucketweb.ingress.secrets 자체 인증서를 제공하는 경우 인증서를 시크릿으로 추가하기 위해 사용
+    ## key와 certificate는 -----BEGIN CERTIFICATE----- 또는
+    ## -----BEGIN RSA PRIVATE KEY-----로 시작해야 함
     ##
-    ## name should line up with a tlsSecret set further up
-    ## If you're using cert-manager, this is unneeded, as it will create the secret for you if it is not set
+    ## name은 위에서 설정한 tlsSecret과 일치해야 함
+    ## cert-manager를 사용하는 경우 설정되지 않으면 자동으로 시크릿 생성하므로 불필요
     ##
-    ## It is also possible to create and manage the certificates outside of this helm chart
-    ## Please see README.md for more information
-    ## e.g:
+    ## 이 Helm 차트 외부에서 인증서를 생성하고 관리하는 것도 가능
+    ## 자세한 내용은 README.md 참조
+    ## 예제:
     ## - name: thanos-bucketweb.local-tls
     ##   key:
     ##   certificate:
     ##
     secrets: []
-    ## @param bucketweb.ingress.extraRules Additional rules to be covered with this ingress record
+    ## @param bucketweb.ingress.extraRules 이 Ingress 레코드로 커버할 추가 규칙
     ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-rules
-    ## e.g:
+    ## 예제:
     ## extraRules:
     ## - host: example.local
     ##     http:
@@ -2349,24 +2353,24 @@ bucketweb:
     ##             name: http
     ##
     extraRules: []
-    ## @param bucketweb.ingress.tls Enable TLS configuration for the hostname defined at `bucketweb.ingress.hostname` parameter
-    ## TLS certificates will be retrieved from a TLS secret with name: `{{- printf "%s-tls" .Values.bucketweb.ingress.hostname }}`
-    ## You can:
-    ##   - Use the `bucketweb.ingress.secrets` parameter to create this TLS secret
-    ##   - Rely on cert-manager to create it by setting the corresponding annotations
-    ##   - Rely on Helm to create self-signed certificates by setting `bucketweb.ingress.selfSigned=true`
+    ## @param bucketweb.ingress.tls `bucketweb.ingress.hostname` 파라미터에 정의된 호스트 이름에 대한 TLS 구성 활성화
+    ## TLS 인증서는 다음 이름의 TLS 시크릿에서 가져옴: `{{- printf "%s-tls" .Values.bucketweb.ingress.hostname }}`
+    ## 다음 중 하나를 선택:
+    ##   - `bucketweb.ingress.secrets` 파라미터를 사용하여 이 TLS 시크릿 생성
+    ##   - 해당 어노테이션을 설정하여 cert-manager가 생성하도록 설정
+    ##   - `bucketweb.ingress.selfSigned=true`로 설정하여 Helm이 자체 서명 인증서를 생성하도록 설정
     ##
     tls: false
-    ## @param bucketweb.ingress.selfSigned Create a TLS secret for this ingress record using self-signed certificates generated by Helm
+    ## @param bucketweb.ingress.selfSigned Helm에서 생성한 자체 서명 인증서를 사용하여 이 Ingress 레코드에 대한 TLS 시크릿 생성
     ##
     selfSigned: false
-    ## @param bucketweb.ingress.apiVersion Force Ingress API version (automatically detected if not set)
+    ## @param bucketweb.ingress.apiVersion Ingress API 버전 강제 지정 (설정하지 않으면 자동 감지)
     ##
     apiVersion: ""
-    ## @param bucketweb.ingress.path Ingress path
+    ## @param bucketweb.ingress.path Ingress 경로
     ##
     path: /
-    ## @param bucketweb.ingress.pathType Ingress path type
+    ## @param bucketweb.ingress.pathType Ingress 경로 타입
     ##
     pathType: ImplementationSpecific
 ## ============================================================
