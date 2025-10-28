@@ -5151,25 +5151,49 @@ receive:
     ## @param receive.ingress.pathType Ingress Path type
     ##
     pathType: ImplementationSpecific
-## @section Thanos Receive Distributor parameters
+## ============================================================
+## @section Thanos Receive Distributor parameters (Thanos Receive Distributor 파라미터)
+## ============================================================
+## 💡 Thanos Receive Distributor는 Dual-mode 구성에서 사용되는 무상태(stateless) 컴포넌트입니다.
+##
+## 주요 기능:
+##   1. 들어오는 Remote Write 요청을 받아 Hashring에 따라 라우팅
+##   2. 데이터를 적절한 Ingester(Receiver)로 분산
+##   3. Replication Factor에 따라 여러 Ingester에 복제
+##   4. Ingester 장애 시 자동 페일오버
+##
+## 아키텍처 (Dual-mode):
+##   Prometheus Agent --remote-write--> Distributor --route--> Ingester (Receiver)
+##
+## 💡 대규모 환경에서 수평 확장 가능 (Distributor는 stateless이므로 자유롭게 스케일링)
+##
 receiveDistributor:
-  ## @param receiveDistributor.enabled Enable/disable Thanos Receive Distributor component
+  ## @param receiveDistributor.enabled Thanos Receive Distributor 컴포넌트 활성화/비활성화
+  ## 💡 receive.mode가 "dual-mode"일 때만 활성화됨
   ##
   enabled: false
-  ## @param receiveDistributor.logLevel Thanos Receive Distributor log level
+
+  ## @param receiveDistributor.logLevel Thanos Receive Distributor 로그 레벨
   ##
   logLevel: info
-  ## @param receiveDistributor.logFormat Thanos Receive Distributor log format
+
+  ## @param receiveDistributor.logFormat Thanos Receive Distributor 로그 형식
   ##
   logFormat: logfmt
-  ## @param receiveDistributor.replicaLabel Label to treat as a replica indicator along which data is de-duplicated
+
+  ## @param receiveDistributor.replicaLabel 데이터 중복 제거를 위한 레플리카 인디케이터 레이블
   ##
   replicaLabel: replica
-  ## @param receiveDistributor.replicationProtocol Thanos Receive Distributor replication-protocol
+
+  ## @param receiveDistributor.replicationProtocol Thanos Receive Distributor 복제 프로토콜
   ## ref: https://thanos.io/tip/components/receive.md/#replication-protocols
+  ## 가능한 값: capnproto, grpc
+  ## 💡 Ingester 간 데이터 복제에 사용
   ##
   replicationProtocol: capnproto
-  ## @param receiveDistributor.replicationFactor Thanos Receive Distributor replication-factor
+
+  ## @param receiveDistributor.replicationFactor Thanos Receive Distributor 복제 계수
+  ## 💡 각 메트릭을 몇 개의 Ingester에 복제할지 결정 (HA: 3, 단일: 1)
   ##
   replicationFactor: 1
   ## @param receiveDistributor.extraEnvVars Extra environment variables for Thanos Receive Distributor container
@@ -5470,62 +5494,92 @@ receiveDistributor:
     create: true
     minAvailable: ""
     maxUnavailable: ""
-## @section Metrics parameters
+## ============================================================
+## @section Metrics parameters (메트릭 파라미터)
+## ============================================================
 
-## Prometheus metrics
+## Prometheus 메트릭 수집 설정
+## 💡 Thanos 컴포넌트 자체를 모니터링하기 위한 설정
 ##
 metrics:
-  ## @param metrics.enabled Enable the export of Prometheus metrics
+  ## @param metrics.enabled Prometheus 메트릭 내보내기 활성화
+  ## 💡 Thanos 컴포넌트의 상태를 모니터링하려면 활성화
   ##
   enabled: false
-  ## Prometheus Operator ServiceMonitor configuration
+
+  ## ============================================================
+  ## Prometheus Operator ServiceMonitor 설정
+  ## ============================================================
+  ## 💡 Prometheus Operator를 사용하는 경우 자동으로 메트릭 수집
   ##
   serviceMonitor:
-    ## @param metrics.serviceMonitor.enabled Specify if a ServiceMonitor will be deployed for Prometheus Operator
+    ## @param metrics.serviceMonitor.enabled Prometheus Operator용 ServiceMonitor 배포 여부
+    ## 💡 Prometheus Operator 사용 시 활성화
     ##
     enabled: false
-    ## @param metrics.serviceMonitor.namespace Namespace in which Prometheus is running
+
+    ## @param metrics.serviceMonitor.namespace Prometheus가 실행되는 네임스페이스
+    ## 💡 미설정 시 Thanos와 동일한 네임스페이스 사용
     ##
     namespace: ""
-    ## @param metrics.serviceMonitor.labels Extra labels for the ServiceMonitor
+
+    ## @param metrics.serviceMonitor.labels ServiceMonitor에 추가할 레이블
+    ## 💡 Prometheus가 이 ServiceMonitor를 선택하도록 레이블 추가
+    ## 예: labels: { "prometheus": "kube-prometheus" }
     ##
     labels: {}
-    ## @param metrics.serviceMonitor.jobLabel The name of the label on the target service to use as the job name in Prometheus
+
+    ## @param metrics.serviceMonitor.jobLabel Prometheus의 job 이름으로 사용할 대상 서비스의 레이블 이름
     ##
     jobLabel: ""
-    ## @param metrics.serviceMonitor.interval How frequently to scrape metrics
-    ## e.g:
-    ## interval: 10s
+
+    ## @param metrics.serviceMonitor.interval 메트릭 수집 주기
+    ## 예: interval: 30s
     ##
     interval: ""
-    ## @param metrics.serviceMonitor.scrapeTimeout Timeout after which the scrape is ended
-    ## e.g:
-    ## scrapeTimeout: 10s
+
+    ## @param metrics.serviceMonitor.scrapeTimeout 수집 종료 타임아웃
+    ## 예: scrapeTimeout: 10s
     ##
     scrapeTimeout: ""
-    ## @param metrics.serviceMonitor.metricRelabelings [array] Specify additional relabeling of metrics
+
+    ## @param metrics.serviceMonitor.metricRelabelings [array] 메트릭의 추가 relabeling 지정
+    ## 💡 불필요한 메트릭 필터링, 레이블 변경 등
     ##
     metricRelabelings: []
-    ## @param metrics.serviceMonitor.relabelings [array] Specify general relabeling
+
+    ## @param metrics.serviceMonitor.relabelings [array] 일반 relabeling 지정
+    ## 💡 수집 전 대상 레이블 변경
     ##
     relabelings: []
-    ## @param metrics.serviceMonitor.selector Prometheus instance selector labels
+
+    ## @param metrics.serviceMonitor.selector Prometheus 인스턴스 셀렉터 레이블
     ## ref: https://github.com/bitnami/charts/tree/main/bitnami/prometheus-operator#prometheus-configuration
     ##
     selector: {}
-    ## @param metrics.serviceMonitor.extraParameters Any extra parameter to be added to the endpoint configured in the ServiceMonitor
-    ## (e.g. tlsConfig for further customization of the HTTPS behavior)
-    ## Note that the 'scheme' is automatically set to 'https' when the 'https.enabled' flag is used in this chart.
+
+    ## @param metrics.serviceMonitor.extraParameters ServiceMonitor 엔드포인트에 추가할 추가 파라미터
+    ## 예: HTTPS 동작 추가 커스터마이징을 위한 tlsConfig
+    ## ⚠️ 주의: 이 차트에서 'https.enabled' 플래그 사용 시 'scheme'이 자동으로 'https'로 설정됨
     ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#monitoring.coreos.com/v1.Endpoint
     ##
     extraParameters: {}
-  ## PrometheusRule CRD configuration
+  ## ============================================================
+  ## PrometheusRule CRD 설정
+  ## ============================================================
+  ## 💡 Thanos 컴포넌트에 대한 사전 정의된 알림 규칙
   ##
   prometheusRule:
-    ## @param metrics.prometheusRule.enabled If `true`, creates a Prometheus Operator PrometheusRule (also requires `metrics.enabled` to be `true`)
+    ## @param metrics.prometheusRule.enabled Prometheus Operator PrometheusRule 생성 여부
+    ## ⚠️ 주의: `metrics.enabled`도 `true`여야 함
+    ## 💡 Thanos 컴포넌트 장애 알림을 받으려면 활성화
     ##
     enabled: false
-    ## Configure prometheus rules
+
+    ## ============================================================
+    ## Prometheus Rule 설정
+    ## ============================================================
+    ## 💡 Thanos 각 컴포넌트에 대한 기본 알림 규칙
     ##
     default:
       ## @extra metrics.prometheusRule.default.absent_rules Enable absent_rules when metrics.prometheusRule.default.create is false (also requires `metrics.enabled` to be `true`)
