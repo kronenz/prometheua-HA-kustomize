@@ -24,11 +24,18 @@ Thanos는 S3(또는 S3 호환 스토리지)에 메트릭 데이터를 장기 보
 
 ### 적용 대상
 
+#### Thanos 컴포넌트
 - **Thanos Query**: S3 접근 없음 (Store Gateway를 통해 간접 접근)
 - **Thanos Receiver**: S3에 메트릭 블록 업로드 ✅
 - **Thanos Store Gateway**: S3에서 메트릭 블록 다운로드 ✅
 - **Thanos Compactor**: S3 블록 압축 및 다운샘플링 ✅
 - **Thanos Ruler**: S3에 Rule 평가 결과 저장 (사용 시) ✅
+
+#### Prometheus (kube-prometheus-stack)
+- **Prometheus with Thanos Sidecar**: S3에 TSDB 블록 업로드 ✅
+- **Prometheus Remote Write**: Thanos Receiver 사용 시 간접 접근
+  - 현재 구성: Remote Write → Thanos Receiver → S3
+  - Sidecar 전환 시: Prometheus → Thanos Sidecar → S3
 
 ### 주요 이점
 
@@ -589,6 +596,212 @@ mc ls --recursive minio/thanos-cluster-01/ | grep -c "meta.json"
 
 ---
 
+## Prometheus (kube-prometheus-stack) S3 TLS 설정
+
+### 개요
+
+**kube-prometheus-stack**의 Prometheus에 S3 TLS 인증서를 설정하는 방법입니다. 이는 **Thanos Sidecar 패턴**을 사용할 때 필요합니다.
+
+#### 현재 아키텍처 vs Sidecar 패턴
+
+```mermaid
+flowchart LR
+    subgraph "현재: Remote Write 패턴"
+        P1[Prometheus]
+        P1 -->|Remote Write| TR1[Thanos Receiver]
+        TR1 -->|Upload| S31[S3]
+    end
+
+    subgraph "Sidecar 패턴 (TLS 설정 필요)"
+        P2[Prometheus]
+        TS[Thanos Sidecar]
+        P2 -.Share TSDB.-> TS
+        TS -->|Upload<br/>HTTPS| S32[S3]
+        S32CERT[TLS Certificate]
+        S32 --> S32CERT
+    end
+
+    style S32CERT fill:#ffe6e6
+    style TS fill:#e8f5e9
+```
+
+### 1. Prometheus S3 TLS Secret 생성
+
+**파일 위치:** `deploy-new/overlays/cluster-01-central/kube-prometheus-stack/s3-tls-secret.yaml`
+
+```bash
+# S3 인증서 다운로드
+openssl s_client -showcerts -connect s3.minio.miribit.lab:443 </dev/null 2>/dev/null | \
+  openssl x509 -outform PEM > /tmp/s3.crt
+
+# Secret 생성
+kubectl --context cluster-01 create secret generic prometheus-s3-tls-cert \
+  --from-file=ca.crt=/tmp/s3.crt \
+  -n monitoring
+```
+
+### 2. Prometheus Volume Mount 설정
+
+**파일:** `values-central.yaml`
+
+```yaml
+prometheus:
+  prometheusSpec:
+    # S3 TLS 인증서 볼륨
+    volumes:
+      - name: s3-tls-cert
+        secret:
+          secretName: prometheus-s3-tls-cert
+          items:
+            - key: ca.crt
+              path: s3-ca.crt
+
+    # Prometheus 컨테이너에 마운트
+    volumeMounts:
+      - name: s3-tls-cert
+        mountPath: /etc/ssl/certs/s3-ca.crt
+        subPath: s3-ca.crt
+        readOnly: true
+```
+
+### 3. Thanos Sidecar 활성화 (선택 사항)
+
+현재는 **Remote Write 패턴**을 사용하므로 Sidecar가 비활성화되어 있습니다. Sidecar로 전환하려면:
+
+#### 3.1. S3 설정 Secret 생성
+
+```bash
+# S3 설정 파일 생성
+cat > /tmp/objstore.yml <<EOF
+type: S3
+config:
+  bucket: "thanos-cluster-01"
+  endpoint: "s3.minio.miribit.lab:443"
+  access_key: "your-access-key"
+  secret_key: "your-secret-key"
+  insecure: false
+  http_config:
+    insecure_skip_verify: false
+    tls_config:
+      ca_file: /etc/ssl/certs/s3-ca.crt
+EOF
+
+# Secret 생성
+kubectl --context cluster-01 create secret generic prometheus-thanos-s3-config \
+  --from-file=objstore.yml=/tmp/objstore.yml \
+  -n monitoring
+```
+
+#### 3.2. values-central.yaml에 Sidecar 설정 추가
+
+```yaml
+prometheus:
+  prometheusSpec:
+    # Thanos Sidecar 활성화
+    thanos:
+      image: quay.io/thanos/thanos:v0.38.0
+      version: v0.38.0
+
+      # S3 설정 Secret
+      objectStorageConfig:
+        name: prometheus-thanos-s3-config
+        key: objstore.yml
+
+      # 리소스 설정
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 200m
+          memory: 512Mi
+```
+
+#### 3.3. Remote Write 비활성화
+
+Sidecar 사용 시 Remote Write 제거:
+
+```yaml
+prometheus:
+  prometheusSpec:
+    # Remote Write 주석 처리 또는 제거
+    # remoteWrite:
+    #   - url: http://thanos-receive...
+```
+
+### 4. 배포
+
+```bash
+cd deploy-new/overlays/cluster-01-central/kube-prometheus-stack
+
+# Secret 먼저 배포
+kubectl --context cluster-01 apply -f s3-tls-secret.yaml
+
+# kube-prometheus-stack 배포
+kustomize build --enable-helm . | kubectl --context cluster-01 apply -f -
+
+# Prometheus Pod 재시작
+kubectl --context cluster-01 rollout restart statefulset/prometheus-kube-prometheus-stack-prometheus -n monitoring
+```
+
+### 5. 검증
+
+```bash
+# Pod 상태 확인
+kubectl --context cluster-01 get pods -n monitoring -l app.kubernetes.io/name=prometheus
+
+# Sidecar 컨테이너 확인 (활성화한 경우)
+kubectl --context cluster-01 get pod prometheus-kube-prometheus-stack-prometheus-0 -n monitoring \
+  -o jsonpath='{.spec.containers[*].name}'
+
+# 출력: prometheus thanos-sidecar prometheus-config-reloader
+
+# Volume Mount 확인
+kubectl --context cluster-01 exec -it prometheus-kube-prometheus-stack-prometheus-0 \
+  -n monitoring -c prometheus -- ls -la /etc/ssl/certs/s3-ca.crt
+
+# Sidecar 로그 확인 (S3 업로드)
+kubectl --context cluster-01 logs prometheus-kube-prometheus-stack-prometheus-0 \
+  -n monitoring -c thanos-sidecar | grep -i "uploaded\|bucket"
+```
+
+**성공 로그 예시:**
+```
+level=info ts=2025-10-31T12:00:00.123Z msg="uploaded block" block=01HXXX...
+```
+
+### 6. 아키텍처 비교
+
+#### Remote Write 패턴 (현재)
+```
+Prometheus → (HTTP Remote Write) → Thanos Receiver → S3
+```
+
+**장점:**
+- Prometheus 부하 감소 (로컬 저장 불필요)
+- 중앙 집중식 데이터 관리
+- Prometheus Agent 모드 사용 가능
+
+**단점:**
+- 네트워크 대역폭 사용 증가
+- Thanos Receiver SPOF 가능성
+
+#### Sidecar 패턴
+```
+Prometheus ← (파일 공유) → Thanos Sidecar → S3
+```
+
+**장점:**
+- Prometheus가 독립적으로 동작
+- 네트워크 부하 감소 (로컬 파일 공유)
+- Receiver 불필요
+
+**단점:**
+- Prometheus에 스토리지 필요
+- 각 Prometheus마다 Sidecar 실행 (리소스 증가)
+
+---
+
 ## 트러블슈팅
 
 ### 문제 1: `x509: certificate signed by unknown authority`
@@ -825,12 +1038,12 @@ rules:
 
 ## 요약 체크리스트
 
-배포 전 확인 사항:
+### Thanos 컴포넌트 배포
 
 - [ ] S3 서버 TLS 인증서 다운로드 완료
-- [ ] `s3-tls-secret.yaml` Secret 생성
+- [ ] `deploy-new/overlays/cluster-01-central/thanos/s3-tls-secret.yaml` Secret 생성
 - [ ] `thanos-s3-secret.yaml`에 HTTPS 설정 (`insecure: false`)
-- [ ] `values-thanos.yaml`에 extraVolumes/volumeMounts 설정
+- [ ] `values-thanos.yaml`에 extraVolumes/volumeMounts 설정 (Query, Receiver, Store, Compactor)
 - [ ] `kustomization.yaml`에 s3-tls-secret.yaml 리소스 추가
 - [ ] Secret 배포 및 확인
 - [ ] Thanos Pod 재시작
@@ -838,9 +1051,23 @@ rules:
 - [ ] S3 연결 테스트 (Receiver, Store, Compactor)
 - [ ] MinIO 버킷에 블록 업로드 확인
 
+### Prometheus (kube-prometheus-stack) 배포 (선택 사항)
+
+- [ ] `deploy-new/overlays/cluster-01-central/kube-prometheus-stack/s3-tls-secret.yaml` Secret 생성
+- [ ] `values-central.yaml`에 volumes/volumeMounts 설정
+- [ ] `kustomization.yaml`에 s3-tls-secret.yaml 리소스 추가
+- [ ] Thanos Sidecar 활성화 (필요 시)
+  - [ ] `prometheus-thanos-s3-config` Secret 생성 (objstore.yml)
+  - [ ] `values-central.yaml`에 thanos 섹션 추가
+  - [ ] Remote Write 비활성화
+- [ ] Prometheus Pod 재시작
+- [ ] Sidecar 컨테이너 확인
+- [ ] S3 업로드 로그 확인
+
 ---
 
 **작성일**: 2025-10-31
-**버전**: 1.0.0
+**최종 업데이트**: 2025-10-31
+**버전**: 1.1.0
 **작성자**: Claude Code
 **문서 경로**: `deploy-new/docs/S3_TLS_CONFIGURATION_GUIDE.md`

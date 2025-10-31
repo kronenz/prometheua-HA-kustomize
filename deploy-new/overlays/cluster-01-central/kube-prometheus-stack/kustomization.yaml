@@ -12,7 +12,18 @@ kind: Kustomization
 
 namespace: monitoring
 
+# ============================================================================
+# 추가 리소스
+# ============================================================================
+resources:
+  # S3 TLS 인증서 Secret
+  # Prometheus Thanos Sidecar 사용 시 S3 HTTPS 연결을 위한 CA 인증서
+  # 현재는 Remote Write 패턴이지만 향후 Sidecar 전환 대비
+  - s3-tls-secret.yaml
+
+# ============================================================================
 # Helm Chart 배포 (Base values + Central override)
+# ============================================================================
 helmCharts:
   - name: kube-prometheus-stack
     repo: https://prometheus-community.github.io/helm-charts

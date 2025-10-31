@@ -65,8 +65,64 @@ prometheus:
           maxBackoff: 100ms
 
     # --------------------------------------------------------------------
-    # Thanos Sidecar 비활성화 (Remote Write 패턴 사용)
-    # 주의: thanos 섹션 자체를 제거하여 Sidecar 배포 방지
+    # S3 TLS 인증서 볼륨 마운트 (Prometheus)
+    # --------------------------------------------------------------------
+    # 목적:
+    #   - Thanos Sidecar 사용 시 S3 HTTPS 연결을 위한 CA 인증서
+    #   - 자체 서명 인증서 또는 프라이빗 CA 인증서 신뢰
+    #
+    # 적용 시나리오:
+    #   1. Thanos Sidecar 패턴으로 전환 시
+    #   2. Prometheus에서 직접 S3 접근이 필요한 경우
+    #   3. Remote Write가 HTTPS S3를 거치는 경우
+    #
+    # 설정 방법:
+    #   1. s3-tls-secret.yaml에 CA 인증서 저장
+    #   2. volumes로 Secret 마운트
+    #   3. volumeMounts로 Prometheus 컨테이너에 마운트
+    #   4. Thanos Sidecar 설정에서 ca_file 경로 지정
+    #
+    # 현재 상태:
+    #   - Remote Write 패턴 사용 중 (Sidecar 미사용)
+    #   - 향후 Sidecar 전환 시를 대비한 사전 설정
+    volumes:
+      - name: s3-tls-cert
+        secret:
+          secretName: prometheus-s3-tls-cert
+          items:
+            - key: ca.crt
+              path: s3-ca.crt
+
+    volumeMounts:
+      - name: s3-tls-cert
+        mountPath: /etc/ssl/certs/s3-ca.crt
+        subPath: s3-ca.crt
+        readOnly: true
+
+    # --------------------------------------------------------------------
+    # Thanos Sidecar 설정 (현재 비활성화)
+    # --------------------------------------------------------------------
+    # Remote Write 패턴 사용 중이므로 Sidecar 비활성화
+    # Sidecar 활성화 시 아래 설정 사용:
+    #
+    # thanos:
+    #   image: quay.io/thanos/thanos:v0.38.0
+    #   objectStorageConfig:
+    #     name: thanos-s3-config  # Secret 이름
+    #     key: objstore.yml       # Secret 키
+    #
+    #   # S3 설정 (objstore.yml):
+    #   # type: S3
+    #   # config:
+    #   #   bucket: "thanos-cluster-01"
+    #   #   endpoint: "s3.minio.miribit.lab:443"
+    #   #   access_key: "..."
+    #   #   secret_key: "..."
+    #   #   insecure: false
+    #   #   http_config:
+    #   #     insecure_skip_verify: false
+    #   #     tls_config:
+    #   #       ca_file: /etc/ssl/certs/s3-ca.crt  # 위 volumeMounts 경로
     # --------------------------------------------------------------------
 
 # ============================================================================
