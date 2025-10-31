@@ -14,5 +14,12 @@ helmCharts:
 
 # 추가 리소스
 resources:
+  # S3 접속 정보 Secret (access_key, secret_key, endpoint, bucket)
   - thanos-s3-secret.yaml
+
+  # S3 TLS 인증서 Secret (HTTPS 연결용 CA 인증서)
+  # 자체 서명 인증서 또는 프라이빗 CA 인증서를 위한 설정
+  - s3-tls-secret.yaml
+
+  # Thanos Receiver Ingress (엣지 클러스터 Remote Write 수신)
   - thanos-receiver-ingress.yaml

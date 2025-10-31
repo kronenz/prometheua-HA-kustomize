@@ -195,6 +195,42 @@ query:
       # 내부 통신용 (일반 사용자는 사용 안 함)
       grpc: 10901
 
+  # --------------------------------------------------------------------
+  # S3 TLS 인증서 볼륨 마운트
+  # --------------------------------------------------------------------
+  # S3가 HTTPS를 사용하는 경우 CA 인증서를 컨테이너에 마운트
+  #
+  # 목적:
+  #   - S3 서버의 자체 서명 인증서 신뢰
+  #   - 프라이빗 CA로 발급된 인증서 검증
+  #   - insecure_skip_verify 없이 안전한 TLS 연결
+  #
+  # 설정 방법:
+  #   1. s3-tls-secret Secret에 CA 인증서 저장 (ca.crt)
+  #   2. extraVolumes로 Secret을 Volume으로 마운트
+  #   3. volumeMounts로 컨테이너의 /etc/ssl/certs에 마운트
+  #   4. update-ca-certificates로 시스템 CA 스토어에 추가 (선택)
+  #
+  # S3 설정과 함께 사용:
+  #   objstore.yml:
+  #     http_config:
+  #       insecure_skip_verify: false  # TLS 검증 활성화
+  #       tls_config:
+  #         ca_file: /etc/ssl/certs/s3-ca.crt  # CA 인증서 경로
+  extraVolumes:
+    - name: s3-tls-cert
+      secret:
+        secretName: s3-tls-cert
+        items:
+          - key: ca.crt
+            path: s3-ca.crt
+
+  volumeMounts:
+    - name: s3-tls-cert
+      mountPath: /etc/ssl/certs/s3-ca.crt
+      subPath: s3-ca.crt
+      readOnly: true
+
 # ----------------------------------------------------------------------------
 # Thanos Receiver - Remote Write 수신
 # ----------------------------------------------------------------------------
@@ -320,6 +356,24 @@ receive:
   ingress:
     enabled: false
 
+  # --------------------------------------------------------------------
+  # S3 TLS 인증서 볼륨 마운트 (Receiver)
+  # --------------------------------------------------------------------
+  # Receiver는 S3에 메트릭 블록을 업로드하므로 TLS 인증서 필요
+  extraVolumes:
+    - name: s3-tls-cert
+      secret:
+        secretName: s3-tls-cert
+        items:
+          - key: ca.crt
+            path: s3-ca.crt
+
+  volumeMounts:
+    - name: s3-tls-cert
+      mountPath: /etc/ssl/certs/s3-ca.crt
+      subPath: s3-ca.crt
+      readOnly: true
+
 # ----------------------------------------------------------------------------
 # Thanos Store Gateway - S3 장기 데이터 쿼리
 # ----------------------------------------------------------------------------
@@ -390,6 +444,24 @@ storegateway:
       # gRPC StoreAPI: Thanos Query와 통신
       # 장기 메트릭 제공
       grpc: 10901
+
+  # --------------------------------------------------------------------
+  # S3 TLS 인증서 볼륨 마운트 (Store Gateway)
+  # --------------------------------------------------------------------
+  # Store Gateway는 S3에서 메트릭 블록을 읽으므로 TLS 인증서 필요
+  extraVolumes:
+    - name: s3-tls-cert
+      secret:
+        secretName: s3-tls-cert
+        items:
+          - key: ca.crt
+            path: s3-ca.crt
+
+  volumeMounts:
+    - name: s3-tls-cert
+      mountPath: /etc/ssl/certs/s3-ca.crt
+      subPath: s3-ca.crt
+      readOnly: true
 
 # ----------------------------------------------------------------------------
 # Thanos Compactor - 데이터 압축 및 다운샘플링
@@ -479,6 +551,24 @@ compactor:
     ports:
       # HTTP API: 상태 확인, 메트릭
       http: 10902
+
+  # --------------------------------------------------------------------
+  # S3 TLS 인증서 볼륨 마운트 (Compactor)
+  # --------------------------------------------------------------------
+  # Compactor는 S3의 블록을 압축하고 다운샘플링하므로 TLS 인증서 필요
+  extraVolumes:
+    - name: s3-tls-cert
+      secret:
+        secretName: s3-tls-cert
+        items:
+          - key: ca.crt
+            path: s3-ca.crt
+
+  volumeMounts:
+    - name: s3-tls-cert
+      mountPath: /etc/ssl/certs/s3-ca.crt
+      subPath: s3-ca.crt
+      readOnly: true
 
 # ----------------------------------------------------------------------------
 # Thanos Ruler - Alert/Recording Rule 평가
