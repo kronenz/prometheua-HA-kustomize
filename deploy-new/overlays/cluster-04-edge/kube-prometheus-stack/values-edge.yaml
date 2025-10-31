@@ -146,3 +146,33 @@ prometheus-node-exporter:
     limits:
       cpu: 100m
       memory: 100Mi
+
+# ============================================================================
+# 기본 타겟 모니터링 활성화
+# ============================================================================
+kubeApiServer:
+  enabled: true
+
+kubelet:
+  enabled: true
+
+kubeControllerManager:
+  enabled: true
+
+coreDns:
+  enabled: true
+
+kubeEtcd:
+  enabled: false  # 엣지 클러스터에서는 불필요
+
+kubeScheduler:
+  enabled: true
+
+kubeProxy:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true

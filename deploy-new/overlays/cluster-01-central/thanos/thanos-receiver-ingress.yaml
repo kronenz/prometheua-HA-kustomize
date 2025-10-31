@@ -18,4 +18,4 @@ spec:
               service:
                 name: thanos-receive
                 port:
-                  number: 19291
+                  number: 10902  # Remote Write API 포트
