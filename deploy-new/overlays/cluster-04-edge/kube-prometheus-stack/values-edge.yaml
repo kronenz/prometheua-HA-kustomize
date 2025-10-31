@@ -34,8 +34,17 @@ prometheus:
     # --------------------------------------------------------------------
     # Remote Write 설정 (Thanos Receiver)
     # --------------------------------------------------------------------
+    # 주의: writeRelabelConfigs에서 메트릭을 필터링하면 해당 메트릭만 전송됨
+    # 모든 메트릭을 전송하려면 writeRelabelConfigs를 제거하거나 주석 처리
     remoteWrite:
       - url: http://thanos-receiver.k8s-cluster-01.miribit.lab/api/v1/receive
+
+        # Remote Write Headers (옵션)
+        # Thanos Receiver에서 클러스터 식별용
+        # headers:
+        #   THANOS-TENANT: cluster-04-edge
+
+        # Queue 설정 최적화
         queueConfig:
           capacity: 10000
           maxShards: 10
@@ -44,10 +53,25 @@ prometheus:
           batchSendDeadline: 5s
           minBackoff: 30ms
           maxBackoff: 100ms
-        writeRelabelConfigs:
-          - sourceLabels: [__name__]
-            regex: 'up|scrape_.*'
-            action: keep
+
+        # Write Relabel 설정 (선택 사항)
+        # 특정 메트릭만 전송하거나 레이블 수정 시 사용
+        # 현재는 주석 처리하여 모든 메트릭 전송
+        #
+        # writeRelabelConfigs:
+        #   # 예시 1: 특정 메트릭만 전송 (비권장 - 대부분의 메트릭 누락)
+        #   - sourceLabels: [__name__]
+        #     regex: 'up|scrape_.*'
+        #     action: keep
+        #
+        #   # 예시 2: 불필요한 메트릭 제외 (권장)
+        #   - sourceLabels: [__name__]
+        #     regex: 'go_.*|process_.*'
+        #     action: drop
+        #
+        #   # 예시 3: 특정 레이블 제거 (카디널리티 감소)
+        #   - regex: 'instance|pod'
+        #     action: labeldrop
 
     # --------------------------------------------------------------------
     # 리소스 설정 (Agent는 경량)

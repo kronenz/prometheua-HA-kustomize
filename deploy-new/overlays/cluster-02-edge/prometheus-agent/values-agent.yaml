@@ -67,12 +67,6 @@ prometheus:
     remoteWrite:
       - url: http://thanos-receiver.k8s-cluster-01.miribit.lab/api/v1/receive
 
-        # External Labels (클러스터 식별용)
-        writeRelabelConfigs:
-          - sourceLabels: [__address__]
-            targetLabel: cluster
-            replacement: cluster-02-edge
-
         # Queue 설정 최적화
         queueConfig:
           capacity: 10000
@@ -83,7 +77,25 @@ prometheus:
           minBackoff: 30ms
           maxBackoff: 100ms
 
-    # External Labels (모든 메트릭에 추가)
+        # Write Relabel 설정 (선택 사항)
+        # externalLabels가 설정되어 있으므로 추가 relabeling 불필요
+        # 필요 시 아래 설정으로 레이블 추가/수정 가능
+        #
+        # writeRelabelConfigs:
+        #   # 불필요한 메트릭 제외
+        #   - sourceLabels: [__name__]
+        #     regex: 'go_.*|process_.*'
+        #     action: drop
+        #
+        #   # 커스텀 레이블 추가
+        #   - targetLabel: datacenter
+        #     replacement: edge-dc-01
+
+    # --------------------------------------------------------------------
+    # External Labels (모든 메트릭에 자동 추가)
+    # --------------------------------------------------------------------
+    # 주의: externalLabels는 모든 메트릭에 자동으로 추가됩니다
+    # Thanos Query에서 클러스터 필터링 시 사용됩니다
     externalLabels:
       cluster: cluster-02-edge
       region: edge
