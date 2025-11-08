@@ -1,0 +1,536 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-resource-capacity-ko-v5
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-resource-capacity-ko-v5.json: |
+    {
+      "uid": "dataops-capacity-ko-v5",
+      "title": "DataOps 플랫폼 - 리소스 용량",
+      "tags": ["dataops", "capacity", "resources", "korean", "v5", "kubernetes"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "title": "📋 리소스 용량 개요",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+          "options": {
+            "mode": "markdown",
+            "content": "# 📊 DataOps 리소스 용량 관리\n\n**클러스터 전체의 리소스 사용량**을 실시간으로 모니터링합니다.\n\n- **CPU/메모리 할당**: 요청(Request) 및 제한(Limit) 추적\n- **노드 용량**: 각 노드의 가용 리소스 분석\n- **스토리지**: PVC 사용량 및 용량 계획\n\n---\n\n**빠른 이동**: [🏠 포털](d/dataops-portal-ko-v5) | [🚀 배포](d/dataops-deployment-ko-v5) | [💊 앱 상태](d/dataops-health-ko-v5) | [⚡ 성능](d/dataops-performance-ko-v5) | [🔄 데이터](d/dataops-data-ko-v5) | [🔧 최적화](d/dataops-optimize-ko-v5)"
+          }
+        },
+        {
+          "title": "1️⃣ CPU 할당률",
+          "type": "stat",
+          "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+          "description": "**CPU Request 할당률**\n\n전체 CPU 용량 대비 Request로 할당된 비율입니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) / sum(kube_node_status_allocatable{resource=\"cpu\"}) * 100",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 70, "color": "#FCF3CF" },
+                  { "value": 85, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "2️⃣ 메모리 할당률",
+          "type": "stat",
+          "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+          "description": "**메모리 Request 할당률**\n\n전체 메모리 용량 대비 Request로 할당된 비율입니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\"}) / sum(kube_node_status_allocatable{resource=\"memory\"}) * 100",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 70, "color": "#FCF3CF" },
+                  { "value": 85, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "3️⃣ CPU 실제 사용률",
+          "type": "stat",
+          "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+          "description": "**실제 CPU 사용률**\n\n전체 노드의 실제 CPU 사용률입니다.",
+          "targets": [
+            {
+              "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 70, "color": "#FCF3CF" },
+                  { "value": 90, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "4️⃣ 메모리 실제 사용률",
+          "type": "stat",
+          "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+          "description": "**실제 메모리 사용률**\n\n전체 노드의 실제 메모리 사용률입니다.",
+          "targets": [
+            {
+              "expr": "(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 70, "color": "#FCF3CF" },
+                  { "value": 90, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "📈 CPU 할당 vs 사용 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+          "description": "**CPU 할당 및 사용 현황**\n\nRequest 할당량과 실제 사용량을 비교합니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) / sum(kube_node_status_allocatable{resource=\"cpu\"}) * 100",
+              "legendFormat": "CPU Request %",
+              "refId": "A"
+            },
+            {
+              "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100",
+              "legendFormat": "CPU 실제 사용률 %",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\"}) / sum(kube_node_status_allocatable{resource=\"cpu\"}) * 100",
+              "legendFormat": "CPU Limit %",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percent"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "CPU Request %" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#D6EAF8", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "CPU 실제 사용률 %" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#B8E0D2", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "CPU Limit %" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#FADBD8", "mode": "fixed" } }]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            }
+          }
+        },
+        {
+          "title": "📊 메모리 할당 vs 사용 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+          "description": "**메모리 할당 및 사용 현황**\n\nRequest 할당량과 실제 사용량을 비교합니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\"}) / sum(kube_node_status_allocatable{resource=\"memory\"}) * 100",
+              "legendFormat": "Memory Request %",
+              "refId": "A"
+            },
+            {
+              "expr": "(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100",
+              "legendFormat": "Memory 실제 사용률 %",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\"}) / sum(kube_node_status_allocatable{resource=\"memory\"}) * 100",
+              "legendFormat": "Memory Limit %",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percent"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Memory Request %" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#E8DAEF", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Memory 실제 사용률 %" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#FCF3CF", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Memory Limit %" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#FADBD8", "mode": "fixed" } }]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            }
+          }
+        },
+        {
+          "title": "🖥️ 노드별 CPU 용량",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+          "description": "**각 노드의 CPU 리소스**\n\n노드별 CPU 할당 가능 용량과 Request 할당량을 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_node_status_allocatable{resource=\"cpu\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) by (node)",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "resource": true
+                },
+                "renameByName": {
+                  "node": "Node",
+                  "Value #A": "Allocatable (Cores)",
+                  "Value #B": "Requested (Cores)"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              },
+              "decimals": 2
+            }
+          }
+        },
+        {
+          "title": "💾 노드별 메모리 용량",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+          "description": "**각 노드의 메모리 리소스**\n\n노드별 메모리 할당 가능 용량과 Request 할당량을 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_node_status_allocatable{resource=\"memory\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\"}) by (node)",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "resource": true
+                },
+                "renameByName": {
+                  "node": "Node",
+                  "Value #A": "Allocatable (Bytes)",
+                  "Value #B": "Requested (Bytes)"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              },
+              "unit": "bytes"
+            }
+          }
+        },
+        {
+          "title": "💿 네임스페이스별 PVC 사용량",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
+          "description": "**PVC 스토리지 사용 현황**\n\n각 네임스페이스의 PVC 용량을 표시합니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_persistentvolumeclaim_resource_requests_storage_bytes) by (namespace)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "Value": "Storage Requested"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": true,
+              "reducer": ["sum"]
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              },
+              "unit": "bytes"
+            }
+          }
+        },
+        {
+          "title": "📦 Pod별 리소스 할당 Top 10 (CPU)",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
+          "description": "**CPU를 가장 많이 요청한 Pod**\n\nCPU Request가 높은 상위 10개 Pod를 표시합니다.",
+          "targets": [
+            {
+              "expr": "topk(10, sum(kube_pod_container_resource_requests{resource=\"cpu\"}) by (namespace, pod))",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "Value": "CPU Request (Cores)"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              },
+              "decimals": 2
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "CPU Request (Cores)" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 0.5, "color": "#FCF3CF" },
+                        { "value": 1, "color": "#FADBD8" }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "🧮 네임스페이스별 CPU/메모리 할당",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 31, "w": 24, "h": 8 },
+          "description": "**네임스페이스별 리소스 요청량**\n\n각 네임스페이스의 CPU 및 메모리 Request를 추적합니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) by (namespace)",
+              "legendFormat": "{{namespace}} (CPU)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        }
+      ]
+    }

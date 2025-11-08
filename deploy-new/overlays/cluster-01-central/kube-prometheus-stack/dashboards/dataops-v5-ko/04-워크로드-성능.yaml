@@ -1,0 +1,503 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-workload-performance-ko-v5
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-workload-performance-ko-v5.json: |
+    {
+      "uid": "dataops-performance-ko-v5",
+      "title": "DataOps 플랫폼 - 워크로드 성능",
+      "tags": ["dataops", "performance", "workload", "korean", "v5", "spark"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "title": "📋 워크로드 성능 개요",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+          "options": {
+            "mode": "markdown",
+            "content": "# ⚡ DataOps 워크로드 성능 분석\n\n**Spark 및 Kubernetes 워크로드의 성능**을 실시간으로 모니터링합니다.\n\n- **Spark 클러스터**: Worker, Application, Executor 성능\n- **Container 성능**: CPU/메모리 실제 사용량\n- **네트워크 I/O**: 데이터 전송 성능\n\n---\n\n**빠른 이동**: [🏠 포털](d/dataops-portal-ko-v5) | [🚀 배포](d/dataops-deployment-ko-v5) | [💊 앱 상태](d/dataops-health-ko-v5) | [📊 리소스](d/dataops-capacity-ko-v5) | [🔄 데이터](d/dataops-data-ko-v5) | [🔧 최적화](d/dataops-optimize-ko-v5)"
+          }
+        },
+        {
+          "title": "1️⃣ Spark Workers",
+          "type": "stat",
+          "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+          "description": "**Spark 활성 Worker 수**\n\nSpark 클러스터에 연결된 Worker 노드 개수입니다.",
+          "targets": [
+            {
+              "expr": "metrics_master_aliveWorkers_Value{namespace=\"spark\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D6EAF8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "2️⃣ Spark Apps",
+          "type": "stat",
+          "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+          "description": "**실행 중인 Spark Application**\n\nSpark 클러스터에서 실행 중인 Application 개수입니다.",
+          "targets": [
+            {
+              "expr": "metrics_master_apps_Value{namespace=\"spark\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#B8E0D2" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "3️⃣ 코드 생성 성능 (P95)",
+          "type": "stat",
+          "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+          "description": "**Spark 코드 생성 시간 (95th Percentile)**\n\nSpark SQL 코드 생성 성능 지표입니다.",
+          "targets": [
+            {
+              "expr": "metrics_CodeGenerator_compilationTime_95thPercentile{namespace=\"spark\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#FCF3CF" }
+                ]
+              },
+              "unit": "ms",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "4️⃣ Spark 메트릭 수집 상태",
+          "type": "stat",
+          "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+          "description": "**Spark 메트릭 엔드포인트**\n\nSpark 메트릭 수집이 정상 동작하는지 확인합니다.",
+          "targets": [
+            {
+              "expr": "up{namespace=\"spark\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#FADBD8" },
+                  { "value": 1, "color": "#D5F4E6" }
+                ]
+              },
+              "unit": "short",
+              "mappings": [
+                { "type": "value", "value": "1", "text": "UP" },
+                { "type": "value", "value": "0", "text": "DOWN" }
+              ]
+            }
+          },
+          "options": {
+            "graphMode": "none",
+            "colorMode": "background",
+            "textMode": "value"
+          }
+        },
+        {
+          "title": "📈 Spark Worker 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+          "description": "**Spark Worker 수 변화**\n\nSpark 클러스터의 Worker 노드 수를 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "metrics_master_aliveWorkers_Value{namespace=\"spark\"}",
+              "legendFormat": "Alive Workers",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 3,
+                "fillOpacity": 30,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Alive Workers" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#D6EAF8", "mode": "fixed" } }]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            }
+          }
+        },
+        {
+          "title": "📊 Spark Application 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+          "description": "**Spark Application 수 변화**\n\n실행 중인 Spark Application 개수를 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "metrics_master_apps_Value{namespace=\"spark\"}",
+              "legendFormat": "Running Apps",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 3,
+                "fillOpacity": 30,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Running Apps" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#B8E0D2", "mode": "fixed" } }]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            }
+          }
+        },
+        {
+          "title": "🖥️ Container CPU 사용량 (Top 10)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+          "description": "**CPU를 가장 많이 사용하는 Container**\n\n실제 CPU 사용량 기준 상위 10개 Container를 표시합니다.",
+          "targets": [
+            {
+              "expr": "topk(10, rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[5m]))",
+              "legendFormat": "{{namespace}}/{{pod}}/{{container}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percentunit"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "💾 Container 메모리 사용량 (Top 10)",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+          "description": "**메모리를 가장 많이 사용하는 Container**\n\n실제 메모리 사용량 기준 상위 10개 Container를 표시합니다.",
+          "targets": [
+            {
+              "expr": "topk(10, container_memory_working_set_bytes{container!=\"\",container!=\"POD\"})",
+              "legendFormat": "{{namespace}}/{{pod}}/{{container}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "🌐 네트워크 수신 속도 (Top 10 Pods)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
+          "description": "**네트워크 수신 속도가 높은 Pod**\n\n네트워크 Receive 속도 기준 상위 10개 Pod를 표시합니다.",
+          "targets": [
+            {
+              "expr": "topk(10, rate(container_network_receive_bytes_total{pod!=\"\"}[5m]))",
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "Bps"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "📡 네트워크 전송 속도 (Top 10 Pods)",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
+          "description": "**네트워크 전송 속도가 높은 Pod**\n\n네트워크 Transmit 속도 기준 상위 10개 Pod를 표시합니다.",
+          "targets": [
+            {
+              "expr": "topk(10, rate(container_network_transmit_bytes_total{pod!=\"\"}[5m]))",
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "Bps"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "📦 네임스페이스별 CPU 사용률",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 31, "w": 12, "h": 8 },
+          "description": "**각 네임스페이스의 CPU 사용량**\n\n네임스페이스별 실제 CPU 사용률을 표시합니다.",
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[5m])) by (namespace)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "Value": "CPU Usage (Cores)"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": true,
+              "reducer": ["sum"]
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              },
+              "decimals": 3
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "CPU Usage (Cores)" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 0.5, "color": "#FCF3CF" },
+                        { "value": 1, "color": "#FADBD8" }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "🧮 네임스페이스별 메모리 사용량",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 31, "w": 12, "h": 8 },
+          "description": "**각 네임스페이스의 메모리 사용량**\n\n네임스페이스별 실제 메모리 사용량을 표시합니다.",
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{container!=\"\",container!=\"POD\"}) by (namespace)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "Value": "Memory Usage"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": true,
+              "reducer": ["sum"]
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              },
+              "unit": "bytes"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Memory Usage" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 536870912, "color": "#FCF3CF" },
+                        { "value": 1073741824, "color": "#FADBD8" }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }

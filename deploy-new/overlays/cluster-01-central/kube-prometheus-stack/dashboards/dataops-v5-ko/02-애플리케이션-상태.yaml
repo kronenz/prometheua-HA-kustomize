@@ -1,0 +1,461 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-application-health-ko-v5
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-application-health-ko-v5.json: |
+    {
+      "uid": "dataops-health-ko-v5",
+      "title": "DataOps 플랫폼 - 애플리케이션 상태",
+      "tags": ["dataops", "health", "application", "korean", "v5", "kubernetes"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "title": "📋 애플리케이션 상태 개요",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+          "options": {
+            "mode": "markdown",
+            "content": "# 💊 DataOps 애플리케이션 건강 상태\n\n**모든 워크로드의 건강도**를 실시간으로 모니터링합니다.\n\n- **Pod 건강 상태**: Readiness/Liveness Probe 성공률\n- **Container 안정성**: OOMKilled, CrashLoopBackOff 탐지\n- **네임스페이스별 상태**: 각 네임스페이스의 건강도 분석\n\n---\n\n**빠른 이동**: [🏠 포털](d/dataops-portal-ko-v5) | [🚀 배포](d/dataops-deployment-ko-v5) | [📊 리소스](d/dataops-capacity-ko-v5) | [⚡ 성능](d/dataops-performance-ko-v5) | [🔄 데이터](d/dataops-data-ko-v5) | [🔧 최적화](d/dataops-optimize-ko-v5)"
+          }
+        },
+        {
+          "title": "1️⃣ 정상 Pod 비율",
+          "type": "stat",
+          "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+          "description": "**Running 상태 Pod 비율**\n\n전체 Pod 중 정상 실행 중인 Pod의 비율입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Running\"}) / count(kube_pod_info) * 100",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#FADBD8" },
+                  { "value": 80, "color": "#FCF3CF" },
+                  { "value": 95, "color": "#D5F4E6" }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "2️⃣ Ready Containers",
+          "type": "stat",
+          "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+          "description": "**Ready 상태 Container 수**\n\nReadiness Probe를 통과한 Container 개수입니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_status_ready)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D6EAF8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "3️⃣ Waiting Containers",
+          "type": "stat",
+          "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+          "description": "**대기 중인 Container**\n\nWaiting 상태의 Container 수입니다. ImagePullBackOff, CrashLoopBackOff 등을 포함합니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_status_waiting) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 1, "color": "#FCF3CF" },
+                  { "value": 5, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "4️⃣ Terminated Containers",
+          "type": "stat",
+          "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+          "description": "**종료된 Container**\n\nTerminated 상태의 Container 수입니다. OOMKilled, Error 등을 포함합니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_status_terminated) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 1, "color": "#FCF3CF" },
+                  { "value": 3, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "📊 네임스페이스별 Pod 상태",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+          "description": "**각 네임스페이스의 Pod 개수**\n\n네임스페이스별 Running Pod 개수를 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Running\"}) by (namespace)",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "🔄 Container 재시작 비율 (5m)",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+          "description": "**Container 재시작 속도**\n\n5분간 Container 재시작 비율을 네임스페이스별로 추적합니다.",
+          "targets": [
+            {
+              "expr": "sum(rate(kube_pod_container_status_restarts_total[5m])) by (namespace)",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "reqps"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "⚠️ CrashLoopBackOff Containers",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+          "description": "**반복적으로 실패하는 Container**\n\nCrashLoopBackOff 상태의 Container를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true,
+                  "reason": true,
+                  "Value": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "container": "Container"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            }
+          }
+        },
+        {
+          "title": "🖼️ ImagePullBackOff Containers",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+          "description": "**이미지 다운로드 실패 Container**\n\nImagePullBackOff 상태의 Container를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_pod_container_status_waiting_reason{reason=~\"ImagePullBackOff|ErrImagePull\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true,
+                  "Value": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "container": "Container",
+                  "reason": "Reason"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            }
+          }
+        },
+        {
+          "title": "💀 OOMKilled Containers (최근 1시간)",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
+          "description": "**메모리 부족으로 종료된 Container**\n\n최근 1시간 내에 OOMKilled된 Container를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_pod_container_status_terminated_reason{reason=\"OOMKilled\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true,
+                  "reason": true,
+                  "Value": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "container": "Container"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            }
+          }
+        },
+        {
+          "title": "🩺 Readiness Probe 실패 (Top 10)",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
+          "description": "**Readiness Probe 실패 Container**\n\nReady 상태가 아닌 Container를 표시합니다.",
+          "targets": [
+            {
+              "expr": "topk(10, kube_pod_container_status_ready == 0)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true,
+                  "Value": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "container": "Container"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            }
+          }
+        },
+        {
+          "title": "📈 Pod 건강도 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 31, "w": 24, "h": 8 },
+          "description": "**전체 클러스터 건강도**\n\nRunning Pod 비율을 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Running\"}) / count(kube_pod_info) * 100",
+              "legendFormat": "Running Pod %",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 3,
+                "fillOpacity": 30,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "transparent" },
+                  { "value": 80, "color": "red" },
+                  { "value": 95, "color": "green" }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Running Pod %" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#D5F4E6", "mode": "fixed" } }]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            }
+          }
+        }
+      ]
+    }

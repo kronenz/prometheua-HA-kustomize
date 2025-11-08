@@ -1,0 +1,630 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-optimization-ko-v5
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-optimization-ko-v5.json: |
+    {
+      "uid": "dataops-optimize-ko-v5",
+      "title": "DataOps 플랫폼 - 최적화 및 문제해결",
+      "tags": ["dataops", "optimization", "troubleshooting", "korean", "v5", "kubernetes"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "title": "📋 최적화 및 문제해결 개요",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+          "options": {
+            "mode": "markdown",
+            "content": "# 🔧 DataOps 최적화 및 문제해결\n\n**리소스 최적화 기회와 문제 진단**을 위한 통합 대시보드입니다.\n\n- **리소스 낭비 탐지**: Over-provisioned Container 식별\n- **성능 병목 지점**: CPU/메모리 제약, I/O 병목\n- **안정성 문제**: 재시작 패턴, OOMKilled 분석\n\n---\n\n**빠른 이동**: [🏠 포털](d/dataops-portal-ko-v5) | [🚀 배포](d/dataops-deployment-ko-v5) | [💊 앱 상태](d/dataops-health-ko-v5) | [📊 리소스](d/dataops-capacity-ko-v5) | [⚡ 성능](d/dataops-performance-ko-v5) | [🔄 데이터](d/dataops-data-ko-v5)"
+          }
+        },
+        {
+          "title": "⚠️ 문제 Pod 수",
+          "type": "stat",
+          "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+          "description": "**비정상 상태 Pod**\n\nPending, Failed, Unknown 상태의 Pod 개수입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase!~\"Running|Succeeded\"}) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 1, "color": "#FCF3CF" },
+                  { "value": 5, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "🔄 재시작 중인 Container",
+          "type": "stat",
+          "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+          "description": "**최근 재시작된 Container**\n\n최근 5분간 재시작이 발생한 Container 수입니다.",
+          "targets": [
+            {
+              "expr": "count(rate(kube_pod_container_status_restarts_total[5m]) > 0) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 1, "color": "#FCF3CF" },
+                  { "value": 3, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "💀 OOMKilled Container",
+          "type": "stat",
+          "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+          "description": "**메모리 부족으로 종료된 Container**\n\nOOMKilled 상태의 Container 수입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_container_status_terminated_reason{reason=\"OOMKilled\"}) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 1, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "🖼️ Image Pull 실패",
+          "type": "stat",
+          "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+          "description": "**이미지 다운로드 실패 Container**\n\nImagePullBackOff 상태의 Container 수입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_container_status_waiting_reason{reason=~\"ImagePullBackOff|ErrImagePull\"}) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 1, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "🔍 CPU 과다 할당 Container (Request vs Usage)",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+          "description": "**CPU Request 대비 실제 사용률**\n\nRequest는 높지만 실제 사용률이 낮은 Container를 식별합니다. (최적화 기회)",
+          "targets": [
+            {
+              "expr": "kube_pod_container_resource_requests{resource=\"cpu\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[5m])",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "resource": true,
+                  "unit": true,
+                  "id": true,
+                  "image": true,
+                  "name": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "container": "Container",
+                  "Value #A": "CPU Request",
+                  "Value #B": "CPU Usage"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
+                },
+                "binary": {
+                  "left": "CPU Usage",
+                  "operator": "/",
+                  "right": "CPU Request"
+                },
+                "alias": "Usage %"
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Usage %",
+                "desc": false
+              }
+            ]
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "CPU Request" },
+                "properties": [{ "id": "decimals", "value": 3 }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "CPU Usage" },
+                "properties": [{ "id": "decimals", "value": 3 }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Usage %" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#FADBD8" },
+                        { "value": 0.3, "color": "#FCF3CF" },
+                        { "value": 0.7, "color": "#D5F4E6" }
+                      ]
+                    }
+                  },
+                  { "id": "unit", "value": "percentunit" },
+                  { "id": "decimals", "value": 2 }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "💾 메모리 과다 할당 Container (Request vs Usage)",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+          "description": "**메모리 Request 대비 실제 사용량**\n\nRequest는 높지만 실제 사용량이 낮은 Container를 식별합니다. (최적화 기회)",
+          "targets": [
+            {
+              "expr": "kube_pod_container_resource_requests{resource=\"memory\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "container_memory_working_set_bytes{container!=\"\",container!=\"POD\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "resource": true,
+                  "unit": true,
+                  "id": true,
+                  "image": true,
+                  "name": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "container": "Container",
+                  "Value #A": "Memory Request",
+                  "Value #B": "Memory Usage"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "mode": "binary",
+                "reduce": {
+                  "reducer": "sum"
+                },
+                "binary": {
+                  "left": "Memory Usage",
+                  "operator": "/",
+                  "right": "Memory Request"
+                },
+                "alias": "Usage %"
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Usage %",
+                "desc": false
+              }
+            ]
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Memory Request" },
+                "properties": [{ "id": "unit", "value": "bytes" }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Memory Usage" },
+                "properties": [{ "id": "unit", "value": "bytes" }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Usage %" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#FADBD8" },
+                        { "value": 0.3, "color": "#FCF3CF" },
+                        { "value": 0.7, "color": "#D5F4E6" }
+                      ]
+                    }
+                  },
+                  { "id": "unit", "value": "percentunit" },
+                  { "id": "decimals", "value": 2 }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "🔄 재시작이 많은 Container (Top 10)",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+          "description": "**재시작 횟수가 많은 Container**\n\n안정성 문제가 있는 Container를 식별합니다.",
+          "targets": [
+            {
+              "expr": "topk(10, kube_pod_container_status_restarts_total > 0)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "container": "Container",
+                  "Value": "Restarts"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": true,
+              "reducer": ["sum"]
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Restarts" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 5, "color": "#FCF3CF" },
+                        { "value": 10, "color": "#FADBD8" }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "⚠️ 현재 문제 상태 Pod 목록",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+          "description": "**비정상 상태 Pod 상세**\n\nPending, Failed, Unknown 상태의 Pod를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_pod_status_phase{phase!~\"Running|Succeeded\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true,
+                  "Value": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "phase": "Status"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Status" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      { "type": "value", "value": "Pending", "text": "Pending", "color": "#FCF3CF" },
+                      { "type": "value", "value": "Failed", "text": "Failed", "color": "#FADBD8" },
+                      { "type": "value", "value": "Unknown", "text": "Unknown", "color": "#E8DAEF" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "📊 노드 리소스 압박 지표",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
+          "description": "**노드별 리소스 할당률**\n\n각 노드의 CPU/메모리 할당률을 추적합니다. 85% 이상이면 리소스 압박 상태입니다.",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) by (node) / sum(kube_node_status_allocatable{resource=\"cpu\"}) by (node) * 100",
+              "legendFormat": "{{node}} CPU %",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\"}) by (node) / sum(kube_node_status_allocatable{resource=\"memory\"}) by (node) * 100",
+              "legendFormat": "{{node}} Memory %",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percent",
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "transparent" },
+                  { "value": 85, "color": "red" }
+                ]
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "🌡️ 노드 실제 리소스 사용률",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
+          "description": "**노드의 실제 CPU/메모리 사용률**\n\n노드별 실제 리소스 사용률을 추적합니다. 90% 이상이면 성능 저하 가능성이 있습니다.",
+          "targets": [
+            {
+              "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (instance)) * 100",
+              "legendFormat": "{{instance}} CPU %",
+              "refId": "A"
+            },
+            {
+              "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
+              "legendFormat": "{{instance}} Memory %",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percent",
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "transparent" },
+                  { "value": 90, "color": "red" }
+                ]
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "💡 최적화 권장사항",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 31, "w": 24, "h": 8 },
+          "options": {
+            "mode": "markdown",
+            "content": "# 💡 리소스 최적화 가이드\n\n## 🔍 CPU/메모리 과다 할당 식별\n\n**문제**: Request는 높지만 실제 사용률이 낮은 Container (Usage % < 30%)\n\n**해결 방법**:\n```yaml\nresources:\n  requests:\n    cpu: 100m      # 현재 200m → 100m 으로 감소\n    memory: 128Mi  # 현재 256Mi → 128Mi 으로 감소\n  limits:\n    cpu: 200m\n    memory: 256Mi\n```\n\n**효과**: 클러스터 리소스 활용도 향상, 더 많은 Pod 배포 가능\n\n---\n\n## 🔄 재시작이 잦은 Container 문제해결\n\n**문제**: Restarts > 5 인 Container\n\n**원인 분석**:\n1. **OOMKilled**: 메모리 부족 → Memory Limit 증가 필요\n2. **CrashLoopBackOff**: 애플리케이션 오류 → 로그 확인 (`kubectl logs`)\n3. **Liveness Probe 실패**: Probe 설정 검토 필요\n\n**해결 방법**:\n```bash\n# 로그 확인\nkubectl logs <pod-name> -c <container-name> --previous\n\n# Probe 설정 조정\nlivenessProbe:\n  initialDelaySeconds: 60  # 시작 대기 시간 증가\n  periodSeconds: 20        # 체크 간격 증가\n  timeoutSeconds: 5\n  failureThreshold: 5      # 실패 허용 횟수 증가\n```\n\n---\n\n## 📊 노드 리소스 압박 해소\n\n**문제**: 노드 할당률 > 85% 또는 사용률 > 90%\n\n**해결 방법**:\n1. **노드 추가**: 클러스터에 노드 추가 (수평 확장)\n2. **Pod 재배치**: 리소스가 여유로운 노드로 이동\n3. **리소스 최적화**: 과다 할당된 Container의 Request 감소\n\n---\n\n## ⚡ 성능 최적화 체크리스트\n\n- [ ] CPU/메모리 Request vs Usage 비율 확인 (70% 이상 권장)\n- [ ] OOMKilled Container 메모리 Limit 증가\n- [ ] 재시작 패턴 분석 및 원인 제거\n- [ ] 노드 리소스 할당률 85% 이하 유지\n- [ ] Readiness/Liveness Probe 설정 최적화\n- [ ] PVC 용량 사용률 모니터링 (80% 이하 유지)\n- [ ] 네트워크 I/O 병목 지점 식별 및 해소"
+          }
+        }
+      ]
+    }

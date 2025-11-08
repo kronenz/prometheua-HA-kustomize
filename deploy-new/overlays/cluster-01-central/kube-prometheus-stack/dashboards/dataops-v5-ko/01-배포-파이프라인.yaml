@@ -1,0 +1,472 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-deployment-pipeline-ko-v5
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-deployment-pipeline-ko-v5.json: |
+    {
+      "uid": "dataops-deployment-ko-v5",
+      "title": "DataOps 플랫폼 - 배포 파이프라인",
+      "tags": ["dataops", "deployment", "pipeline", "korean", "v5", "kubernetes"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "title": "📋 배포 파이프라인 개요",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+          "options": {
+            "mode": "markdown",
+            "content": "# 🚀 DataOps 배포 파이프라인\n\n**Kubernetes 워크로드 배포 현황**을 실시간으로 모니터링합니다.\n\n- **Pod 생명주기**: 생성, 실행, 종료 추적\n- **배포 안정성**: 재시작 및 실패 패턴 분석\n- **리소스 상태**: Deployment, StatefulSet 건강도\n\n---\n\n**빠른 이동**: [🏠 포털](d/dataops-portal-ko-v5) | [💊 앱 상태](d/dataops-health-ko-v5) | [📊 리소스](d/dataops-capacity-ko-v5) | [⚡ 성능](d/dataops-performance-ko-v5) | [🔄 데이터](d/dataops-data-ko-v5) | [🔧 최적화](d/dataops-optimize-ko-v5)"
+          }
+        },
+        {
+          "title": "1️⃣ 총 Pod 수",
+          "type": "stat",
+          "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+          "description": "**전체 클러스터의 Pod 수**\n\n모든 네임스페이스에서 실행 중인 Pod의 총 개수입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_info)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#B8E0D2" },
+                  { "value": 50, "color": "#D6EAF8" },
+                  { "value": 100, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "2️⃣ Running Pods",
+          "type": "stat",
+          "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+          "description": "**정상 실행 중인 Pod**\n\nRunning 상태의 Pod 개수입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Running\"})",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#FADBD8" },
+                  { "value": 10, "color": "#FCF3CF" },
+                  { "value": 30, "color": "#D5F4E6" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "3️⃣ Pending Pods",
+          "type": "stat",
+          "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+          "description": "**대기 중인 Pod**\n\nPending 상태의 Pod 개수입니다. 높으면 리소스 부족을 의미할 수 있습니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Pending\"}) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 1, "color": "#FCF3CF" },
+                  { "value": 5, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "4️⃣ Failed Pods",
+          "type": "stat",
+          "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+          "description": "**실패한 Pod**\n\nFailed 상태의 Pod 개수입니다. 배포 문제를 나타냅니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Failed\"}) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 1, "color": "#FCF3CF" },
+                  { "value": 3, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "📈 Pod 생명주기 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 7, "w": 12, "h": 8 },
+          "description": "**Pod 상태별 개수 추이**\n\nRunning, Pending, Failed, Succeeded 상태의 Pod 개수를 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Running\"}) or vector(0)",
+              "legendFormat": "Running",
+              "refId": "A"
+            },
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Pending\"}) or vector(0)",
+              "legendFormat": "Pending",
+              "refId": "B"
+            },
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Failed\"}) or vector(0)",
+              "legendFormat": "Failed",
+              "refId": "C"
+            },
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Succeeded\"}) or vector(0)",
+              "legendFormat": "Succeeded",
+              "refId": "D"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Running" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#D5F4E6", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Pending" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#FCF3CF", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Failed" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#FADBD8", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Succeeded" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#E8DAEF", "mode": "fixed" } }]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            }
+          }
+        },
+        {
+          "title": "🔄 Container 재시작 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 7, "w": 12, "h": 8 },
+          "description": "**Container 재시작 횟수**\n\n각 Container의 재시작 횟수를 추적합니다. 높은 재시작 빈도는 애플리케이션 불안정성을 나타냅니다.",
+          "targets": [
+            {
+              "expr": "topk(10, rate(kube_pod_container_status_restarts_total[5m]) > 0)",
+              "legendFormat": "{{namespace}}/{{pod}}/{{container}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "reqps"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max"]
+            }
+          }
+        },
+        {
+          "title": "📦 Deployment 상태",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+          "description": "**Deployment 리소스 상태**\n\n각 Deployment의 desired, available, unavailable replica 수를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_deployment_status_replicas",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "kube_deployment_status_replicas_available",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            },
+            {
+              "expr": "kube_deployment_status_replicas_unavailable",
+              "format": "table",
+              "instant": true,
+              "refId": "C"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "deployment": "Deployment",
+                  "Value #A": "Desired",
+                  "Value #B": "Available",
+                  "Value #C": "Unavailable"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Unavailable" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 1, "color": "#FADBD8" }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "🗂️ StatefulSet 상태",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+          "description": "**StatefulSet 리소스 상태**\n\n각 StatefulSet의 desired, ready replica 수를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_statefulset_replicas",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "kube_statefulset_status_replicas_ready",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "statefulset": "StatefulSet",
+                  "Value #A": "Desired",
+                  "Value #B": "Ready"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            }
+          }
+        },
+        {
+          "title": "⚠️ 최근 재시작된 Container (Top 10)",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 23, "w": 24, "h": 8 },
+          "description": "**재시작이 가장 많은 Container**\n\n최근 5분간 재시작 빈도가 높은 상위 10개 Container를 표시합니다.",
+          "targets": [
+            {
+              "expr": "topk(10, kube_pod_container_status_restarts_total > 0)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true,
+                  "id": true,
+                  "image": true,
+                  "image_id": true,
+                  "image_spec": true
+                },
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "container": "Container",
+                  "Value": "Restarts"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Restarts" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 5, "color": "#FCF3CF" },
+                        { "value": 10, "color": "#FADBD8" }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }

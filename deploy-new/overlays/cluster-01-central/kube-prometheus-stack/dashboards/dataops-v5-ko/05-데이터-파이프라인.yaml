@@ -1,0 +1,510 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-data-pipeline-ko-v5
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-data-pipeline-ko-v5.json: |
+    {
+      "uid": "dataops-data-ko-v5",
+      "title": "DataOps 플랫폼 - 데이터 파이프라인",
+      "tags": ["dataops", "data", "pipeline", "korean", "v5", "spark"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "title": "📋 데이터 파이프라인 개요",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+          "options": {
+            "mode": "markdown",
+            "content": "# 🔄 DataOps 데이터 파이프라인\n\n**Spark 기반 데이터 처리 파이프라인**을 실시간으로 모니터링합니다.\n\n- **Spark 클러스터 Flow**: Master → Workers → Applications\n- **데이터 처리 성능**: Worker CPU/메모리 사용 추이\n- **파이프라인 건강도**: 처리 안정성 및 성능 지표\n\n---\n\n**빠른 이동**: [🏠 포털](d/dataops-portal-ko-v5) | [🚀 배포](d/dataops-deployment-ko-v5) | [💊 앱 상태](d/dataops-health-ko-v5) | [📊 리소스](d/dataops-capacity-ko-v5) | [⚡ 성능](d/dataops-performance-ko-v5) | [🔧 최적화](d/dataops-optimize-ko-v5)"
+          }
+        },
+        {
+          "title": "1️⃣ Spark Master 상태",
+          "type": "stat",
+          "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+          "description": "**Spark Master 메트릭 수집**\n\nSpark Master가 정상적으로 메트릭을 제공하는지 확인합니다.",
+          "targets": [
+            {
+              "expr": "up{namespace=\"spark\",job=\"spark-master\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#FADBD8" },
+                  { "value": 1, "color": "#D5F4E6" }
+                ]
+              },
+              "unit": "short",
+              "mappings": [
+                { "type": "value", "value": "1", "text": "정상" },
+                { "type": "value", "value": "0", "text": "비정상" }
+              ]
+            }
+          },
+          "options": {
+            "graphMode": "none",
+            "colorMode": "background",
+            "textMode": "value"
+          }
+        },
+        {
+          "title": "2️⃣ 활성 Worker 수",
+          "type": "stat",
+          "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+          "description": "**Spark 활성 Worker**\n\n데이터 처리에 사용 가능한 Worker 노드 개수입니다.",
+          "targets": [
+            {
+              "expr": "metrics_master_aliveWorkers_Value{namespace=\"spark\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D6EAF8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "3️⃣ 실행 중인 앱",
+          "type": "stat",
+          "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+          "description": "**Spark Application 실행 수**\n\n현재 데이터를 처리 중인 Application 개수입니다.",
+          "targets": [
+            {
+              "expr": "metrics_master_apps_Value{namespace=\"spark\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#B8E0D2" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "4️⃣ 코드 생성 성능",
+          "type": "stat",
+          "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+          "description": "**SQL 코드 생성 시간**\n\nSpark SQL의 코드 생성 성능 (95th Percentile)입니다.",
+          "targets": [
+            {
+              "expr": "metrics_CodeGenerator_compilationTime_95thPercentile{namespace=\"spark\"}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#D5F4E6" },
+                  { "value": 100, "color": "#FCF3CF" },
+                  { "value": 500, "color": "#FADBD8" }
+                ]
+              },
+              "unit": "ms",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "🔄 Spark 데이터 처리 Flow",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 7, "w": 24, "h": 6 },
+          "options": {
+            "mode": "markdown",
+            "content": "```mermaid\ngraph LR\n    A[\"🎯 Spark Master<br/>(메트릭 제공)\"] -->|관리| B[\"⚙️ Worker 1<br/>(데이터 처리)\"]\n    A -->|관리| C[\"⚙️ Worker 2<br/>(데이터 처리)\"]\n    B -->|실행| D[\"📦 Application<br/>(작업 수행)\"]\n    C -->|실행| D\n    D -->|결과| E[\"📊 데이터 출력<br/>(S3/HDFS)\"]\n    \n    style A fill:#D6EAF8,stroke:#3498DB,stroke-width:2px\n    style B fill:#B8E0D2,stroke:#27AE60,stroke-width:2px\n    style C fill:#B8E0D2,stroke:#27AE60,stroke-width:2px\n    style D fill:#FCF3CF,stroke:#F39C12,stroke-width:2px\n    style E fill:#E8DAEF,stroke:#9B59B6,stroke-width:2px\n```\n\n**데이터 처리 흐름**:\n1. **Spark Master**: 클러스터 전체 관리 및 리소스 할당\n2. **Workers**: 실제 데이터 처리 수행 (분산 병렬 처리)\n3. **Applications**: 사용자 작업 실행 (Spark Jobs)\n4. **데이터 출력**: 처리 결과를 S3, HDFS 등에 저장"
+          }
+        },
+        {
+          "title": "📈 Spark Worker CPU 사용률",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 13, "w": 12, "h": 8 },
+          "description": "**Spark Worker의 CPU 사용 추이**\n\nWorker Pod의 CPU 사용률을 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "rate(container_cpu_usage_seconds_total{namespace=\"spark\",pod=~\".*worker.*\",container!=\"\",container!=\"POD\"}[5m])",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percentunit"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max", "mean"]
+            }
+          }
+        },
+        {
+          "title": "💾 Spark Worker 메모리 사용량",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 13, "w": 12, "h": 8 },
+          "description": "**Spark Worker의 메모리 사용 추이**\n\nWorker Pod의 메모리 사용량을 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "container_memory_working_set_bytes{namespace=\"spark\",pod=~\".*worker.*\",container!=\"\",container!=\"POD\"}",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max", "mean"]
+            }
+          }
+        },
+        {
+          "title": "🌐 Spark Worker 네트워크 수신",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 21, "w": 12, "h": 8 },
+          "description": "**Worker 네트워크 수신 속도**\n\nWorker가 데이터를 받는 속도를 추적합니다.",
+          "targets": [
+            {
+              "expr": "rate(container_network_receive_bytes_total{namespace=\"spark\",pod=~\".*worker.*\"}[5m])",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "Bps"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max", "mean"]
+            }
+          }
+        },
+        {
+          "title": "📡 Spark Worker 네트워크 전송",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 21, "w": 12, "h": 8 },
+          "description": "**Worker 네트워크 전송 속도**\n\nWorker가 데이터를 전송하는 속도를 추적합니다.",
+          "targets": [
+            {
+              "expr": "rate(container_network_transmit_bytes_total{namespace=\"spark\",pod=~\".*worker.*\"}[5m])",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "Bps"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "max", "mean"]
+            }
+          }
+        },
+        {
+          "title": "🔢 Spark Pods 상태",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 29, "w": 12, "h": 8 },
+          "description": "**Spark 네임스페이스의 Pod 목록**\n\nMaster, Worker, Application Pod의 상태를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_pod_info{namespace=\"spark\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "kube_pod_status_phase{namespace=\"spark\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true,
+                  "created_by_kind": true,
+                  "created_by_name": true,
+                  "host_ip": true,
+                  "host_network": true,
+                  "pod_ip": true,
+                  "priority_class": true,
+                  "Value #A": true
+                },
+                "renameByName": {
+                  "pod": "Pod",
+                  "node": "Node",
+                  "phase": "Status"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Status" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      { "type": "value", "value": "Running", "text": "Running", "color": "#D5F4E6" },
+                      { "type": "value", "value": "Pending", "text": "Pending", "color": "#FCF3CF" },
+                      { "type": "value", "value": "Failed", "text": "Failed", "color": "#FADBD8" },
+                      { "type": "value", "value": "Succeeded", "text": "Succeeded", "color": "#E8DAEF" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "🔄 Spark Container 재시작 내역",
+          "type": "table",
+          "gridPos": { "x": 12, "y": 29, "w": 12, "h": 8 },
+          "description": "**Spark Container 재시작 횟수**\n\nSpark 네임스페이스 Container의 재시작 횟수를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_pod_container_status_restarts_total{namespace=\"spark\"} > 0",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true
+                },
+                "renameByName": {
+                  "pod": "Pod",
+                  "container": "Container",
+                  "Value": "Restarts"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": true,
+              "reducer": ["sum"]
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Restarts" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 3, "color": "#FCF3CF" },
+                        { "value": 10, "color": "#FADBD8" }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "📊 Spark 클러스터 건강도 요약",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 37, "w": 24, "h": 8 },
+          "description": "**Spark 클러스터 전반적인 건강도**\n\nWorker 수, Application 수, 정상 Pod 비율을 한눈에 확인합니다.",
+          "targets": [
+            {
+              "expr": "metrics_master_aliveWorkers_Value{namespace=\"spark\"}",
+              "legendFormat": "활성 Workers",
+              "refId": "A"
+            },
+            {
+              "expr": "metrics_master_apps_Value{namespace=\"spark\"}",
+              "legendFormat": "실행 중인 Apps",
+              "refId": "B"
+            },
+            {
+              "expr": "count(kube_pod_status_phase{namespace=\"spark\",phase=\"Running\"}) / count(kube_pod_info{namespace=\"spark\"}) * 10",
+              "legendFormat": "정상 Pod 비율 (x10)",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 3,
+                "fillOpacity": 30,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "활성 Workers" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#D6EAF8", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "실행 중인 Apps" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#B8E0D2", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "정상 Pod 비율 (x10)" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#D5F4E6", "mode": "fixed" } }]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            }
+          }
+        }
+      ]
+    }
