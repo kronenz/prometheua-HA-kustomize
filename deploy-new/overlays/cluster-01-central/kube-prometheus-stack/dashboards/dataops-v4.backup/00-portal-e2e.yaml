@@ -1,0 +1,387 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-portal-e2e-v4
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-portal-e2e-v4.json: |
+    {
+      "uid": "dataops-portal-e2e-v4",
+      "title": "DataOps Platform - E2E Portal",
+      "tags": ["dataops", "portal", "e2e", "v4", "pastel"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "editable": true,
+      "style": "dark",
+      "folder": "DataOps E2E",
+      "folderUid": "dataops-e2e-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 5, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1A1F2E;padding:28px;border-radius:10px;border-bottom:3px solid #7FB3E8'><div style='display:flex;justify-content:space-between;align-items:center'><div style='display:flex;align-items:center;gap:20px'><div style='width:56px;height:56px;background:rgba(127,179,232,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;border:2px solid rgba(127,179,232,0.3)'>📊</div><div><div style='font-size:26px;font-weight:700;color:#E5E7EB;letter-spacing:-0.3px'>DataOps Platform</div><div style='font-size:13px;color:#9CA3AF;margin-top:4px'>End-to-End Observability Suite • Multi-Cluster BigData Platform</div></div></div><div style='display:flex;gap:20px'><div style='text-align:right'><div style='font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px'>Platform Status</div><div style='margin-top:6px;padding:6px 14px;background:rgba(129,201,149,0.15);border-radius:6px;border:1px solid rgba(129,201,149,0.3)'><span style='font-size:14px;color:#81C995;font-weight:600'>● Operational</span></div></div><div style='text-align:right'><div style='font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px'>Uptime (30d)</div><div style='margin-top:6px;font-size:22px;color:#E5E7EB;font-weight:700'>99.97%</div></div></div></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "End-to-End Pipeline Status",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "1. Deployment",
+          "description": "**GitOps 배포 파이프라인 상태**\n\n**흐름**: Bitbucket → Jenkins CI → ArgoCD CD → Kubernetes\n\n**주요 메트릭**:\n- Jenkins Build 성공률\n- ArgoCD Sync 성공률\n- Deployment 소요 시간\n\n**정상 기준**: 95% 이상 성공률\n\n**관련 대시보드**: [Deployment Pipeline](/d/dataops-deployment-v4)",
+          "gridPos": {"h": 8, "w": 4, "x": 0, "y": 6},
+          "targets": [{
+            "expr": "sum(rate(jenkins_job_success_total[1h])) / sum(rate(jenkins_job_total[1h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 14,
+              "valueSize": 36
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 90, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 95, "color": "rgba(127, 179, 232, 0.2)"}
+                ]
+              },
+              "color": {
+                "mode": "thresholds"
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "2. Health Check",
+          "description": "**애플리케이션 건강 상태 검증**\n\n**검증 항목**:\n- Pod Running 상태\n- Service Endpoint 가용성\n- Readiness Probe 성공률\n- Container Restart 빈도\n\n**정상 기준**: 98% 이상 Pod Running\n\n**조치 사항**:\n- CrashLoopBackOff 확인\n- Pod Events 로그 분석\n- Resource Limits 조정\n\n**관련 대시보드**: [Application Health](/d/dataops-health-v4)",
+          "gridPos": {"h": 8, "w": 4, "x": 4, "y": 6},
+          "targets": [{
+            "expr": "count(kube_pod_status_phase{phase=\"Running\"}) / count(kube_pod_status_phase) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 14,
+              "valueSize": 36
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 95, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 98, "color": "rgba(129, 201, 149, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "3. Resource Capacity",
+          "description": "**인프라 자원 가용성 모니터링**\n\n**모니터링 자원**:\n- CPU 가용 코어 수\n- Memory 가용 용량\n- Storage IOPS\n- Network 대역폭\n\n**임계값**:\n- 🟢 <70%: 여유 있음\n- 🟡 70-85%: 주의 필요\n- 🔴 >85%: 증설 검토\n\n**최적화**:\n- 워크로드 재배치\n- Auto-scaling 설정\n- 불필요한 Pod 정리\n\n**관련 대시보드**: [Resource Capacity](/d/dataops-resource-v4)",
+          "gridPos": {"h": 8, "w": 4, "x": 8, "y": 6},
+          "targets": [{
+            "expr": "(sum(machine_cpu_cores) - sum(kube_pod_container_resource_requests{resource=\"cpu\"})) / sum(machine_cpu_cores) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 14,
+              "valueSize": 36
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 15, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 30, "color": "rgba(177, 156, 217, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "4. Workload Execution",
+          "description": "**빅데이터 워크로드 실행 상태**\n\n**모니터링 워크로드**:\n- Spark Job 성공률\n- Airflow DAG 실행률\n- Trino Query 성능\n- Kafka Consumer Lag\n\n**성능 지표**:\n- Job Success Rate: >95%\n- GC Time Ratio: <10%\n- Query p95 Latency: <10s\n\n**병목 분석**:\n- Executor 메모리 부족\n- Shuffle 데이터 과다\n- 소형 파일 문제\n\n**관련 대시보드**: [Workload Performance](/d/dataops-workload-v4)",
+          "gridPos": {"h": 8, "w": 4, "x": 12, "y": 6},
+          "targets": [{
+            "expr": "sum(rate(spark_job_status{status=\"succeeded\"}[1h])) / sum(rate(spark_job_status[1h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 14,
+              "valueSize": 36
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 90, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 95, "color": "rgba(255, 179, 71, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "5. Data Pipeline",
+          "description": "**데이터 파이프라인 흐름 모니터링**\n\n**데이터 경로**: Spark/Trino → Iceberg → MinIO S3\n\n**주요 메트릭**:\n- S3 Write 성공률: >99.9%\n- Iceberg Small Files: <1000개\n- Write Throughput: 레코드/초\n- Hive Metastore Latency: <500ms\n\n**데이터 품질**:\n- Snapshot 주기 확인\n- Compaction 필요 여부\n- Partition 최적화\n\n**스토리지 최적화**:\n- 소형 파일 Compaction\n- Partition Pruning\n- Z-Ordering\n\n**관련 대시보드**: [Data Pipeline](/d/dataops-pipeline-v4)",
+          "gridPos": {"h": 8, "w": 4, "x": 16, "y": 6},
+          "targets": [{
+            "expr": "sum(rate(s3_requests_total{operation=\"PutObject\",status=\"200\"}[5m])) / sum(rate(s3_requests_total{operation=\"PutObject\"}[5m])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 14,
+              "valueSize": 36
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 99.5, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 99.9, "color": "rgba(111, 184, 184, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "6. Optimization",
+          "description": "**성능 최적화 및 문제 해결**\n\n**분석 영역**:\n- Slow Query 분석 (Top 10)\n- Memory OOM 발생 빈도\n- Network 병목 지점\n- Storage Latency\n\n**비용 최적화**:\n- Job별 비용 계산\n- 자원 사용률 분석\n- Idle Resource 정리\n\n**모니터링 점수**:\n- 🟢 90-100: 최적화됨\n- 🟡 80-90: 개선 가능\n- 🔴 <80: 조치 필요\n\n**최적화 우선순위**:\n1. OOM 발생 Pod\n2. GC Time 높은 Job\n3. 소형 파일 과다 Table\n\n**관련 대시보드**: [Optimization](/d/dataops-optimization-v4)",
+          "gridPos": {"h": 8, "w": 4, "x": 20, "y": 6},
+          "targets": [{
+            "expr": "(100 - (sum(rate(container_memory_failures_total{failure_type=\"oom\"}[5m])) * 10 + sum(rate(log_messages_total{level=\"error\"}[5m])) * 5))",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 14,
+              "valueSize": 36
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 80, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 90, "color": "rgba(244, 164, 196, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "E2E Timeline Visualization",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 14},
+          "collapsed": false
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 6, "w": 24, "x": 0, "y": 15},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1E2433;border-radius:8px;padding:20px;border:1px solid#374151'><div style='font-size:14px;color:#9CA3AF;margin-bottom:16px;font-weight:600'>End-to-End Process Flow</div><div style='display:flex;align-items:center;gap:12px'><div style='flex:1;background:rgba(127,179,232,0.15);border-radius:6px;padding:16px;border-left:4px solid #7FB3E8;transition:all 0.2s'onmouseover='this.style.background=\"rgba(127,179,232,0.25)\"'onmouseout='this.style.background=\"rgba(127,179,232,0.15)\"'><div style='font-size:11px;color:#9CA3AF;margin-bottom:4px'>STEP 1</div><div style='font-size:16px;color:#E5E7EB;font-weight:600;margin-bottom:8px'>📝 Git Push</div><div style='font-size:20px;color:#7FB3E8;font-weight:700'>~2m</div></div><div style='color:#4B5563;font-size:24px'>→</div><div style='flex:1;background:rgba(127,179,232,0.15);border-radius:6px;padding:16px;border-left:4px solid #7FB3E8;transition:all 0.2s'onmouseover='this.style.background=\"rgba(127,179,232,0.25)\"'onmouseout='this.style.background=\"rgba(127,179,232,0.15)\"'><div style='font-size:11px;color:#9CA3AF;margin-bottom:4px'>STEP 2</div><div style='font-size:16px;color:#E5E7EB;font-weight:600;margin-bottom:8px'>🔨 CI Build</div><div style='font-size:20px;color:#7FB3E8;font-weight:700'>~5m</div></div><div style='color:#4B5563;font-size:24px'>→</div><div style='flex:1;background:rgba(129,201,149,0.15);border-radius:6px;padding:16px;border-left:4px solid #81C995;transition:all 0.2s'onmouseover='this.style.background=\"rgba(129,201,149,0.25)\"'onmouseout='this.style.background=\"rgba(129,201,149,0.15)\"'><div style='font-size:11px;color:#9CA3AF;margin-bottom:4px'>STEP 3</div><div style='font-size:16px;color:#E5E7EB;font-weight:600;margin-bottom:8px'>🚀 Deploy</div><div style='font-size:20px;color:#81C995;font-weight:700'>~3m</div></div><div style='color:#4B5563;font-size:24px'>→</div><div style='flex:1;background:rgba(177,156,217,0.15);border-radius:6px;padding:16px;border-left:4px solid #B19CD9;transition:all 0.2s'onmouseover='this.style.background=\"rgba(177,156,217,0.25)\"'onmouseout='this.style.background=\"rgba(177,156,217,0.15)\"'><div style='font-size:11px;color:#9CA3AF;margin-bottom:4px'>STEP 4</div><div style='font-size:16px;color:#E5E7EB;font-weight:600;margin-bottom:8px'>✅ Verify</div><div style='font-size:20px;color:#B19CD9;font-weight:700'>~1m</div></div><div style='color:#4B5563;font-size:24px'>→</div><div style='flex:1;background:rgba(255,179,71,0.15);border-radius:6px;padding:16px;border-left:4px solid #FFB347;transition:all 0.2s'onmouseover='this.style.background=\"rgba(255,179,71,0.25)\"'onmouseout='this.style.background=\"rgba(255,179,71,0.15)\"'><div style='font-size:11px;color:#9CA3AF;margin-bottom:4px'>STEP 5</div><div style='font-size:16px;color:#E5E7EB;font-weight:600;margin-bottom:8px'>⚡ Execute</div><div style='font-size:20px;color:#FFB347;font-weight:700'>~15m</div></div><div style='color:#4B5563;font-size:24px'>→</div><div style='flex:1;background:rgba(111,184,184,0.15);border-radius:6px;padding:16px;border-left:4px solid #6FB8B8;transition:all 0.2s'onmouseover='this.style.background=\"rgba(111,184,184,0.25)\"'onmouseout='this.style.background=\"rgba(111,184,184,0.15)\"'><div style='font-size:11px;color:#9CA3AF;margin-bottom:4px'>STEP 6</div><div style='font-size:16px;color:#E5E7EB;font-weight:600;margin-bottom:8px'>💾 Store</div><div style='font-size:20px;color:#6FB8B8;font-weight:700'>Complete</div></div></div><div style='margin-top:16px;padding:12px;background:#252B3D;border-radius:6px;text-align:center'><span style='font-size:13px;color:#9CA3AF'>Total E2E Duration: </span><span style='font-size:16px;color:#E5E7EB;font-weight:700'>~26 minutes</span><span style='font-size:13px;color:#9CA3AF;margin-left:16px'>| Target: <30min</span></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Quick Metrics",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 21},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Active Alerts",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 22},
+          "targets": [{
+            "expr": "count(ALERTS{alertstate=\"firing\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#81C995"},
+                  {"value": 1, "color": "#FFD97D"},
+                  {"value": 5, "color": "#F48B8B"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Running Pods",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 22},
+          "targets": [{
+            "expr": "count(kube_pod_status_phase{phase=\"Running\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#7FB3E8"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{"value": 0, "color": "#7FB3E8"}]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Active Spark Jobs",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 22},
+          "targets": [{
+            "expr": "spark_application_running_jobs",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#FFB347"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{"value": 0, "color": "#FFB347"}]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Clusters Online",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 22},
+          "targets": [{
+            "expr": "count(up{job=\"kubernetes-apiservers\"} == 1)",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#B19CD9"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#F48B8B"},
+                  {"value": 4, "color": "#B19CD9"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "System Architecture",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 26},
+          "collapsed": false
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 27},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1E2433;border-radius:8px;padding:24px;border:1px solid #374151'><div style='font-size:14px;color:#9CA3AF;font-weight:600;margin-bottom:20px;border-bottom:1px solid #374151;padding-bottom:12px'>Platform Architecture Overview</div><div style='display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px'><div style='background:#252B3D;border-radius:8px;padding:18px;border-left:4px solid #7FB3E8'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div style='width:40px;height:40px;background:rgba(127,179,232,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(127,179,232,0.3)'>☸️</div><div style='font-size:15px;font-weight:600;color:#E5E7EB'>Kubernetes</div></div><div style='font-size:12px;color:#9CA3AF;line-height:1.6'><div style='margin:4px 0'>• Central: cluster-01 (194)</div><div style='margin:4px 0'>• Edge: cluster-02/03/04</div><div style='margin:4px 0'>• CNI: Cilium L2 LoadBalancer</div><div style='margin:4px 0'>• Runtime: containerd</div></div></div><div style='background:#252B3D;border-radius:8px;padding:18px;border-left:4px solid #FFB347'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div style='width:40px;height:40px;background:rgba(255,179,71,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(255,179,71,0.3)'>⚡</div><div style='font-size:15px;font-weight:600;color:#E5E7EB'>BigData Stack</div></div><div style='font-size:12px;color:#9CA3AF;line-height:1.6'><div style='margin:4px 0'>• Spark 3.5 (Batch/Stream)</div><div style='margin:4px 0'>• Airflow 2.8 (Orchestration)</div><div style='margin:4px 0'>• Trino 435 (Query Engine)</div><div style='margin:4px 0'>• Kafka (Event Streaming)</div></div></div><div style='background:#252B3D;border-radius:8px;padding:18px;border-left:4px solid #6FB8B8'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div style='width:40px;height:40px;background:rgba(111,184,184,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(111,184,184,0.3)'>💾</div><div style='font-size:15px;font-weight:600;color:#E5E7EB'>Data Lake</div></div><div style='font-size:12px;color:#9CA3AF;line-height:1.6'><div style='margin:4px 0'>• Iceberg 1.4 (Table Format)</div><div style='margin:4px 0'>• MinIO S3 (Object Storage)</div><div style='margin:4px 0'>• Hive Metastore 3.1</div><div style='margin:4px 0'>• Oracle (Transaction DB)</div></div></div></div><div style='display:grid;grid-template-columns:repeat(3,1fr);gap:16px'><div style='background:#252B3D;border-radius:8px;padding:18px;border-left:4px solid #81C995'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div style='width:40px;height:40px;background:rgba(129,201,149,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(129,201,149,0.3)'>💽</div><div style='font-size:15px;font-weight:600;color:#E5E7EB'>Storage</div></div><div style='font-size:12px;color:#9CA3AF;line-height:1.6'><div style='margin:4px 0'>• Longhorn (K8s PV)</div><div style='margin:4px 0'>• Isilon (NAS, 100TB)</div><div style='margin:4px 0'>• Ceph (Distributed, 50TB)</div><div style='margin:4px 0'>• MinIO (S3, Unlimited)</div></div></div><div style='background:#252B3D;border-radius:8px;padding:18px;border-left:4px solid #B19CD9'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div style='width:40px;height:40px;background:rgba(177,156,217,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(177,156,217,0.3)'>📊</div><div style='font-size:15px;font-weight:600;color:#E5E7EB'>Observability</div></div><div style='font-size:12px;color:#9CA3AF;line-height:1.6'><div style='margin:4px 0'>• Prometheus + Thanos</div><div style='margin:4px 0'>• OpenSearch + Fluent-bit</div><div style='margin:4px 0'>• Grafana (Visualization)</div><div style='margin:4px 0'>• Alertmanager</div></div></div><div style='background:#252B3D;border-radius:8px;padding:18px;border-left:4px solid #F4A4C4'><div style='display:flex;align-items:center;gap:10px;margin-bottom:12px'><div style='width:40px;height:40px;background:rgba(244,164,196,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(244,164,196,0.3)'>🚀</div><div style='font-size:15px;font-weight:600;color:#E5E7EB'>GitOps</div></div><div style='font-size:12px;color:#9CA3AF;line-height:1.6'><div style='margin:4px 0'>• Bitbucket (Git Repository)</div><div style='margin:4px 0'>• Jenkins (CI Pipeline)</div><div style='margin:4px 0'>• ArgoCD (CD Deployment)</div><div style='margin:4px 0'>• Kustomize + Helm</div></div></div></div></div>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 2, "w": 24, "x": 0, "y": 35},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1A1F2E;border-top:1px solid #374151;padding:16px;text-align:center;border-radius:0 0 8px 8px'><div style='font-size:12px;color:#6B7280'>DataOps Platform v4.0 • E2E Observability Suite • Multi-Cluster Kubernetes</div><div style='font-size:11px;color:#4B5563;margin-top:4px'>Powered by Prometheus, Thanos, Grafana, ArgoCD • Designed with Pastel Color System for Eye Comfort</div></div>"
+          }
+        }
+      ]
+    }

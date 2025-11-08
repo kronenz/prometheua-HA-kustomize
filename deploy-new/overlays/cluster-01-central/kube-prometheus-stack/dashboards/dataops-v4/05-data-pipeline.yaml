@@ -1,0 +1,577 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-data-pipeline-v4
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-data-pipeline-v4.json: |
+    {
+      "uid": "dataops-data-pipeline-v4",
+      "title": "DataOps - 5. Data Pipeline",
+      "tags": ["dataops", "pipeline", "Spark", "iceberg", "s3"],
+      "timezone": "Asia/Seoul",
+      "schemaVersion": 39,
+      "version": 5,
+      "refresh": "30s",
+      "graphTooltip": 1,
+      "editable": true,
+      "style": "dark",
+      "panels": [
+        {
+          "type": "text",
+          "id": 1,
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "markdown",
+            "content": "# 🌊 Data Pipeline Dashboard\n\n**목적**: 데이터 파이프라인 흐름 및 데이터 품질 모니터링\n\n**데이터 흐름**: Spark (Ingestion) → Spark (Processing) → Iceberg (Table Format) → S3 (Storage) → Spark (Application)\n\n[◀ 포털로 돌아가기](/d/dataops-portal-e2e-v4)"
+          },
+          "options": {
+            "code": {
+              "language": "plaintext",
+              "showLineNumbers": false,
+              "showMiniMap": false
+            },
+            "content": "# 🌊 Data Pipeline Dashboard\n\n**목적**: 데이터 파이프라인 흐름 및 데이터 품질 모니터링\n\n**데이터 흐름**: Spark (Ingestion) → Spark (Processing) → Iceberg (Table Format) → S3 (Storage) → Spark (Application)\n\n[◀ 포털로 돌아가기](/d/dataops-portal-e2e-v4)",
+            "mode": "markdown"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 10,
+          "title": "Spark Cluster Workers",
+          "description": "**Spark로 유입되는 메시지 처리율 (msg/sec)**\n\n**계산식**:\nsum(rate(Spark_server_brokertopicmetrics_messagesin_total[5m]))\n\n**메트릭 설명**:\n- Spark 브로커가 수신하는 초당 메시지 개수\n- 전체 Topic의 합산 처리량\n- 데이터 파이프라인의 입구 지표\n\n**정상 범위**:\n- 🟢 평균: 10K-50K msg/sec (업무 시간대)\n- 🟡 피크: 50K-100K msg/sec (배치 적재)\n- 🔴 >100K msg/sec: 브로커 부하 주의\n\n**패턴 분석**:\n- **실시간 수집**: 일정한 처리율 유지\n- **배치 수집**: 특정 시간대 Spike (예: 새벽 2시 로그 적재)\n- **이상 징후**: 갑작스러운 증가 (데이터 폭주) 또는 0 (Producer 장애)\n\n**병목 현상**:\n- 처리율 급감: Pod Restarts 증가 → Spark Streaming Job 점검\n- 처리율 0: Producer 장애, 네트워크 단절, 인증 오류\n\n**조치 사항**:\n- Pod Restarts이 증가하면 Spark Executor 증설\n- Broker CPU/Network 사용률 확인\n- Topic별 처리율 분해 분석 (Spark_server_brokertopicmetrics_messagesin_total{topic=\"...\"}\n\n**SLO**: 평균 처리율 변동 계수 < 30% (안정적 수집)\n**관련 메트릭**: Pod Restarts, Spark Streaming Batch Duration",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+          "targets": [
+            {
+              "expr": "metrics_master_aliveWorkers_Value{namespace="spark"}",
+              "refId": "A",
+              "legendFormat": "Message Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "msg/s",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(111, 184, 184, 0.3)"},
+                  {"value": 50000, "color": "rgba(111, 184, 184, 0.4)"},
+                  {"value": 100000, "color": "rgba(255, 217, 125, 0.3)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 11,
+          "title": "Spark Pod Restarts (Total)",
+          "description": "**Spark Consumer의 전체 Lag (처리 지연)**\n\n**계산식**:\nsum(Spark_consumer_group_lag)\n\n**메트릭 설명**:\n- Producer가 적재한 메시지 Offset과 Consumer가 처리한 Offset의 차이\n- 누적된 미처리 메시지 개수\n- 데이터 지연 시간의 핵심 지표\n\n**정상 범위**:\n- 🟢 0-10K: 우수 (거의 실시간 처리)\n- 🟡 10K-100K: 양호 (수 초~수 분 지연)\n- 🔴 >100K: 위험 (수십 분 이상 지연, Consumer 처리 능력 부족)\n\n**Lag 발생 원인**:\n1. **Consumer 처리 속도 부족**: Spark Streaming Job의 Batch Duration 초과\n2. **일시적 부하 증가**: 데이터 유입 Spike\n3. **Consumer 장애**: Job 중단, Exception 발생\n4. **리소스 부족**: Executor 메모리/CPU 부족\n\n**영향**:\n- 데이터 신선도 저하 (실시간 대시보드 지연)\n- SLA 위반 (예: 5분 이내 처리 요구사항)\n- Consumer 재시작 시 긴 복구 시간\n\n**조치 사항**:\n- Lag 100K 초과 시 Spark Streaming Job 스케일 아웃\n- Consumer Group별 Lag 분해: Spark_consumer_group_lag{group=\"...\"}\n- Spark Streaming UI에서 Batch Processing Time 확인\n- Spark Partition 증가로 병렬 처리 향상\n\n**SLO**: 평균 Lag < 10K, p95 Lag < 50K\n**Alert**: Lag > 100K가 10분 이상 지속 시\n**관련 메트릭**: Message Ingest Rate, Spark Streaming Processing Rate",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 4},
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_status_restarts_total{namespace="spark", pod=~"spark-worker.*"})",
+              "refId": "A",
+              "legendFormat": "Total Lag"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(111, 184, 184, 0.3)"},
+                  {"value": 10000, "color": "rgba(255, 217, 125, 0.3)"},
+                  {"value": 100000, "color": "rgba(244, 139, 139, 0.3)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 12,
+          "title": "Iceberg Table Write Rate",
+          "description": "**Iceberg 테이블로 데이터 쓰기 비율 (rows/sec)**\n\n**계산식**:\nsum(rate(iceberg_commit_records_total[5m]))\n\n**메트릭 설명**:\n- Iceberg 테이블에 Commit된 레코드 개수 (초당)\n- Spark에서 Iceberg Table Format으로 데이터 적재 완료율\n- 데이터 파이프라인 출구의 핵심 지표\n\n**정상 범위**:\n- 🟢 평균: 5K-30K rows/sec (실시간 적재)\n- 🟡 피크: 30K-100K rows/sec (배치 적재)\n- 🔴 0 rows/sec: 파이프라인 중단\n\n**Write 성능 요인**:\n1. **파티션 전략**: 적절한 파티션 키로 쓰기 분산\n2. **파일 크기**: 너무 많은 작은 파일 방지 (Small Files Problem)\n3. **Merge-on-Read vs Copy-on-Write**: Iceberg의 Write 모드\n4. **S3 I/O 성능**: 네트워크 대역폭, S3 API Rate Limit\n\n**Small Files Problem**:\n- 파일 개수가 과다하면 Spark 쿼리 성능 저하\n- Iceberg의 자동 Compaction으로 해결\n- iceberg_files_count 메트릭으로 모니터링\n\n**조치 사항**:\n- Write Rate 0 시 Spark Job 상태 확인\n- Hive Metastore 연결 상태 점검 (Iceberg 메타데이터 저장소)\n- S3 Bucket의 Write IOPS 및 에러율 확인\n- Spark의 iceberg.commit.threads 파라미터 조정\n\n**SLO**: 평균 Write Rate > 10K rows/sec\n**Alert**: Write Rate 0이 5분 이상 지속 시\n**관련 메트릭**: Iceberg Commit Latency, S3 Write Throughput",
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 4},
+          "targets": [
+            {
+              "expr": "sum(rate(iceberg_commit_records_total[5m]))",
+              "refId": "A",
+              "legendFormat": "Write Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "rows/s",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.3)"},
+                  {"value": 5000, "color": "rgba(111, 184, 184, 0.3)"},
+                  {"value": 30000, "color": "rgba(111, 184, 184, 0.5)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 13,
+          "title": "S3 Data Volume (TB)",
+          "description": "**S3에 저장된 전체 데이터 용량**\n\n**계산식**:\nsum(s3_bucket_size_bytes{bucket=~\".*iceberg.*|.*datalake.*\"}) / 1024 / 1024 / 1024 / 1024\n\n**메트릭 설명**:\n- Iceberg 및 데이터 레이크용 S3 Bucket의 총 용량\n- 데이터 누적 추이 및 스토리지 용량 계획\n- 비용 관리의 핵심 지표 (S3 요금은 저장 용량 기반)\n\n**용량 증가 패턴**:\n- **선형 증가**: 일정한 데이터 수집률 (정상)\n- **급격한 증가**: 대용량 배치 적재 또는 데이터 복제\n- **정체**: 파이프라인 중단 또는 데이터 소스 문제\n\n**정상 범위**:\n- 🟢 < 80TB: 여유 있음 (100TB 스토리지 기준)\n- 🟡 80-90TB: 용량 계획 필요\n- 🔴 > 90TB: 긴급 확장 또는 데이터 정리\n\n**용량 최적화**:\n1. **파티션 프루닝**: 오래된 파티션 삭제 (Retention Policy)\n2. **데이터 압축**: Parquet Snappy/Zstd 압축 적용\n3. **Iceberg Compaction**: Small Files 병합으로 메타데이터 감소\n4. **S3 Lifecycle**: 오래된 데이터를 Glacier로 이동\n\n**비용 관리**:\n- S3 Standard: $0.023/GB/month\n- 90TB = 약 $2,070/month\n- Intelligent-Tiering으로 비용 절감 가능\n\n**조치 사항**:\n- 80TB 초과 시 데이터 보관 정책 검토\n- 불필요한 데이터 삭제 (DROP TABLE, EXPIRE SNAPSHOTS)\n- S3 Storage Class 전환 (Glacier, Deep Archive)\n\n**SLO**: 월간 증가율 < 10%\n**Alert**: 90TB 초과 시 알림\n**관련 메트릭**: Iceberg Table Count, S3 Request Rate",
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 4},
+          "targets": [
+            {
+              "expr": "sum(s3_bucket_size_bytes{bucket=~\".*iceberg.*|.*datalake.*\"}) / 1024 / 1024 / 1024 / 1024",
+              "refId": "A",
+              "legendFormat": "Data Volume"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "deckbytes",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(111, 184, 184, 0.3)"},
+                  {"value": 80, "color": "rgba(255, 217, 125, 0.3)"},
+                  {"value": 90, "color": "rgba(244, 139, 139, 0.3)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "none",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 20,
+          "title": "Spark Topic Message Rate (Top 10)",
+          "description": "**Spark Topic별 메시지 유입율 Top 10 (msg/sec)**\n\n**계산식**:\ntopk(10, sum(rate(Spark_server_brokertopicmetrics_messagesin_total[5m])) by (topic))\n\n**메트릭 설명**:\n- Topic별로 분해한 메시지 처리율\n- 어느 Topic이 가장 많은 트래픽을 생성하는지 파악\n- 데이터 소스별 수집 현황 모니터링\n\n**Topic 분류**:\n- **실시간 이벤트**: user_events, clickstream (높은 처리율)\n- **로그 수집**: application_logs, access_logs (중간 처리율)\n- **CDC (Change Data Capture)**: db_changes (DB 트랜잭션에 비례)\n\n**패턴 분석**:\n- **업무 시간 연동**: 사용자 활동에 따라 증감\n- **배치 적재**: 특정 시간대 Spike\n- **이상 징후**: 평소보다 10배 이상 증가 (데이터 폭주, Producer 오류)\n\n**용량 계획**:\n- Topic별 Partition 개수 조정 (병렬 처리 향상)\n- Retention 정책 (시간 또는 용량 기반)\n- Replication Factor (고가용성)\n\n**조치 사항**:\n- 특정 Topic의 급증 시 Consumer 확인\n- DLQ (Dead Letter Queue) Topic 모니터링 (처리 실패 메시지)\n- Topic별 Consumer Group 매핑 확인\n\n**참고**:\n- 범례에 Topic명 표시\n- Top 10 이외 Topic은 \"Others\"로 집계 가능",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+          "targets": [
+            {
+              "expr": "topk(3, container_memory_working_set_bytes{namespace="spark"})",
+              "refId": "A",
+              "legendFormat": "{{topic}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "msg/s",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"}
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 21,
+          "title": "Spark Pod Restarts by Group (Top 10)",
+          "description": "**Consumer Group별 Lag Top 10**\n\n**계산식**:\ntopk(10, sum(Spark_consumer_group_lag) by (group))\n\n**메트릭 설명**:\n- Consumer Group별로 누적된 처리 지연\n- 어느 Consumer가 문제인지 식별\n- Spark Streaming, Flink 등 다양한 Consumer 구분\n\n**Consumer Group 구성**:\n- **spark-streaming-events**: 실시간 이벤트 처리\n- **spark-batch-logs**: 배치 로그 처리\n- **flink-analytics**: 실시간 분석\n\n**Lag 분석**:\n- **일시적 Lag**: Producer Spike 후 자연 해소\n- **지속적 Lag**: Consumer 처리 능력 부족 (확장 필요)\n- **특정 Group만 Lag**: 해당 Application 문제\n\n**Consumer 최적화**:\n1. **Partition 증가**: Spark Topic의 Partition 추가\n2. **Parallelism 증가**: Spark의 spark.executor.instances 증가\n3. **Batch Size 조정**: Spark Streaming의 Batch Interval\n4. **메모리 증설**: Consumer Application의 리소스\n\n**장애 대응**:\n- Lag이 계속 증가: Consumer 재시작 또는 스케일 아웃\n- 특정 Partition만 Lag: 데이터 스큐, Consumer Rebalancing\n- Consumer Group 전체 중단: Application 로그 확인\n\n**SLO**: 각 Group의 Lag < 50K\n**Alert**: 특정 Group Lag > 100K가 10분 이상\n**관련 메트릭**: Spark Streaming Batch Duration",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+          "targets": [
+            {
+              "expr": "topk(3, rate(container_cpu_usage_seconds_total{namespace="spark", pod=~"spark-worker.*"}[5m]))",
+              "refId": "A",
+              "legendFormat": "{{group}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"}
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 30,
+          "title": "Iceberg Commit Latency (seconds)",
+          "description": "**Iceberg Table Commit 소요 시간**\n\n**계산식**:\nrate(iceberg_commit_duration_seconds_sum[5m]) / \nrate(iceberg_commit_duration_seconds_count[5m])\n\n**메트릭 설명**:\n- Spark에서 Iceberg 테이블로 데이터를 Commit하는 시간\n- 메타데이터 업데이트 (Manifest, Snapshot 생성) 포함\n- ACID 트랜잭션 완료까지의 Latency\n\n**정상 범위**:\n- 🟢 0-5초: 우수 (소량 데이터 또는 최적화된 파티션)\n- 🟡 5-15초: 양호 (중간 규모 데이터)\n- 🔴 15초 이상: 주의 (대용량 Commit, 메타데이터 병목)\n\n**Latency 영향 요인**:\n1. **파일 개수**: Manifest에 기록할 파일이 많을수록 느림\n2. **파티션 개수**: 업데이트할 파티션이 많을수록 느림\n3. **Hive Metastore 성능**: 메타데이터 DB의 쿼리 성능\n4. **S3 Consistency**: Manifest 파일 쓰기 및 읽기\n\n**최적화 방법**:\n- **파일 크기 조정**: spark.sql.files.maxRecordsPerFile 설정\n- **Commit 병렬화**: iceberg.commit.threads 증가\n- **Metastore 튜닝**: Connection Pool, 인덱스 추가\n- **파티션 전략**: 과도한 파티션 세분화 지양\n\n**트랜잭션 격리**:\n- Iceberg의 Optimistic Concurrency로 다중 Writer 지원\n- Commit 충돌 시 자동 재시도\n- iceberg_commit_retry_total 메트릭으로 재시도 횟수 확인\n\n**SLO**: 평균 Commit Latency < 10초, p95 < 20초\n**Alert**: Commit Latency > 30초가 10분 이상\n**관련 메트릭**: Iceberg Table Write Rate, Manifest File Count",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+          "targets": [
+            {
+              "expr": "rate(iceberg_commit_duration_seconds_sum[5m]) / rate(iceberg_commit_duration_seconds_count[5m])",
+              "refId": "A",
+              "legendFormat": "Commit Latency"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(111, 184, 184, 0.8)"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 5, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 15, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "single"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 31,
+          "title": "Iceberg Files Count (Total)",
+          "description": "**Iceberg 테이블의 전체 데이터 파일 개수**\n\n**계산식**:\nsum(iceberg_table_files_count)\n\n**메트릭 설명**:\n- Iceberg 테이블을 구성하는 Parquet 파일의 총 개수\n- Small Files Problem 모니터링의 핵심 지표\n- 파일 개수가 많을수록 쿼리 플래닝 및 메타데이터 조회 느림\n\n**정상 범위**:\n- 🟢 < 10K 파일: 우수 (쿼리 성능 양호)\n- 🟡 10K-50K 파일: 양호 (Compaction 권장)\n- 🔴 > 50K 파일: 위험 (심각한 Small Files Problem)\n\n**Small Files Problem**:\n- **원인**: 실시간 Streaming으로 작은 파일 지속 생성\n- **영향**: Spark 쿼리 시 많은 파일 Open/Close로 성능 저하\n- **해결**: Iceberg Compaction으로 파일 병합\n\n**Iceberg Compaction**:\n```sql\n-- Spark SQL\nCALL catalog.system.rewrite_data_files(\n  table => 'db.table',\n  strategy => 'binpack',\n  options => map('target-file-size-bytes', '536870912') -- 512MB\n)\n```\n\n**파일 크기 최적화**:\n- **목표 파일 크기**: 256MB - 1GB (Parquet)\n- spark.sql.files.maxRecordsPerFile 조정\n- Streaming: 짧은 Checkpoint Interval로 파일 개수 증가 → 주기적 Compaction\n\n**메타데이터 영향**:\n- 파일 개수가 많으면 Manifest 크기 증가\n- Snapshot Planning 시간 증가 (Spark Application 지연)\n\n**SLO**: 파일 개수 < 30K\n**Alert**: 파일 개수 > 50K 시 Compaction 작업 예약\n**관련 메트릭**: Spark Application Planning Time",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+          "targets": [
+            {
+              "expr": "sum(iceberg_table_files_count)",
+              "refId": "A",
+              "legendFormat": "Total Files"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(111, 184, 184, 0.8)"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 10000, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 50000, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "single"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 40,
+          "title": "S3 Write Throughput (MB/s)",
+          "description": "**S3로의 데이터 쓰기 처리량**\n\n**계산식**:\nsum(rate(s3_bytes_uploaded_total[5m])) / 1024 / 1024\n\n**메트릭 설명**:\n- Iceberg 데이터 파일 (Parquet)과 메타데이터 (Manifest, Snapshot)를 S3에 업로드하는 속도\n- 데이터 파이프라인 최종 단계의 처리량\n- S3 I/O 성능 및 네트워크 대역폭 모니터링\n\n**정상 범위**:\n- 🟢 평균: 100-500 MB/s (실시간 처리)\n- 🟡 피크: 500-2000 MB/s (배치 적재)\n- 🔴 > 2000 MB/s: 네트워크 포화 위험 (10GbE 기준 ~1250 MB/s)\n\n**처리량 영향 요인**:\n1. **네트워크 대역폭**: 10GbE = 이론상 1250 MB/s\n2. **S3 API Rate Limit**: 초당 3,500 PUT/COPY/POST/DELETE, 5,500 GET/HEAD\n3. **Spark 병렬도**: Executor 개수 및 Container 병렬 실행\n4. **압축률**: Parquet Snappy 압축 시 압축 전후 비율\n\n**S3 최적화**:\n- **Multipart Upload**: 큰 파일을 부분으로 나눠 병렬 업로드\n- **S3 Transfer Acceleration**: 장거리 업로드 가속\n- **Endpoint 선택**: S3 VPC Endpoint 사용으로 비용 절감\n\n**병목 탐지**:\n- Write Throughput 0: 파이프라인 중단\n- Write Throughput 저하: S3 API 에러율 확인 (s3_request_errors_total)\n- 네트워크 대역폭 초과: 다른 서비스와 경쟁\n\n**조치 사항**:\n- S3 에러율 확인 (ThrottlingException, SlowDown)\n- 네트워크 모니터링 (node_network_transmit_bytes_total)\n- Spark의 s3a.connection.maximum 파라미터 조정\n\n**SLO**: 평균 Write Throughput > 200 MB/s\n**Alert**: Write Throughput < 50 MB/s가 10분 이상 (정상 업무 시간대)\n**관련 메트릭**: S3 Request Rate, Network TX Bandwidth",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+          "targets": [
+            {
+              "expr": "sum(rate(s3_bytes_uploaded_total[5m])) / 1024 / 1024",
+              "refId": "A",
+              "legendFormat": "S3 Write"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "MBs",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 25,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(111, 184, 184, 0.8)"}
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "single"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 41,
+          "title": "S3 Read Throughput (MB/s)",
+          "description": "**S3로부터의 데이터 읽기 처리량**\n\n**계산식**:\nsum(rate(s3_bytes_downloaded_total[5m])) / 1024 / 1024\n\n**메트릭 설명**:\n- Spark, Spark 등에서 Iceberg 테이블을 쿼리할 때 S3에서 읽는 속도\n- 쿼리 성능 및 데이터 액세스 패턴 모니터링\n- 네트워크 수신 대역폭 사용률\n\n**정상 범위**:\n- 🟢 평균: 100-500 MB/s (대시보드, Ad-hoc 쿼리)\n- 🟡 피크: 500-2000 MB/s (대용량 분석 쿼리)\n- 🔴 > 2000 MB/s: 네트워크 수신 포화\n\n**처리량 패턴**:\n- **업무 시간**: 대시보드 자동 갱신, 사용자 쿼리로 일정한 Read\n- **배치 윈도우**: ETL Job이 대량 데이터 스캔\n- **0 처리량**: 쿼리 미실행 (야간 시간대)\n\n**Read 최적화**:\n1. **파티션 프루닝**: WHERE 절로 불필요한 파티션 스킵\n2. **컬럼 프로젝션**: SELECT 필요 컬럼만 (Parquet의 컬럼 지향)\n3. **Predicate Pushdown**: Connector에서 필터링\n4. **로컬 캐싱**: Spark의 Hive Connector 캐시 활성화\n\n**S3 비용**:\n- S3 GET 요청: $0.0004 per 1,000 requests\n- Data Transfer Out: $0.09/GB (인터넷으로 나가는 경우)\n- VPC Endpoint 사용 시 Transfer 비용 0원\n\n**조치 사항**:\n- Read Throughput 급증: 비정상 쿼리 확인 (Full Table Scan)\n- S3 GET 요청 급증: Small Files Problem (파일 개수 과다)\n- Spark UI에서 쿼리별 스캔 데이터량 확인\n\n**SLO**: p95 Read Throughput < 1500 MB/s (네트워크 여유 확보)\n**관련 메트릭**: Spark Application Execution Time, Iceberg Files Count",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+          "targets": [
+            {
+              "expr": "sum(rate(s3_bytes_downloaded_total[5m])) / 1024 / 1024",
+              "refId": "A",
+              "legendFormat": "S3 Read"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "MBs",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 25,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(111, 184, 184, 0.8)"}
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "single"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 50,
+          "title": "Hive Metastore Application Latency (ms)",
+          "description": "**Hive Metastore 쿼리 응답 시간**\n\n**계산식**:\nrate(hive_metastore_application_duration_seconds_sum[5m]) / \nrate(hive_metastore_application_duration_seconds_count[5m]) * 1000\n\n**메트릭 설명**:\n- Iceberg의 메타데이터 저장소인 Hive Metastore의 쿼리 Latency\n- 테이블 스키마, 파티션 정보, Snapshot 조회 시간\n- 쿼리 플래닝 성능에 직접 영향\n\n**정상 범위**:\n- 🟢 0-50ms: 우수 (빠른 메타데이터 조회)\n- 🟡 50-200ms: 양호 (허용 가능한 Latency)\n- 🔴 > 200ms: 위험 (쿼리 플래닝 지연)\n\n**Latency 증가 원인**:\n1. **DB 부하**: Metastore DB (MySQL/Postgres)의 CPU/Memory 부족\n2. **인덱스 부재**: Metastore 테이블의 인덱스 미최적화\n3. **테이블 개수**: 수천 개 이상의 테이블로 메타데이터 과다\n4. **동시 접속**: Spark, Spark 등 다수 클라이언트의 동시 쿼리\n\n**Metastore 최적화**:\n- **DB 튜닝**: Connection Pool 크기, Application Cache\n- **인덱스 추가**: TBLS, PARTITIONS, SDS 테이블\n- **HA 구성**: Metastore 서버 다중화\n- **캐싱**: Client-side 메타데이터 캐싱\n\n**Metastore 테이블 예시**:\n- TBLS: 테이블 목록\n- PARTITIONS: 파티션 정보\n- SDS (Storage Descriptors): 파일 경로, 포맷\n\n**영향**:\n- Spark Application Planning Time 증가\n- Spark Job 시작 지연\n- SHOW TABLES, DESCRIBE TABLE 느림\n\n**조치 사항**:\n- Metastore DB의 Slow Application 분석\n- Connection Pool 설정 확인 (hive.metastore.client.connect.retry.delay)\n- 불필요한 테이블/파티션 정리 (DROP TABLE)\n\n**SLO**: 평균 Latency < 100ms, p95 < 200ms\n**Alert**: Latency > 500ms가 10분 이상\n**관련 메트릭**: Spark Application Planning Time, Iceberg Commit Latency",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 34},
+          "targets": [
+            {
+              "expr": "rate(hive_metastore_application_duration_seconds_sum[5m]) / rate(hive_metastore_application_duration_seconds_count[5m]) * 1000",
+              "refId": "A",
+              "legendFormat": "Application Latency"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(111, 184, 184, 0.8)"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 50, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 200, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "single"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 51,
+          "title": "Data Pipeline End-to-End Latency (seconds)",
+          "description": "**데이터 파이프라인 End-to-End 지연 시간**\n\n**계산식**:\navg(\n  (iceberg_record_timestamp - Spark_record_timestamp)\n) by (pipeline)\n\n**메트릭 설명**:\n- Spark 메시지 생성 시점부터 Iceberg 테이블 Commit까지의 전체 소요 시간\n- 데이터 신선도 (Freshness)의 핵심 지표\n- SLA 준수 모니터링 (예: 데이터는 생성 후 5분 이내 쿼리 가능)\n\n**정상 범위**:\n- 🟢 0-300초 (5분): 우수 (실시간에 가까움)\n- 🟡 300-600초 (5-10분): 양호\n- 🔴 > 600초 (10분): 위험 (SLA 위반 가능)\n\n**Latency 구성 요소**:\n1. **Spark Lag**: Consumer가 메시지를 읽기까지 (초-분)\n2. **Processing Time**: Spark에서 변환 처리 (초-분)\n3. **Iceberg Commit**: 메타데이터 업데이트 및 S3 쓰기 (초)\n4. **Metadata Refresh**: Spark가 새 Snapshot 인식 (초)\n\n**E2E Latency 측정**:\n- Spark 메시지에 timestamp 필드 포함\n- Iceberg 테이블의 _ingestion_time 컬럼에 기록\n- 차이 계산으로 실제 지연 시간 산출\n\n**SLA 예시**:\n- **Tier 1 (Critical)**: E2E < 5분 (실시간 대시보드)\n- **Tier 2 (Important)**: E2E < 15분 (정기 리포트)\n- **Tier 3 (Batch)**: E2E < 1시간 (배치 분석)\n\n**조치 사항**:\n- Latency 증가 시 각 단계별 분해 분석\n- Spark Pod Restarts 확인\n- Spark Streaming Batch Duration 확인\n- Iceberg Commit Latency 확인\n\n**SLO**: p95 E2E Latency < 600초 (10분)\n**Alert**: Latency > 900초 (15분)가 10분 이상\n**관련 메트릭**: Spark Pod Restarts, Iceberg Commit Latency",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 34},
+          "targets": [
+            {
+              "expr": "avg((iceberg_record_timestamp - Spark_record_timestamp)) by (pipeline)",
+              "refId": "A",
+              "legendFormat": "{{pipeline}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 300, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 600, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "table",
+          "id": 60,
+          "title": "Top 10 Iceberg Tables by Size",
+          "description": "**크기가 큰 Iceberg 테이블 Top 10**\n\n**계산식**:\ntopk(10, \n  sum(iceberg_table_size_bytes) by (namespace, table) / 1024 / 1024 / 1024\n)\n\n**메트릭 설명**:\n- Iceberg 테이블별 S3 저장 용량 (GB 단위)\n- 스토리지 비용 관리 및 데이터 정리 우선순위 결정\n- 테이블 증가 추세 모니터링\n\n**분석 포인트**:\n- **대용량 테이블**: 수백 GB ~ TB 규모 (로그, 이벤트)\n- **증가율**: 일일 증가량 추적\n- **Retention**: 보관 정책 적용 여부\n\n**데이터 정리 방법**:\n1. **파티션 삭제**: ALTER TABLE DROP PARTITION\n2. **Snapshot Expiration**: EXPIRE SNAPSHOTS older_than '2024-01-01'\n3. **Orphan Files**: REMOVE ORPHAN FILES (메타데이터 없는 파일)\n4. **Compaction**: 작은 파일 병합으로 공간 최적화\n\n**비용 최적화**:\n- 오래된 데이터 → S3 Glacier 이동\n- 접근 빈도 낮은 테이블 → Intelligent-Tiering\n- 중복 테이블 삭제 (dev/test 환경)\n\n**Iceberg 운영 명령**:\n```sql\n-- Snapshot 정리 (30일 이전)\nCALL catalog.system.expire_snapshots(\n  table => 'db.table',\n  older_than => DATE '2024-01-01'\n)\n\n-- Orphan Files 삭제\nCALL catalog.system.remove_orphan_files(\n  table => 'db.table'\n)\n```\n\n**참고**:\n- Namespace는 Database명\n- Table은 테이블명\n- 크기는 압축된 Parquet 기준",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 42},
+          "targets": [
+            {
+              "expr": "topk(10, sum(iceberg_table_size_bytes) by (namespace, table) / 1024 / 1024 / 1024)",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true},
+                "indexByName": {"namespace": 0, "table": 1, "Value": 2},
+                "renameByName": {"namespace": "Namespace", "table": "Table", "Value": "Size (GB)"}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "left", "filterable": true}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Size (GB)"},
+                "properties": [
+                  {"id": "unit", "value": "decgbytes"},
+                  {"id": "decimals", "value": 2},
+                  {"id": "custom.align", "value": "right"},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                      {"value": 500, "color": "rgba(255, 217, 125, 0.3)"},
+                      {"value": 1000, "color": "rgba(244, 139, 139, 0.3)"}
+                    ]
+                  }}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "id": 61,
+          "title": "Data Quality Check Results (Last 1h)",
+          "description": "**데이터 품질 검사 결과 (최근 1시간)**\n\n**계산식**:\nsum(increase(data_quality_check_total[1h])) by (table, check_type, status)\n\n**메트릭 설명**:\n- 데이터 파이프라인에 내장된 품질 검사 결과\n- 테이블별, 검사 유형별 성공/실패 집계\n- 데이터 신뢰성 모니터링\n\n**품질 검사 유형**:\n1. **Schema Validation**: 스키마 일치 여부\n2. **Null Check**: 필수 컬럼의 NULL 검사\n3. **Range Check**: 숫자 범위, 날짜 범위 검증\n4. **Uniqueness**: 중복 레코드 검사\n5. **Referential Integrity**: 외래 키 관계 검증\n\n**품질 저하 원인**:\n- **Schema Evolution**: 소스 스키마 변경\n- **데이터 오염**: 잘못된 형식, 값 범위 초과\n- **upstream 오류**: 소스 시스템의 데이터 생성 오류\n\n**자동 조치**:\n- 실패한 레코드 → DLQ (Dead Letter Queue) 이동\n- Alert 발송 (Critical Check 실패 시)\n- 파이프라인 중단 (Fail-Fast 정책)\n\n**Great Expectations 활용**:\n```python\n# Spark에서 Great Expectations 통합\nfrom great_expectations.dataset import SparkDFDataset\n\ndf_ge = SparkDFDataset(df)\nresult = df_ge.expect_column_values_to_be_between(\n    column=\"age\", min_value=0, max_value=120\n)\n```\n\n**조치 사항**:\n- 실패 Check의 상세 로그 확인\n- 소스 데이터 검증\n- 스키마 버전 관리 (Schema Registry)\n\n**SLO**: 품질 검사 성공률 > 99.5%\n**Alert**: 특정 테이블의 Check 실패가 10회 이상\n**관련 메트릭**: Pipeline Success Rate",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 42},
+          "targets": [
+            {
+              "expr": "sum(increase(data_quality_check_total[1h])) by (table, check_type, status)",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true},
+                "indexByName": {"table": 0, "check_type": 1, "status": 2, "Value": 3},
+                "renameByName": {"table": "Table", "check_type": "Check Type", "status": "Status", "Value": "Count"}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "left", "filterable": true}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Count"},
+                "properties": [
+                  {"id": "unit", "value": "short"},
+                  {"id": "decimals", "value": 0},
+                  {"id": "custom.align", "value": "right"}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Status"},
+                "properties": [
+                  {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+                  {"id": "mappings", "value": [
+                    {"type": "value", "value": "success", "text": "✅ Success", "color": "green"},
+                    {"type": "value", "value": "failure", "text": "❌ Failure", "color": "red"}
+                  ]}
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }

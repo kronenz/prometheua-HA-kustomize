@@ -160,11 +160,107 @@ grafana:
 
   adminPassword: admin123
 
-  # Sidecar 설정 - additionalDataSources를 사용하여 Thanos Query를 기본으로 설정
+  # --------------------------------------------------------------------
+  # Keycloak OAuth 연동 설정 (환경변수 방식)
+  # --------------------------------------------------------------------
+  # 이메일 없이도 로그인 가능하도록 설정
+  env:
+    # ----------------------------------------------------------------
+    # Auth 기본 설정
+    # ----------------------------------------------------------------
+    GF_AUTH_DISABLE_LOGIN_FORM: "false"  # 로컬 로그인 폼 유지
+    GF_AUTH_OAUTH_AUTO_LOGIN: "false"    # OAuth 자동 리다이렉트 비활성화
+
+    # ----------------------------------------------------------------
+    # Generic OAuth 활성화 및 기본 설정
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+    GF_AUTH_GENERIC_OAUTH_NAME: "Keycloak"
+
+    # ----------------------------------------------------------------
+    # Keycloak 클라이언트 정보
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "grafana"
+    # Client Secret은 Secret으로 관리하거나 여기에 직접 입력
+    # GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "YOUR_CLIENT_SECRET"
+
+    # ----------------------------------------------------------------
+    # Keycloak 엔드포인트 (환경에 맞게 수정)
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://keycloak.example.com/realms/YOUR_REALM/protocol/openid-connect/auth"
+    GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://keycloak.example.com/realms/YOUR_REALM/protocol/openid-connect/token"
+    GF_AUTH_GENERIC_OAUTH_API_URL: "https://keycloak.example.com/realms/YOUR_REALM/protocol/openid-connect/userinfo"
+
+    # ----------------------------------------------------------------
+    # 스코프 설정 (이메일 제외)
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_SCOPES: "openid profile"
+
+    # ----------------------------------------------------------------
+    # 이메일 속성 - 비워서 이메일 없이도 로그인 가능
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: ""
+    GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_NAME: ""
+
+    # ----------------------------------------------------------------
+    # 사용자 식별 속성 (이메일 대신 username 사용)
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: "preferred_username"
+    GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: "name"
+
+    # ----------------------------------------------------------------
+    # 사용자 자동 생성 및 조직 할당
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+    GF_USERS_AUTO_ASSIGN_ORG: "true"
+    GF_USERS_AUTO_ASSIGN_ORG_ID: "1"
+    GF_USERS_AUTO_ASSIGN_ORG_ROLE: "Viewer"  # 기본 역할: Viewer
+
+    # ----------------------------------------------------------------
+    # 역할 매핑 (Keycloak 그룹 기반)
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups[*], 'grafana-admin') && 'Admin' || contains(groups[*], 'grafana-editor') && 'Editor' || 'Viewer'"
+    GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT: "false"  # 역할 검증 엄격 모드 비활성화
+
+    # ----------------------------------------------------------------
+    # 추가 OAuth 설정
+    # ----------------------------------------------------------------
+    GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN: "false"
+    GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN: "false"
+    GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"  # PKCE 보안 강화
+
+  # ----------------------------------------------------------------
+  # envFromSecret을 통한 Client Secret 관리 (권장)
+  # ----------------------------------------------------------------
+  # Secret 생성:
+  # kubectl create secret generic grafana-keycloak-secret \
+  #   --from-literal=GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=YOUR_CLIENT_SECRET \
+  #   -n monitoring
+  #
+  # envFromSecret:
+  #   - name: grafana-keycloak-secret
+
+  # Sidecar 설정 - 대시보드 및 데이터소스 자동 검색 활성화
   sidecar:
     datasources:
       enabled: true
       defaultDatasourceEnabled: false  # Chart 기본 datasource 비활성화
+    dashboards:
+      enabled: true
+      defaultFolderName: "General"
+      label: grafana_dashboard  # ConfigMap에 이 레이블이 있으면 자동으로 로드
+      labelValue: "1"
+      folder: /tmp/dashboards
+      folderAnnotation: grafana_folder
+      searchNamespace: ALL  # 모든 네임스페이스에서 대시보드 검색
+      provider:
+        name: sidecarProvider
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        allowUiUpdates: true  # UI에서 대시보드 수정 허용 (중요!)
+        foldersFromFilesStructure: true
 
   # 데이터소스 설정 - Thanos Query를 기본으로 사용
   datasources:

@@ -21,6 +21,18 @@ resources:
   # 현재는 Remote Write 패턴이지만 향후 Sidecar 전환 대비
   - s3-tls-secret.yaml
 
+  # Grafana 대시보드 ConfigMaps
+  # Grafana Sidecar가 자동으로 검색하여 로드
+  # label: grafana_dashboard: '1' 필수
+  - dashboards/grafana-dashboard-multi-cluster-overview.yaml
+  - dashboards/grafana-dashboard-ops-main-navigation.yaml
+  - dashboards/grafana-dashboard-ops-nav-dataplatform.yaml
+  - dashboards/grafana-dashboard-ops-nav-infrastructure.yaml
+  - dashboards/grafana-dashboard-ops-nav-kubernetes.yaml
+  - dashboards/grafana-dashboard-ops-nav-monitoring.yaml
+  - dashboards/grafana-dashboard-stable-nav.yaml
+  - dashboards/grafana-dashboard-k8s-resources-cluster-patch.yaml
+
 # ============================================================================
 # Helm Chart 배포 (Base values + Central override)
 # ============================================================================

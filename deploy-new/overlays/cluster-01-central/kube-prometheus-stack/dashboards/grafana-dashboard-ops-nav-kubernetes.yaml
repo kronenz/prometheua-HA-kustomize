@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-ops-nav-kubernetes
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+data:
+  ops-nav-kubernetes.json: '{"uid": "ops-nav-kubernetes", "title": "☸️ 쿠버네티스 운영 대시보드",
+    "tags": ["operations", "kubernetes", "drilldown"], "timezone": "browser", "schemaVersion":
+    27, "version": 1, "refresh": "30s", "panels": [{"id": 1, "type": "text", "title":
+    "", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3}, "options": {"mode": "html",
+    "content": "<div style=\"padding: 20px; background: linear-gradient(135deg, #1a1d29
+    0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    margin-bottom: 12px; border: 1px solid rgba(72,187,120,0.3);\">\n  <div style=\"display:
+    flex; align-items: center; justify-content: space-between;\">\n    <div style=\"display:
+    flex; align-items: center;\">\n      <a href=\"/d/ops-nav-main\" style=\"padding:
+    8px 12px; background: rgba(72,187,120,0.2); border: 1px solid #48bb78; border-radius:
+    8px; color: #68d391; text-decoration: none; font-weight: 600; font-size: 13px;
+    margin-right: 20px;\">← 메인</a>\n      <div style=\"width: 48px; height: 48px;
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); border-radius:
+    12px; display: flex; align-items: center; justify-content: center; font-size:
+    28px; margin-right: 16px;\">☸️</div>\n      <div>\n        <h1 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 32px; color: #ffffff; margin: 0; letter-spacing:
+    -0.5px;\">쿠버네티스 운영 대시보드</h1>\n        <p style=\"font-size: 13px; color: #a0aec0;
+    margin: 4px 0 0 0;\">Kubernetes Operations & Performance Metrics</p>\n      </div>\n    </div>\n  </div>\n</div>"}},
+    {"id": 2, "type": "text", "title": "클러스터 헬스", "gridPos": {"x": 0, "y": 3, "w":
+    12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding: 16px;\">\n  <div
+    style=\"margin-bottom: 16px; padding: 12px; background: rgba(72,187,120,0.1);
+    border-left: 4px solid #48bb78; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #68d391; margin: 0 0 8px 0;\">✅
+    클러스터 상태</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">4개 클러스터의 가용성과 건강도를 모니터링합니다</p>\n  </div>\n  <a href=\"/d/k8s-cluster-health\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">클러스터 가용성</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">노드 상태, API 서버 응답, 컨트롤 플레인</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/k8s-component-status\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">컴포넌트 상태</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">etcd, scheduler, controller-manager
+    건강도</div>\n      </div>\n      <div style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a
+    href=\"/d/k8s-node-conditions\" style=\"display: block; padding: 14px 16px; margin-bottom:
+    10px; background: #2d3748; border: 1px solid rgba(72,187,120,0.3); border-radius:
+    8px; text-decoration: none; color: #e2e8f0; transition: all 0.2s;\">\n    <div
+    style=\"display: flex; justify-content: space-between; align-items: center;\">\n      <div>\n        <div
+    style=\"font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">노드
+    Condition</div>\n        <div style=\"font-size: 12px; color: #a0aec0;\">Ready,
+    MemoryPressure, DiskPressure 상태</div>\n      </div>\n      <div style=\"color:
+    #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}}, {"id": 3,
+    "type": "text", "title": "워크로드 성능", "gridPos": {"x": 12, "y": 3, "w": 12, "h":
+    9}, "options": {"mode": "html", "content": "<div style=\"padding: 16px;\">\n  <div
+    style=\"margin-bottom: 16px; padding: 12px; background: rgba(72,187,120,0.1);
+    border-left: 4px solid #48bb78; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #68d391; margin: 0 0 8px 0;\">⚡
+    워크로드 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">애플리케이션 응답시간과 처리량을 추적합니다</p>\n  </div>\n  <a href=\"/d/k8s-deployment-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Deployment 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">응답시간, 요청 처리량, 에러율</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/k8s-statefulset-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">StatefulSet 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">상태 저장 앱 성능, 볼륨 I/O</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/k8s-service-latency\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Service 지연시간</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">P50, P95, P99 레이턴시, 타임아웃</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}},
+    {"id": 4, "type": "text", "title": "리소스 활용", "gridPos": {"x": 0, "y": 12, "w":
+    12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding: 16px;\">\n  <div
+    style=\"margin-bottom: 16px; padding: 12px; background: rgba(72,187,120,0.1);
+    border-left: 4px solid #48bb78; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #68d391; margin: 0 0 8px 0;\">📊
+    리소스 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">CPU, 메모리, 네트워크 리소스 사용률을 모니터링합니다</p>\n  </div>\n  <a href=\"/d/k8s-cpu-utilization\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">CPU 활용률</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">네임스페이스/Pod별 CPU 사용량, 스로틀링</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/k8s-memory-utilization\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">메모리 활용률</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">워킹셋, 캐시, OOM 발생</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/k8s-network-utilization\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">네트워크 활용률</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">Pod 네트워크 I/O, 연결 수</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}},
+    {"id": 5, "type": "text", "title": "Pod 성능 & 안정성", "gridPos": {"x": 12, "y": 12,
+    "w": 12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding:
+    16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(72,187,120,0.1);
+    border-left: 4px solid #48bb78; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #68d391; margin: 0 0 8px 0;\">🔄
+    Pod 지표</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">Pod 재시작, 준비 상태, 로드를 추적합니다</p>\n  </div>\n  <a href=\"/d/k8s-pod-restart\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Pod 재시작 빈도</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">재시작 횟수, CrashLoopBackOff, 원인 분석</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/k8s-pod-readiness\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Pod 준비 상태</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">Readiness/Liveness 프로브, 시작 시간</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/k8s-pod-load\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(72,187,120,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">컨테이너 로드</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">실행 중인 프로세스, 파일 핸들, 쓰레드</div>\n      </div>\n      <div
+    style=\"color: #48bb78; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}}]}'

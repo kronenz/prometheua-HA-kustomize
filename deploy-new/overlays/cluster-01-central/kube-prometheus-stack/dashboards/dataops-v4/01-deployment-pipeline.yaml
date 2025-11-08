@@ -1,0 +1,472 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-deployment-v4
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-deployment-v4.json: |
+    {
+      "uid": "dataops-deployment-v4",
+      "title": "1. Deployment Pipeline - GitOps Flow",
+      "tags": ["dataops", "deployment", "gitops", "jenkins", "argocd", "v4"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "editable": true,
+      "style": "dark",
+      "folder": "DataOps E2E",
+      "folderUid": "dataops-e2e-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1A1F2E;padding:20px;border-radius:8px;border-left:4px solid #7FB3E8'><div style='display:flex;justify-content:space-between;align-items:center'><div style='display:flex;align-items:center;gap:16px'><div style='width:48px;height:48px;background:rgba(127,179,232,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid rgba(127,179,232,0.3)'>🚀</div><div><div style='font-size:22px;font-weight:700;color:#E5E7EB'>Deployment Pipeline</div><div style='font-size:13px;color:#9CA3AF;margin-top:4px'>GitOps 배포 자동화: Bitbucket → Jenkins → ArgoCD → Kubernetes</div></div></div><div style='text-align:right'><a href='/d/dataops-portal-e2e-v4' style='padding:10px 18px;background:rgba(127,179,232,0.15);border:1px solid rgba(127,179,232,0.3);border-radius:6px;color:#7FB3E8;text-decoration:none;font-size:13px;font-weight:500;transition:all 0.2s' onmouseover='this.style.background=\"rgba(127,179,232,0.25)\"' onmouseout='this.style.background=\"rgba(127,179,232,0.15)\"'>← Back to Portal</a></div></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Pipeline Health Overview",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Jenkins Build Success Rate (1h)",
+          "description": "**Jenkins CI 빌드 성공률 (최근 1시간)**\n\n**계산식**:\n```promql\nsum(rate(jenkins_job_success_total[1h])) / \nsum(rate(jenkins_job_total[1h])) * 100\n```\n\n**의미**: Jenkins에서 실행된 전체 빌드 중 성공한 빌드의 비율\n\n**정상 범위**:\n- 🟢 95% 이상: 우수 - CI 파이프라인 안정적\n- 🟡 90-95%: 양호 - 코드 품질 점검 필요\n- 🔴 90% 미만: 위험 - 즉시 조치 필요\n\n**실패 원인 분석**:\n1. 테스트 케이스 실패 (Unit/Integration Test)\n2. 컴파일 오류 (Syntax/Dependency)\n3. 코드 정적 분석 실패 (SonarQube)\n4. Docker 이미지 빌드 실패\n\n**조치 사항**:\n- Jenkins Console 로그 확인\n- 최근 커밋 변경사항 검토\n- 의존성 버전 충돌 확인\n- 테스트 환경 리소스 확인\n\n**SLO**: >95% (주간 평균)",
+          "gridPos": {"h": 7, "w": 6, "x": 0, "y": 5},
+          "targets": [{
+            "expr": "sum(rate(jenkins_job_success_total[1h])) / sum(rate(jenkins_job_total[1h])) * 100",
+            "refId": "A",
+            "legendFormat": "Success Rate"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 90, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 95, "color": "rgba(127, 179, 232, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "ArgoCD Sync Success Rate (1h)",
+          "description": "**ArgoCD CD 동기화 성공률 (최근 1시간)**\n\n**계산식**:\n```promql\nsum(rate(argocd_app_sync_total{phase=\"Succeeded\"}[1h])) / \nsum(rate(argocd_app_sync_total[1h])) * 100\n```\n\n**의미**: ArgoCD가 Git 저장소와 Kubernetes 클러스터를 동기화한 작업 중 성공한 비율\n\n**정상 범위**:\n- 🟢 98% 이상: 우수 - GitOps 자동화 안정적\n- 🟡 95-98%: 양호 - 일부 앱 동기화 이슈\n- 🔴 95% 미만: 위험 - 배포 프로세스 점검 필요\n\n**동기화 단계**:\n1. **Git Fetch**: Manifest 파일 가져오기\n2. **Diff Analysis**: 현재 상태와 비교\n3. **Apply**: Kubernetes 리소스 적용\n4. **Health Check**: 배포 상태 검증\n\n**실패 원인**:\n- Invalid YAML syntax\n- Resource quota exceeded\n- RBAC permission denied\n- Image pull failure\n- CRD not installed\n\n**조치 사항**:\n- ArgoCD UI에서 Sync 상태 확인\n- Application Events 로그 분석\n- Kubernetes Events 확인\n- Manifest 파일 문법 검증\n\n**SLO**: >98% (주간 평균)",
+          "gridPos": {"h": 7, "w": 6, "x": 6, "y": 5},
+          "targets": [{
+            "expr": "sum(rate(argocd_app_sync_total{phase=\"Succeeded\"}[1h])) / sum(rate(argocd_app_sync_total[1h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 95, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 98, "color": "rgba(127, 179, 232, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Total Deployments Today",
+          "description": "**오늘 수행된 총 배포 횟수**\n\n**계산식**:\n```promql\nsum(increase(argocd_app_sync_total[24h]))\n```\n\n**의미**: 지난 24시간 동안 ArgoCD가 수행한 총 동기화(배포) 작업 수\n\n**배포 유형**:\n- **Manual Sync**: 수동 배포 (개발자 트리거)\n- **Auto Sync**: 자동 배포 (Git Push 후 자동)\n- **Rollback**: 이전 버전으로 롤백\n- **Refresh**: 현재 상태 재확인\n\n**정상 범위**:\n- 개발 클러스터: 50-100회/일\n- 스테이징: 20-50회/일\n- 프로덕션: 5-20회/일\n\n**분석 포인트**:\n- 배포 빈도가 급증: 버그 수정 또는 핫픽스\n- 배포 빈도 감소: 개발 활동 둔화\n- 롤백 빈도 증가: 품질 문제 발생\n\n**Best Practice**:\n- 프로덕션: 주 2-3회 정기 배포\n- 스테이징: 일 5-10회 검증 배포\n- 긴급 배포: Change Advisory Board 승인\n\n**관련 메트릭**: Deployment Frequency (DORA Metrics)",
+          "gridPos": {"h": 7, "w": 6, "x": 12, "y": 5},
+          "targets": [{
+            "expr": "sum(increase(argocd_app_sync_total[24h]))",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {"mode": "fixed", "fixedColor": "#7FB3E8"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{"value": 0, "color": "#7FB3E8"}]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Out of Sync Applications",
+          "description": "**Git과 동기화되지 않은 애플리케이션 수**\n\n**계산식**:\n```promql\ncount(argocd_app_info{sync_status=\"OutOfSync\"})\n```\n\n**의미**: ArgoCD가 관리하는 앱 중 Git 저장소의 Manifest와 Kubernetes 클러스터의 실제 상태가 일치하지 않는 앱의 개수\n\n**OutOfSync 원인**:\n1. **Git 변경 미적용**: 새 커밋 후 아직 동기화 안됨\n2. **Manual Change**: kubectl로 직접 수정\n3. **Drift Detection**: 클러스터에서 수동 변경 발생\n4. **Sync 실패**: 동기화 시도했으나 실패\n5. **Auto-sync Disabled**: 자동 동기화 비활성화\n\n**정상 기준**: 0개 (모든 앱이 Synced 상태)\n\n**위험도**:\n- 🟢 0개: 정상 - 모든 앱 동기화됨\n- 🟡 1-3개: 주의 - 일부 앱 확인 필요\n- 🔴 4개 이상: 위험 - 대규모 동기화 이슈\n\n**조치 사항**:\n1. ArgoCD UI에서 OutOfSync 앱 목록 확인\n2. Diff 보기로 변경사항 분석\n3. Manual Sync 또는 Hard Refresh 시도\n4. Sync 실패 원인 로그 확인\n5. 필요시 Prune & Force Sync\n\n**예방책**:\n- Auto-sync 활성화\n- Self-heal 옵션 설정\n- Git을 Single Source of Truth로 유지\n- kubectl 직접 수정 금지\n\n**SLO**: 평균 0개 유지, p95 < 2개",
+          "gridPos": {"h": 7, "w": 6, "x": 18, "y": 5},
+          "targets": [{
+            "expr": "count(argocd_app_info{sync_status=\"OutOfSync\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "none",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 1, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 4, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Jenkins CI Metrics",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 12},
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "Build Duration p95 (by Job)",
+          "description": "**Jenkins Job별 빌드 소요 시간 95 백분위수**\n\n**계산식**:\n```promql\nhistogram_quantile(0.95, \n  sum(rate(jenkins_job_duration_seconds_bucket[5m])) by (job_name, le)\n)\n```\n\n**의미**: 각 Jenkins Job의 빌드 시간 중 95%가 이 값 이하로 완료됨\n\n**p95를 사용하는 이유**:\n- 평균(avg): 이상치에 영향받기 쉬움\n- 최대값(max): 일회성 장애로 왜곡됨\n- p95: 대부분의 사용자 경험을 반영\n\n**정상 범위** (Job 유형별):\n- **Unit Test**: <2분\n- **Integration Test**: <5분\n- **Build + Package**: <10분\n- **Full CI/CD**: <15분\n\n**빌드 시간 증가 원인**:\n1. **코드 복잡도 증가**: 더 많은 모듈, 의존성\n2. **테스트 케이스 추가**: 테스트 커버리지 향상\n3. **리소스 부족**: Jenkins Agent CPU/Memory 부족\n4. **네트워크 지연**: 외부 저장소 다운로드 느림\n5. **캐시 미스**: Docker Layer 캐시 무효화\n\n**최적화 방법**:\n- **병렬화**: 테스트를 여러 Agent에 분산\n- **캐싱**: Maven/Gradle/Docker Layer 캐시\n- **증분 빌드**: 변경된 모듈만 빌드\n- **Agent 증설**: 더 많은 Executor 추가\n- **불필요한 Step 제거**: 중복 작업 정리\n\n**모니터링**:\n- Trend 분석으로 점진적 증가 감지\n- Spike 발생 시 해당 커밋 분석\n- Job별 비교로 병목 Job 식별\n\n**SLO**: Unit Test <2m, Full Build <10m (p95)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+          "targets": [{
+            "expr": "histogram_quantile(0.95, sum(rate(jenkins_job_duration_seconds_bucket[5m])) by (job_name, le))",
+            "refId": "A",
+            "legendFormat": "{{job_name}}"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "showPoints": "never"
+              },
+              "unit": "s",
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(127, 179, 232, 0.1)"},
+                  {"value": 300, "color": "rgba(255, 217, 125, 0.1)"},
+                  {"value": 600, "color": "rgba(244, 139, 139, 0.1)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Build Success vs Failure Rate",
+          "description": "**Jenkins 빌드 성공률 vs 실패율 추이**\n\n**계산식**:\n```promql\n# Success Rate\nsum(rate(jenkins_job_success_total[5m])) / \nsum(rate(jenkins_job_total[5m])) * 100\n\n# Failure Rate\nsum(rate(jenkins_job_failure_total[5m])) / \nsum(rate(jenkins_job_total[5m])) * 100\n```\n\n**의미**: 시간에 따른 빌드 성공/실패 비율의 변화 추이\n\n**트렌드 분석**:\n- **상승 추세 (Success)**: CI 안정화, 코드 품질 향상\n- **하락 추세 (Success)**: 기술 부채 누적, 테스트 불안정\n- **Spike (Failure)**: 특정 커밋/PR로 인한 대규모 장애\n- **주기적 패턴**: 특정 시간대(야간 배치 등) 실패\n\n**실패율 임계값**:\n- 🟢 <5%: 정상 - 우수한 코드 품질\n- 🟡 5-10%: 주의 - 개선 필요\n- 🔴 >10%: 위험 - 긴급 조치\n\n**고빈도 실패 원인**:\n1. **Flaky Test**: 간헐적 실패하는 테스트\n2. **환경 이슈**: DB/서비스 연결 실패\n3. **리소스 고갈**: Out of Memory, Disk Full\n4. **외부 의존성**: 외부 API 장애\n5. **타임아웃**: 네트워크 지연, 느린 테스트\n\n**개선 전략**:\n- Flaky Test 격리 또는 수정\n- 테스트 환경 안정화 (Docker Compose)\n- 리소스 모니터링 및 증설\n- External Service Mocking\n- 타임아웃 적절히 조정\n\n**알림 설정**:\n- Failure Rate > 10% (5분 지속): P2 알림\n- Failure Rate > 20% (1분 지속): P1 알림\n- 연속 3회 실패: 담당자 Slack 알림\n\n**관련 메트릭**: Change Failure Rate (DORA)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+          "targets": [
+            {
+              "expr": "sum(rate(jenkins_job_success_total[5m])) / sum(rate(jenkins_job_total[5m])) * 100",
+              "refId": "A",
+              "legendFormat": "Success Rate"
+            },
+            {
+              "expr": "sum(rate(jenkins_job_failure_total[5m])) / sum(rate(jenkins_job_total[5m])) * 100",
+              "refId": "B",
+              "legendFormat": "Failure Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 20
+              },
+              "unit": "percent",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Success Rate"},
+                "properties": [
+                  {"id": "color", "value": {"fixedColor": "#81C995", "mode": "fixed"}}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Failure Rate"},
+                "properties": [
+                  {"id": "color", "value": {"fixedColor": "#F48B8B", "mode": "fixed"}}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "row",
+          "title": "ArgoCD Deployment Metrics",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 21},
+          "collapsed": false
+        },
+        {
+          "type": "gauge",
+          "title": "Sync Duration (Average)",
+          "description": "**ArgoCD 동기화 평균 소요 시간**\n\n**계산식**:\n```promql\navg(argocd_app_sync_duration_seconds)\n```\n\n**의미**: Git Manifest를 Kubernetes 클러스터에 적용하는 데 걸리는 시간\n\n**동기화 단계별 시간**:\n1. **Git Fetch** (~5s): Repository 클론/Pull\n2. **Manifest Render** (~10s): Helm/Kustomize 렌더링\n3. **Diff Calculation** (~5s): 현재 상태와 비교\n4. **Apply Resources** (~30-60s): kubectl apply\n5. **Health Check** (~30-120s): Pod Ready 대기\n\n**정상 범위**:\n- 🟢 <180초 (3분): 정상 - 빠른 배포\n- 🟡 180-300초 (3-5분): 주의 - 최적화 검토\n- 🔴 >300초 (5분): 위험 - 병목 분석 필요\n\n**지연 원인**:\n1. **대량 리소스**: 수백 개 Manifest 적용\n2. **Init Container 지연**: 초기화 작업 오래 걸림\n3. **Image Pull 느림**: 대용량 이미지, 레지스트리 지연\n4. **Resource Quota**: 리소스 부족으로 Pod 대기\n5. **Health Check 타임아웃**: Readiness Probe 실패\n\n**최적화 방법**:\n- **Sync Wave**: 리소스를 단계별로 배포\n- **Resource Hooks**: Pre/Post Sync Hook 활용\n- **Prune 최적화**: 불필요한 리소스 정리\n- **Parallel Sync**: 독립적 리소스 병렬 적용\n- **Image Cache**: 노드에 이미지 사전 캐싱\n\n**모니터링**:\n- App별 Sync Duration 비교\n- 시간대별 패턴 분석 (피크 시간)\n- 점진적 증가 추세 감지\n\n**SLO**: p95 < 5분, p99 < 10분",
+          "gridPos": {"h": 7, "w": 6, "x": 0, "y": 22},
+          "targets": [{
+            "expr": "avg(argocd_app_sync_duration_seconds)",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0,
+              "max": 600,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#81C995"},
+                  {"value": 180, "color": "#FFD97D"},
+                  {"value": 300, "color": "#F48B8B"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Application Health Status",
+          "description": "**ArgoCD 애플리케이션 건강 상태 분포**\n\n**계산식**:\n```promql\ncount(argocd_app_info) by (health_status)\n```\n\n**Health Status 종류**:\n- **Healthy**: 모든 리소스가 정상 작동 중\n- **Progressing**: 배포 진행 중 (Rolling Update)\n- **Degraded**: 일부 Pod가 비정상 상태\n- **Suspended**: 의도적으로 정지됨 (CronJob 등)\n- **Missing**: 리소스가 클러스터에 없음\n- **Unknown**: 상태를 판단할 수 없음\n\n**정상 분포**:\n- Healthy: 90% 이상\n- Progressing: 5% 이하 (배포 중)\n- Degraded: 0% (이상적)\n- Suspended: 환경별 상이\n\n**Degraded 원인**:\n1. **CrashLoopBackOff**: 컨테이너 반복 재시작\n2. **ImagePullBackOff**: 이미지 가져오기 실패\n3. **Pending**: 리소스 부족으로 스케줄 안됨\n4. **Init:Error**: Init Container 실패\n5. **ReadinessProbe Failed**: Health Check 실패\n\n**Progressing 장기화**:\n- Rolling Update 멈춤\n- Readiness Probe 통과 못함\n- MinReadySeconds 대기 중\n- Manual Approval 대기\n\n**조치 사항**:\n1. ArgoCD UI에서 앱 상세 보기\n2. Pod Events 및 Logs 확인\n3. Resource Requests/Limits 검토\n4. Image Tag 및 Registry 접근성 확인\n5. 필요시 Rollback 수행\n\n**알림 설정**:\n- Degraded > 5분 지속: P2 알림\n- Progressing > 15분 지속: P3 알림\n- Healthy 비율 < 80%: P1 알림\n\n**관련 대시보드**: [Application Health](/d/dataops-health-v4)",
+          "gridPos": {"h": 7, "w": 9, "x": 6, "y": 22},
+          "targets": [{
+            "expr": "count(argocd_app_info) by (health_status)",
+            "refId": "A",
+            "legendFormat": "{{health_status}}"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "stacking": {"mode": "normal"}
+              },
+              "unit": "short",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Healthy"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#81C995", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Progressing"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#7FB3E8", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Degraded"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#F48B8B", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Suspended"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#9CA3AF", "mode": "fixed"}}]
+              }
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Sync Activity (Events per Minute)",
+          "description": "**분당 동기화 이벤트 발생 빈도**\n\n**계산식**:\n```promql\nsum(rate(argocd_app_sync_total[1m])) * 60\n```\n\n**의미**: 1분 동안 발생한 ArgoCD 동기화 작업의 개수\n\n**배포 패턴 분석**:\n- **정상 패턴**: 업무 시간에 높고 야간에 낮음\n- **Spike**: 대규모 배포 또는 롤백\n- **주기적 Peak**: 스케줄된 배포 (일 2회 등)\n- **Zero Activity**: 배포 동결 기간 또는 문제\n\n**배포 빈도 벤치마크** (DORA Metrics):\n- **Elite**: 주문형 배포 (수시로)\n- **High**: 주 1회 ~ 월 1회\n- **Medium**: 월 1회 ~ 분기 1회\n- **Low**: 분기 1회 이하\n\n**급증 시나리오**:\n1. **Mass Rollout**: 여러 앱 동시 배포\n2. **Auto-sync Storm**: Git 변경 후 다수 앱 트리거\n3. **Rollback Wave**: 장애 발생 후 일괄 롤백\n4. **Configuration Drift**: 수동 변경 감지 후 자동 복구\n\n**감소 시나리오**:\n1. **Deploy Freeze**: 배포 동결 기간 (릴리즈 전)\n2. **Holiday/Weekend**: 개발 활동 감소\n3. **ArgoCD 장애**: 동기화 엔진 문제\n4. **Git Repository 장애**: 소스 접근 불가\n\n**모니터링 포인트**:\n- 예상치 못한 Spike 조사\n- 배포 없는 기간 확인\n- 시간대별 패턴 학습\n- Auto-sync vs Manual Sync 비율\n\n**최적 배포 전략**:\n- 업무 시간 중 배포 (빠른 대응 가능)\n- 점진적 롤아웃 (Canary/Blue-Green)\n- 배포 후 모니터링 (최소 30분)\n- Rollback 계획 수립\n\n**관련 메트릭**: Deployment Frequency (DORA)",
+          "gridPos": {"h": 7, "w": 9, "x": 15, "y": 22},
+          "targets": [{
+            "expr": "sum(rate(argocd_app_sync_total[1m])) * 60",
+            "refId": "A",
+            "legendFormat": "Syncs per Minute"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "bars",
+                "lineWidth": 0,
+                "fillOpacity": 50,
+                "barAlignment": 0
+              },
+              "unit": "short",
+              "color": {"mode": "fixed", "fixedColor": "#7FB3E8"}
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Deployment Details & Troubleshooting",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 29},
+          "collapsed": false
+        },
+        {
+          "type": "table",
+          "title": "Recent Failed Builds (Last 1h)",
+          "description": "**최근 1시간 동안 실패한 Jenkins 빌드 목록**\n\n**표시 정보**:\n- **Job Name**: Jenkins Job 이름\n- **Build Number**: 빌드 번호\n- **Duration**: 실패까지 소요 시간\n- **Timestamp**: 실패 시각\n- **Stage**: 어느 단계에서 실패했는지\n\n**빠른 분석 방법**:\n1. Job Name으로 패턴 파악 (특정 Job 반복 실패)\n2. Duration이 짧으면 초기 단계 실패\n3. 동일 시간대 다수 실패는 인프라 이슈\n4. Stage 확인으로 실패 원인 추측\n\n**일반적인 실패 Stage**:\n- **Checkout**: Git 저장소 접근 실패\n- **Build**: 컴파일 오류\n- **Test**: 테스트 케이스 실패\n- **Package**: Docker 이미지 빌드 실패\n- **Publish**: Registry 업로드 실패\n\n**조치 절차**:\n1. Build Number 클릭 → Jenkins Console 이동\n2. 실패 로그에서 ERROR 키워드 검색\n3. 해당 커밋의 변경사항 확인\n4. 로컬에서 재현 시도\n5. 수정 후 재빌드 또는 Revert\n\n**예방책**:\n- Pre-commit Hook으로 로컬 검증\n- Pull Request CI 필수 통과\n- 단위 테스트 커버리지 유지\n- 빌드 환경 안정화",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+          "targets": [{
+            "expr": "jenkins_job_failure_total",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true},
+                "renameByName": {
+                  "job_name": "Job Name",
+                  "build_number": "Build #",
+                  "duration_seconds": "Duration (s)",
+                  "stage": "Failed Stage"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "Time", "desc": true}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Duration (s)"},
+                "properties": [
+                  {"id": "unit", "value": "s"},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                      {"value": 300, "color": "rgba(255, 217, 125, 0.2)"},
+                      {"value": 600, "color": "rgba(244, 139, 139, 0.2)"}
+                    ]
+                  }}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "title": "Out of Sync Applications Details",
+          "description": "**Git과 동기화되지 않은 애플리케이션 상세 정보**\n\n**표시 정보**:\n- **App Name**: ArgoCD 애플리케이션 이름\n- **Namespace**: 배포된 네임스페이스\n- **Cluster**: 타겟 클러스터\n- **Sync Status**: OutOfSync 상태\n- **Health Status**: 애플리케이션 건강 상태\n- **Last Sync**: 마지막 동기화 시각\n\n**OutOfSync 해결 방법**:\n1. **Auto-Sync 켜져 있는 경우**:\n   - ArgoCD가 자동으로 재시도 중\n   - Sync 실패 원인 로그 확인\n   - 필요시 Manual Sync (Hard Refresh)\n\n2. **Auto-Sync 꺼져 있는 경우**:\n   - 의도적 OutOfSync (수동 승인 대기)\n   - Diff 검토 후 Manual Sync\n   - Git 변경사항 검증 필요\n\n3. **Drift Detection (수동 변경)**:\n   - kubectl로 직접 수정된 리소스\n   - Self-Heal 옵션으로 자동 복구\n   - 또는 Git에 현재 상태 반영\n\n**긴급 조치**:\n- **프로덕션 OutOfSync**: 즉시 조사 및 동기화\n- **개발 환경**: 다음 배포 시 자동 해결\n- **지속적 OutOfSync**: Manifest 오류 가능성\n\n**예방책**:\n- Auto-sync + Self-heal 활성화\n- kubectl 직접 수정 금지 (GitOps 원칙)\n- Sync Hook으로 사전/사후 검증\n- Diff 알림으로 빠른 감지",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+          "targets": [{
+            "expr": "argocd_app_info{sync_status=\"OutOfSync\"}",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "job": true, "instance": true},
+                "renameByName": {
+                  "name": "App Name",
+                  "namespace": "Namespace",
+                  "dest_server": "Cluster",
+                  "sync_status": "Sync Status",
+                  "health_status": "Health Status"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "App Name", "desc": false}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Sync Status"},
+                "properties": [
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "mappings", "value": [
+                    {"type": "value", "options": {"OutOfSync": {"color": "rgba(244, 139, 139, 0.3)", "text": "Out of Sync"}}}
+                  ]}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Health Status"},
+                "properties": [
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "mappings", "value": [
+                    {"type": "value", "options": {
+                      "Healthy": {"color": "rgba(129, 201, 149, 0.3)", "text": "Healthy"},
+                      "Progressing": {"color": "rgba(127, 179, 232, 0.3)", "text": "Progressing"},
+                      "Degraded": {"color": "rgba(244, 139, 139, 0.3)", "text": "Degraded"}
+                    }}
+                  ]}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 2, "w": 24, "x": 0, "y": 38},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1A1F2E;border-top:1px solid #374151;padding:12px;text-align:center;border-radius:0 0 8px 8px'><div style='font-size:12px;color:#6B7280'>Deployment Pipeline Dashboard v4.0 • GitOps Flow Monitoring</div><div style='font-size:11px;color:#4B5563;margin-top:4px'>Bitbucket → Jenkins CI → ArgoCD CD → Kubernetes • DORA Metrics Enabled</div></div>"
+          }
+        }
+      ]
+    }

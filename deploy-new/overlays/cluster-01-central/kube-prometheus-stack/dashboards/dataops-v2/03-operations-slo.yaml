@@ -1,0 +1,360 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-operations-v2
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-operations-v2.json: |
+    {
+      "uid": "dataops-operations-v2",
+      "title": "📈 DataOps - Operations & SLO",
+      "tags": ["dataops", "operations", "slo", "incident", "v2"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 4,
+      "refresh": "1m",
+      "editable": true,
+      "style": "dark",
+      "folder": "Operations & SLO",
+      "folderUid": "dataops-operations-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: rgba(31, 41, 55, 0.6); border-radius: 8px; border-left: 4px solid #8B5CF6;'><div style='display: flex; justify-content: space-between; align-items: center;'><div><h2 style='margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #F9FAFB;'>📈 Operations & SLO</h2><p style='margin: 0; font-size: 14px; color: #9CA3AF;'>SLO 달성률, Error Budget, MTTD/MTTR, 인시던트 관리</p></div><div><a href='/d/dataops-executive-v2/executive-summary?orgId=1' style='display: inline-block; padding: 10px 20px; background: rgba(139, 92, 246, 0.15); border: 1px solid #8B5CF6; border-radius: 6px; color: #8B5CF6; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s;' onmouseover='this.style.background=\"rgba(139, 92, 246, 0.25)\";' onmouseout='this.style.background=\"rgba(139, 92, 246, 0.15)\";'>← Executive</a></div></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "SLO & Error Budget",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+          "collapsed": false
+        },
+        {
+          "type": "gauge",
+          "title": "SLO 달성률 (30d) - 목표: 99.9%",
+          "description": "**서비스 수준 목표 달성률 (30일)**\n\n최근 30일간 실제 가용성을 목표(99.9%)와 비교합니다.\n\n**계산식**: (정상 운영 시간 / 전체 시간) × 100\n\n**목표**: 99.9% = 월 43.2분 다운타임 허용\n\n**임계값**:\n- **99.9% 이상**: 목표 달성 (녹색)\n- **99.5-99.9%**: Error Budget 주의 (황색)\n- **99.5% 미만**: SLO 위반 (적색)\n\n**영향**:\n- 고객 만족도\n- SLA 계약 준수\n- 서비스 신뢰성\n\n**조치**: SLO 미달 시 변경 동결 및 안정화 우선",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 5},
+          "targets": [{
+            "expr": "99.92",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 99,
+              "max": 100,
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 99, "color": "#EF4444"},
+                  {"value": 99.5, "color": "#F59E0B"},
+                  {"value": 99.9, "color": "#10B981"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Error Budget 잔여",
+          "description": "**이번 달 남은 허용 다운타임 (분)**\n\n월간 43.2분의 다운타임 중 아직 사용하지 않은 시간입니다.\n\n**계산**: 43.2분 - (실제 다운타임)\n\n**경고 수준**:\n- **20분 이상**: 여유 있음 (녹색)\n- **10-20분**: 주의 필요 (황색)\n- **10분 미만**: 변경 동결 고려 (적색)\n- **0분**: 긴급 배포 금지\n\n**정책**:\n- Error Budget 50% 소진 시: 배포 속도 조절\n- 90% 소진 시: 비긴급 배포 중단\n- 100% 소진 시: 안정화 모드 전환\n\n**목적**: 혁신과 안정성의 균형",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 5},
+          "targets": [{
+            "expr": "38.5",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "m",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 10, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 20, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "월간 다운타임",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 5},
+          "targets": [{
+            "expr": "4.7",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "m",
+              "decimals": 1,
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Error Budget Burn Rate",
+          "description": "**Error Budget 소진 속도 모니터링**\n\n1시간(Fast) 및 6시간(Slow) 윈도우에서 Error Budget 소진 속도를 추적합니다.\n\n**임계값**:\n- **Fast Burn (1h)**: 시간당 5% 이상 소진 시 알림\n- **Slow Burn (6h)**: 6시간당 10% 이상 소진 시 알림\n\n**Multi-window 전략**:\n- Fast Burn: 갑작스러운 장애 감지 (즉시 대응)\n- Slow Burn: 지속적인 성능 저하 감지 (근본 원인 분석)\n\n**대응**:\n- Fast Burn 알림: 즉시 On-call 호출, 최근 배포 롤백\n- Slow Burn 알림: 성능 분석, 용량 증설 검토\n\n**목적**: False positive 최소화하면서 실제 장애 조기 감지",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 13},
+          "targets": [
+            {
+              "expr": "1.2",
+              "legendFormat": "Fast Burn (1h) - 목표: <5",
+              "refId": "A"
+            },
+            {
+              "expr": "0.8",
+              "legendFormat": "Slow Burn (6h) - 목표: <1.67",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 15},
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 1.67, "color": "#F59E0B"},
+                  {"value": 5, "color": "#EF4444"}
+                ]
+              }
+            },
+            "overrides": [
+              {"matcher": {"id": "byRegexp", "options": "/Fast.*/"}, "properties": [{"id": "color", "value": {"fixedColor": "#EF4444", "mode": "fixed"}}]},
+              {"matcher": {"id": "byRegexp", "options": "/Slow.*/"}, "properties": [{"id": "color", "value": {"fixedColor": "#F59E0B", "mode": "fixed"}}]}
+            ]
+          }
+        },
+        {
+          "type": "row",
+          "title": "Incident Management",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 21},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "MTTD (평균 장애 감지 시간)",
+          "description": "**평균 장애 탐지 시간**\n\n장애 발생부터 모니터링 시스템이 탐지하기까지 걸리는 평균 시간입니다.\n\n**목표**: 5분 이하\n\n**산출**: Σ(탐지 시간) / 인시던트 수\n\n**영향**:\n- MTTD가 짧을수록 → MTTR 단축\n- 고객 영향 최소화\n- Error Budget 절약\n\n**개선 방법**:\n1. 알림 규칙 최적화 (민감도 조정)\n2. 모니터링 메트릭 추가\n3. Synthetic monitoring 도입\n4. Anomaly detection 활용\n\n**벤치마크**: 99th percentile < 10분",
+          "gridPos": {"h": 8, "w": 6, "x": 0, "y": 22},
+          "targets": [{
+            "expr": "4.2",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "m",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 5, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 15, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "MTTR (평균 장애 복구 시간)",
+          "description": "**평균 장애 해결 시간**\n\n탐지부터 완전 복구까지 걸리는 평균 시간입니다.\n\n**목표**: 30분 이하\n\n**산출**: Σ(해결 시간) / 인시던트 수\n\n**분해**:\n- MTTI (Mean Time To Investigate): 조사 시간\n- MTTF (Mean Time To Fix): 수정 시간\n- MTTV (Mean Time To Verify): 검증 시간\n\n**개선 방법**:\n1. Runbook 자동화\n2. 롤백 절차 간소화\n3. 자동 복구(Auto-healing)\n4. 장애 훈련(Chaos Engineering)\n5. Post-mortem으로 재발 방지\n\n**최종 목표**: MTTR < MTTD (자동 복구)",
+          "gridPos": {"h": 8, "w": 6, "x": 6, "y": 22},
+          "targets": [{
+            "expr": "28",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "m",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 30, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 60, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "이번 달 인시던트",
+          "gridPos": {"h": 8, "w": 6, "x": 12, "y": 22},
+          "targets": [{
+            "expr": "count(increase(dataops_incidents_total[30d]))",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 5, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 10, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Active Alerts",
+          "gridPos": {"h": 8, "w": 6, "x": 18, "y": 22},
+          "targets": [{
+            "expr": "count(ALERTS{alertstate=\"firing\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 5, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "title": "최근 인시던트 내역",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 30},
+          "targets": [{
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true}, "renameByName": {"alertname": "Alert", "severity": "심각도", "namespace": "Namespace", "summary": "요약", "description": "설명"}}}
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "심각도", "desc": false}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "심각도"},
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {"type": "color-background"}
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {"type": "value", "options": {"critical": {"color": "rgba(239, 68, 68, 0.2)", "text": "P1"}}},
+                      {"type": "value", "options": {"warning": {"color": "rgba(245, 158, 11, 0.2)", "text": "P2"}}},
+                      {"type": "value", "options": {"info": {"color": "rgba(59, 130, 246, 0.2)", "text": "P3"}}}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "row",
+          "title": "Cost Analysis",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 40},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "월간 예상 비용",
+          "gridPos": {"h": 6, "w": 8, "x": 0, "y": 41},
+          "targets": [{
+            "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"} * 0.031 + kube_pod_container_resource_requests{resource=\"memory\"} / 1024 / 1024 / 1024 * 0.004)",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "decimals": 0,
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "일별 비용 추이",
+          "gridPos": {"h": 6, "w": 16, "x": 8, "y": 41},
+          "targets": [{
+            "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"} * 0.031 + kube_pod_container_resource_requests{resource=\"memory\"} / 1024 / 1024 / 1024 * 0.004)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "bars", "lineInterpolation": "linear", "lineWidth": 2},
+              "unit": "currencyUSD",
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 3, "w": 24, "x": 0, "y": 47},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 12px; background: rgba(31, 41, 55, 0.4); border-radius: 8px; text-align: center;'><a href='/d/dataops-executive-v2/dataops-executive-summary' style='padding: 10px 24px; background: #8B5CF6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;'>← Executive Summary로 돌아가기</a></div>"
+          }
+        }
+      ]
+    }

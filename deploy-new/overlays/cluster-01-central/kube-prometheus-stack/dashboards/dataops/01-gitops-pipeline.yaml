@@ -1,0 +1,364 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-gitops-pipeline
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-gitops-pipeline.json: |
+    {
+      "uid": "dataops-gitops-pipeline",
+      "title": "🔄 DataOps - GitOps 배포 파이프라인",
+      "tags": ["dataops", "gitops", "jenkins", "argocd"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "editable": true,
+      "panels": [
+        {
+          "type": "text",
+          "title": "📊 GitOps 배포 파이프라인 개요",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;'><h2 style='margin:0'>🔄 GitOps 배포 파이프라인 모니터링</h2><p style='margin-top:10px; font-size:16px'>Portal → Bitbucket → Jenkins → ArgoCD → Kubernetes 전체 배포 흐름 모니터링</p><div style='margin-top:15px; display:flex; justify-content:space-around;'><div><strong>현재 빌드</strong><br/><span style='font-size:24px'>{{jenkins_running_builds}}</span></div><div><strong>배포 중</strong><br/><span style='font-size:24px'>{{argocd_syncing}}</span></div><div><strong>성공률 (24h)</strong><br/><span style='font-size:24px'>{{pipeline_success_rate}}%</span></div><div><strong>평균 배포 시간</strong><br/><span style='font-size:24px'>{{avg_deploy_time}}m</span></div></div></div>"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Jenkins 빌드 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "sum(rate(jenkins_builds_success_total[24h])) / sum(rate(jenkins_builds_total[24h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "reduceOptions": {"values": false, "calcs": ["lastNotNull"]},
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 90, "color": "yellow"},
+                  {"value": 95, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "ArgoCD Sync 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 4},
+          "targets": [{
+            "expr": "sum(rate(argocd_app_sync_status{status=\"Succeeded\"}[24h])) / sum(rate(argocd_app_sync_status[24h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "reduceOptions": {"values": false, "calcs": ["lastNotNull"]},
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 95, "color": "yellow"},
+                  {"value": 99, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Pod Readiness 시간 (P95)",
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 4},
+          "targets": [{
+            "expr": "histogram_quantile(0.95, sum(rate(kube_pod_start_time_seconds_bucket[1h])) by (le))",
+            "refId": "A"
+          }],
+          "options": {
+            "reduceOptions": {"values": false, "calcs": ["lastNotNull"]},
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 60, "color": "yellow"},
+                  {"value": 120, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "전체 파이프라인 평균 시간",
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 4},
+          "targets": [{
+            "expr": "avg(jenkins_build_duration_seconds) + avg(argocd_sync_duration_seconds) + avg(kube_pod_start_time_seconds)",
+            "refId": "A"
+          }],
+          "options": {
+            "reduceOptions": {"values": false, "calcs": ["lastNotNull"]},
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 300, "color": "yellow"},
+                  {"value": 600, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Jenkins 빌드 성공/실패 추이",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+          "targets": [
+            {
+              "expr": "sum(rate(jenkins_builds_success_total[5m]))",
+              "legendFormat": "성공",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(jenkins_builds_failed_total[5m]))",
+              "legendFormat": "실패",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "fillOpacity": 10
+              },
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "성공"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "실패"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]}
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "ArgoCD Sync 상태 추이",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+          "targets": [
+            {
+              "expr": "sum(rate(argocd_app_sync_status{status=\"Succeeded\"}[5m]))",
+              "legendFormat": "성공",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(argocd_app_sync_status{status=\"Failed\"}[5m]))",
+              "legendFormat": "실패",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(argocd_app_sync_status{status=\"Syncing\"})",
+              "legendFormat": "진행중",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "fillOpacity": 10
+              },
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "성공"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "실패"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "진행중"}, "properties": [{"id": "color", "value": {"fixedColor": "blue", "mode": "fixed"}}]}
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "title": "최근 Jenkins 빌드 목록",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+          "targets": [{
+            "expr": "jenkins_build_info",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "instance": true, "job": true}, "indexByName": {}, "renameByName": {"build_number": "빌드 번호", "project": "프로젝트", "status": "상태", "duration": "소요 시간"}}}
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "빌드 번호", "desc": true}]
+          }
+        },
+        {
+          "type": "table",
+          "title": "ArgoCD 애플리케이션 상태",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+          "targets": [{
+            "expr": "argocd_app_info",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "instance": true, "job": true}, "indexByName": {}, "renameByName": {"name": "애플리케이션", "namespace": "네임스페이스", "sync_status": "Sync 상태", "health_status": "Health 상태"}}}
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "애플리케이션", "desc": false}]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Jenkins 빌드 Duration (P50/P95/P99)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(jenkins_build_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(jenkins_build_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P95",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(jenkins_build_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P99",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "fillOpacity": 0
+              },
+              "unit": "s",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Pod Readiness 시간 추이",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+          "targets": [{
+            "expr": "avg(kube_pod_start_time_seconds) by (namespace)",
+            "legendFormat": "{{namespace}}",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "fillOpacity": 10
+              },
+              "unit": "s",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "프로젝트별 Jenkins 빌드 빈도 (24h)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 34},
+          "targets": [{
+            "expr": "sum(increase(jenkins_builds_total[24h])) by (project)",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "showUnfilled": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "continuous-GrYlRd"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 50, "color": "yellow"},
+                  {"value": 100, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "piechart",
+          "title": "ArgoCD Sync 상태 분포",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 34},
+          "targets": [{
+            "expr": "count(argocd_app_sync_status) by (status)",
+            "refId": "A"
+          }],
+          "options": {
+            "legend": {"displayMode": "list", "placement": "right"},
+            "pieType": "donut",
+            "displayLabels": ["percent"]
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "Succeeded"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "Failed"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "Syncing"}, "properties": [{"id": "color", "value": {"fixedColor": "blue", "mode": "fixed"}}]}
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "title": "🔗 관련 링크",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 42},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 15px; background: #f5f5f5; border-radius: 8px;'><div style='display: flex; justify-content: space-around; align-items: center;'><a href='/d/dataops-main-nav/dataops-platform-main-navigation' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>← 메인으로 돌아가기</a><a href='http://jenkins.example.com' target='_blank' style='padding: 10px 20px; background: #D24939; color: white; text-decoration: none; border-radius: 5px;'>Jenkins 콘솔</a><a href='http://argocd.example.com' target='_blank' style='padding: 10px 20px; background: #EF7B4D; color: white; text-decoration: none; border-radius: 5px;'>ArgoCD UI</a><a href='/d/dataops-resource-capacity/dataops-resource-capacity' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>리소스 가용량 →</a></div></div>"
+          }
+        }
+      ]
+    }

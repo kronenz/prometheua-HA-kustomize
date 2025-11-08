@@ -1,0 +1,313 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-e2e-analytics
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-e2e-analytics.json: |
+    {
+      "uid": "dataops-e2e-analytics",
+      "title": "📊 DataOps - E2E Analytics & SLO",
+      "tags": ["dataops", "e2e", "slo", "analytics"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "1m",
+      "editable": true,
+      "panels": [
+        {
+          "type": "text",
+          "title": "📊 E2E Analytics & SLO",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;'><h2 style='margin:0'>📊 End-to-End Analytics & SLO 모니터링</h2><p style='margin-top:10px; font-size:16px'>전체 파이프라인 성공률, 완료 시간, SLO 달성률</p></div>"
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "🎯 SLO 달성률 (목표: 99.9%)",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "sum(rate(dataops_pipeline_success_total[30d])) / sum(rate(dataops_pipeline_total[30d])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 99,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 99, "color": "red"},
+                  {"value": 99.5, "color": "yellow"},
+                  {"value": 99.9, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "💰 Error Budget 잔여 (43.2분/월)",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 4},
+          "targets": [{
+            "expr": "(43.2 - (43200 * (1 - sum(rate(dataops_pipeline_success_total[30d])) / sum(rate(dataops_pipeline_total[30d])))))",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "m",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 10, "color": "yellow"},
+                  {"value": 20, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "📈 파이프라인 성공률 (24h)",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 4},
+          "targets": [{
+            "expr": "sum(rate(dataops_pipeline_success_total[24h])) / sum(rate(dataops_pipeline_total[24h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 95, "color": "yellow"},
+                  {"value": 99, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "파이프라인 완료 시간 (P50/P95/P99)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(dataops_pipeline_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(dataops_pipeline_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P95",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(dataops_pipeline_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P99",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "unit": "s"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Error Budget Burn Rate",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "targets": [
+            {
+              "expr": "(1 - (sum(rate(dataops_pipeline_success_total[1h])) / sum(rate(dataops_pipeline_total[1h])))) / 0.001",
+              "legendFormat": "Fast Burn (1h)",
+              "refId": "A"
+            },
+            {
+              "expr": "(1 - (sum(rate(dataops_pipeline_success_total[6h])) / sum(rate(dataops_pipeline_total[6h])))) / 0.001",
+              "legendFormat": "Slow Burn (6h)",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 5, "color": "yellow"},
+                  {"value": 10, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "title": "단계별 평균 소요 시간",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 20},
+          "targets": [
+            {
+              "expr": "avg(jenkins_build_duration_seconds)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "avg(argocd_sync_duration_seconds)",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            },
+            {
+              "expr": "avg(spark_job_duration_seconds)",
+              "format": "table",
+              "instant": true,
+              "refId": "C"
+            },
+            {
+              "expr": "avg(iceberg_write_duration_seconds)",
+              "format": "table",
+              "instant": true,
+              "refId": "D"
+            }
+          ],
+          "transformations": [
+            {"id": "merge"},
+            {"id": "organize", "options": {"renameByName": {"__name__": "단계", "Value": "평균 소요시간 (초)"}}}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "일별 파이프라인 실행 횟수",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+          "targets": [{
+            "expr": "sum(increase(dataops_pipeline_total[1d]))",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "bars", "lineInterpolation": "linear"}
+            }
+          }
+        },
+        {
+          "type": "piechart",
+          "title": "단계별 실패 원인 분포",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+          "targets": [{
+            "expr": "sum(rate(dataops_pipeline_failures_total[24h])) by (stage)",
+            "refId": "A"
+          }],
+          "options": {
+            "legend": {"displayMode": "list", "placement": "right"},
+            "pieType": "donut"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "⏱️ MTTD (평균 장애 감지 시간)",
+          "gridPos": {"h": 6, "w": 8, "x": 0, "y": 38},
+          "targets": [{
+            "expr": "avg(alert_detection_time_seconds) / 60",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "value"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "m",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 5, "color": "yellow"},
+                  {"value": 15, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "🔧 MTTR (평균 장애 복구 시간)",
+          "gridPos": {"h": 6, "w": 8, "x": 8, "y": 38},
+          "targets": [{
+            "expr": "avg(alert_resolution_time_seconds) / 60",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "value"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "m",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 30, "color": "yellow"},
+                  {"value": 60, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "📊 이번 달 장애 횟수",
+          "gridPos": {"h": 6, "w": 8, "x": 16, "y": 38},
+          "targets": [{
+            "expr": "count(increase(dataops_incidents_total[30d]))",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "value"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 5, "color": "yellow"},
+                  {"value": 10, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "🔗 관련 링크",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 44},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 15px; background: #f5f5f5; border-radius: 8px;'><div style='display: flex; justify-content: space-around;'><a href='/d/dataops-optimization/dataops-optimization' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>← 최적화</a><a href='/d/dataops-main-nav/dataops-platform-main-navigation' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>메인으로 돌아가기</a></div></div>"
+          }
+        }
+      ]
+    }

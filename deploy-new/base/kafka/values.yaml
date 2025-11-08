@@ -1,0 +1,114 @@
+# ============================================================================
+# Apache Kafka 기본 구성
+# ============================================================================
+# 용도: 실시간 이벤트 스트리밍 플랫폼
+# 아키텍처: Broker Cluster + KRaft (Zookeeper 불필요)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 이미지 설정
+# ----------------------------------------------------------------------------
+# 2025년 이후 Bitnami는 Docker Hub에서 무료 이미지를 제한합니다.
+# 대신 Amazon ECR Public Gallery를 사용합니다.
+# https://gallery.ecr.aws/bitnami/kafka
+global:
+  security:
+    allowInsecureImages: true  # ECR Public 이미지 사용을 위해 필요
+
+image:
+  registry: public.ecr.aws
+  repository: bitnami/kafka
+  tag: 3.9.0
+
+# ----------------------------------------------------------------------------
+# 배포 모드: KRaft (Zookeeper 없이 실행)
+# ----------------------------------------------------------------------------
+kraft:
+  enabled: true
+
+# ----------------------------------------------------------------------------
+# Broker 설정
+# ----------------------------------------------------------------------------
+replicaCount: 3
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    cpu: 1000m
+    memory: 4Gi
+
+# ----------------------------------------------------------------------------
+# Kafka 리스너 설정
+# ----------------------------------------------------------------------------
+listeners:
+  client:
+    protocol: PLAINTEXT
+  controller:
+    protocol: PLAINTEXT
+  interbroker:
+    protocol: PLAINTEXT
+  external:
+    protocol: PLAINTEXT
+
+# ----------------------------------------------------------------------------
+# 메트릭 설정 (Prometheus JMX Exporter)
+# ----------------------------------------------------------------------------
+metrics:
+  kafka:
+    enabled: true
+
+  jmx:
+    enabled: true
+
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    labels:
+      release: kube-prometheus-stack
+
+# ----------------------------------------------------------------------------
+# 스토리지 설정
+# ----------------------------------------------------------------------------
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 10Gi
+
+# ----------------------------------------------------------------------------
+# Kafka 설정
+# ----------------------------------------------------------------------------
+config: |
+  # 기본 파티션 수
+  num.partitions=3
+
+  # 복제 팩터
+  default.replication.factor=2
+  min.insync.replicas=2
+
+  # 로그 보관 설정
+  log.retention.hours=168
+  log.retention.bytes=1073741824
+  log.segment.bytes=1073741824
+
+  # 압축 설정
+  compression.type=snappy
+
+  # 최대 메시지 크기
+  message.max.bytes=1048576
+
+  # Consumer Group 설정
+  group.initial.rebalance.delay.ms=3000
+
+  # Transaction 설정
+  transaction.state.log.replication.factor=2
+  transaction.state.log.min.isr=2
+
+# ----------------------------------------------------------------------------
+# 서비스 설정
+# ----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  ports:
+    client: 9092

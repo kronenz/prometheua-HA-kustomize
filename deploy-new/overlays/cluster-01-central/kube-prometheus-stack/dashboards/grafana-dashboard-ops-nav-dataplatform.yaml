@@ -1,0 +1,138 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-ops-nav-dataplatform
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+data:
+  ops-nav-dataplatform.json: '{"uid": "ops-nav-dataplatform", "title": "🔥 데이터 플랫폼
+    운영 대시보드", "tags": ["operations", "dataplatform", "bigdata", "drilldown"], "timezone":
+    "browser", "schemaVersion": 27, "version": 1, "refresh": "30s", "panels": [{"id":
+    1, "type": "text", "title": "", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3},
+    "options": {"mode": "html", "content": "<div style=\"padding: 20px; background:
+    linear-gradient(135deg, #1a1d29 0%, #2d3748 100%); border-radius: 12px; box-shadow:
+    0 4px 20px rgba(0,0,0,0.3); margin-bottom: 12px; border: 1px solid rgba(237,137,54,0.3);\">\n  <div
+    style=\"display: flex; align-items: center; justify-content: space-between;\">\n    <div
+    style=\"display: flex; align-items: center;\">\n      <a href=\"/d/ops-nav-main\"
+    style=\"padding: 8px 12px; background: rgba(237,137,54,0.2); border: 1px solid
+    #ed8936; border-radius: 8px; color: #f6ad55; text-decoration: none; font-weight:
+    600; font-size: 13px; margin-right: 20px;\">← 메인</a>\n      <div style=\"width:
+    48px; height: 48px; background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-right: 16px;\">🔥</div>\n      <div>\n        <h1 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 32px; color: #ffffff; margin: 0; letter-spacing:
+    -0.5px;\">데이터 플랫폼 운영 대시보드</h1>\n        <p style=\"font-size: 13px; color: #a0aec0;
+    margin: 4px 0 0 0;\">Big Data Platform Operations & Performance</p>\n      </div>\n    </div>\n  </div>\n</div>"}},
+    {"id": 2, "type": "text", "title": "Apache Spark 작업 성능", "gridPos": {"x": 0, "y":
+    3, "w": 12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding:
+    16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(237,137,54,0.1);
+    border-left: 4px solid #ed8936; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #f6ad55; margin: 0 0 8px 0;\">⚡
+    Spark Jobs</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">Spark 작업 실행 성능과 리소스 사용을 모니터링합니다</p>\n  </div>\n  <a href=\"/d/spark-job-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Job 실행 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">Job 실행시간, 성공률, 실패 원인</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/spark-stage-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Stage & Task 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">Stage 지연, Task 스큐, Shuffle 성능</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/spark-executor-metrics\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Executor 리소스</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">CPU, 메모리, GC 시간, 스필</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}},
+    {"id": 3, "type": "text", "title": "Trino 쿼리 성능", "gridPos": {"x": 12, "y": 3,
+    "w": 12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding:
+    16px;\">\n  <div style=\"margin-bottom: 16px; padding: 12px; background: rgba(237,137,54,0.1);
+    border-left: 4px solid #ed8936; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #f6ad55; margin: 0 0 8px 0;\">🔎
+    Trino Queries</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0;
+    line-height: 1.6;\">Trino 쿼리 실행 성능과 처리량을 추적합니다</p>\n  </div>\n  <a href=\"/d/trino-query-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">쿼리 실행 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">쿼리 실행시간, 대기시간, 실패율</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/trino-worker-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Worker 노드 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">CPU, 메모리, 처리 Task 수</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/trino-connector-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Connector 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">데이터 소스 연결, 읽기/쓰기 속도</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}},
+    {"id": 4, "type": "text", "title": "데이터베이스 성능", "gridPos": {"x": 0, "y": 12, "w":
+    12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding: 16px;\">\n  <div
+    style=\"margin-bottom: 16px; padding: 12px; background: rgba(237,137,54,0.1);
+    border-left: 4px solid #ed8936; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #f6ad55; margin: 0 0 8px 0;\">🗄️
+    Database</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0; line-height:
+    1.6;\">데이터베이스 응답시간과 연결 풀을 모니터링합니다</p>\n  </div>\n  <a href=\"/d/oracle-query-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Oracle 쿼리 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">쿼리 응답시간, 실행 계획, 대기 이벤트</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/oracle-connection-pool\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">연결 풀 관리</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">활성 세션, 대기 세션, 연결 타임아웃</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/oracle-tablespace\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">테이블스페이스 사용률</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">용량 사용률, 파편화, 자동 확장</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}},
+    {"id": 5, "type": "text", "title": "파이프라인 운영", "gridPos": {"x": 12, "y": 12, "w":
+    12, "h": 9}, "options": {"mode": "html", "content": "<div style=\"padding: 16px;\">\n  <div
+    style=\"margin-bottom: 16px; padding: 12px; background: rgba(237,137,54,0.1);
+    border-left: 4px solid #ed8936; border-radius: 8px;\">\n    <h4 style=\"font-family:
+    ''BMDOHYEON'', sans-serif; font-size: 16px; color: #f6ad55; margin: 0 0 8px 0;\">🚀
+    CI/CD Pipeline</h4>\n    <p style=\"font-size: 12px; color: #a0aec0; margin: 0;
+    line-height: 1.6;\">배포 파이프라인 성능과 성공률을 추적합니다</p>\n  </div>\n  <a href=\"/d/argocd-sync-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">ArgoCD 동기화 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">동기화 시간, 성공률, 충돌 해결</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/jenkins-build-performance\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">Jenkins 빌드 성능</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">빌드 시간, 성공률, 큐 대기시간</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n  <a href=\"/d/dora-metrics-dashboard\"
+    style=\"display: block; padding: 14px 16px; margin-bottom: 10px; background: #2d3748;
+    border: 1px solid rgba(237,137,54,0.3); border-radius: 8px; text-decoration: none;
+    color: #e2e8f0; transition: all 0.2s;\">\n    <div style=\"display: flex; justify-content:
+    space-between; align-items: center;\">\n      <div>\n        <div style=\"font-weight:
+    600; font-size: 15px; margin-bottom: 4px; color: #ffffff;\">DORA 메트릭</div>\n        <div
+    style=\"font-size: 12px; color: #a0aec0;\">배포 빈도, 리드타임, MTTR, 실패율</div>\n      </div>\n      <div
+    style=\"color: #ed8936; font-size: 18px;\">→</div>\n    </div>\n  </a>\n</div>"}}]}'

@@ -1,0 +1,445 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-infrastructure-v2
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-infrastructure-v2.json: |
+    {
+      "uid": "dataops-infrastructure-v2",
+      "title": "🏗️ DataOps - Infrastructure Health",
+      "tags": ["dataops", "infrastructure", "baremetal", "kubernetes", "v2"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 4,
+      "refresh": "30s",
+      "editable": true,
+      "style": "dark",
+      "folder": "Infrastructure",
+      "folderUid": "dataops-infrastructure-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: rgba(31, 41, 55, 0.6); border-radius: 8px; border-left: 4px solid #5B8DEE;'><div style='display: flex; justify-content: space-between; align-items: center;'><div><h2 style='margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #F9FAFB;'>🏗️ Infrastructure Health</h2><p style='margin: 0; font-size: 14px; color: #9CA3AF;'>베어메탈 서버, 네트워크, 스토리지, Kubernetes 클러스터 전체 인프라 상태</p></div><div><a href='/d/dataops-executive-v2/executive-summary?orgId=1' style='display: inline-block; padding: 10px 20px; background: rgba(91, 141, 238, 0.15); border: 1px solid #5B8DEE; border-radius: 6px; color: #5B8DEE; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s;' onmouseover='this.style.background=\"rgba(91, 141, 238, 0.25)\";' onmouseout='this.style.background=\"rgba(91, 141, 238, 0.15)\";'>← Executive</a></div></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "물리 서버 상태",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+          "collapsed": false
+        },
+        {
+          "type": "gauge",
+          "title": "서버 평균 온도",
+          "description": "**베어메탈 서버의 CPU/시스템 평균 온도**\n\n서버 하드웨어 센서에서 수집한 온도 정보를 표시합니다.\n\n**임계값**:\n- **0-60°C**: 정상 (녹색)\n- **60-75°C**: 주의 - 쿨링 시스템 점검 필요 (황색)\n- **75°C 이상**: 위험 - 즉시 조치 필요 (적색)\n\n**조치 사항**:\n- 75°C 초과: 서버 쿨링 팬 상태 확인, 데이터센터 냉방 점검\n- 지속적 고온: 워크로드 분산 또는 하드웨어 교체 고려\n\n**메트릭**: `node_hwmon_temp_celsius`",
+          "gridPos": {"h": 6, "w": 4, "x": 0, "y": 5},
+          "targets": [{
+            "expr": "avg(node_hwmon_temp_celsius)",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "celsius",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 60, "color": "#F59E0B"},
+                  {"value": 75, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "가동 중인 노드",
+          "description": "**현재 가동 중인 물리 서버 노드 수**\n\nNode Exporter로부터 메트릭을 정상적으로 수집하고 있는 노드의 개수입니다.\n\n**정상 상태**: 전체 노드 수와 일치\n\n**경고**:\n- 노드 수 감소: 서버 다운 또는 네트워크 단절\n- 즉시 해당 노드 상태 확인 필요\n\n**메트릭**: `up{job=\\\"node-exporter\\\"}==1`",
+          "gridPos": {"h": 6, "w": 4, "x": 4, "y": 5},
+          "targets": [{
+            "expr": "count(up{job=\"node-exporter\"} == 1)",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 3, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 4, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "전력 소비",
+          "description": "**전체 서버의 실시간 전력 소비량**\n\n베어메탈 서버의 총 전력 사용량을 Watts 단위로 표시합니다.\n\n**활용**:\n- 전력 예산 관리 및 비용 산정\n- PUE(Power Usage Effectiveness) 계산\n- 전력 효율성 최적화\n\n**최적화**:\n- 유휴 서버 전원 관리\n- 워크로드 스케줄링으로 피크 시간 분산\n- 에너지 효율적인 하드웨어 선정\n\n**메트릭**: `node_power_usage_watts`",
+          "gridPos": {"h": 6, "w": 4, "x": 8, "y": 5},
+          "targets": [{
+            "expr": "sum(node_power_usage_watts)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "watt",
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Memory ECC Errors",
+          "description": "**24시간 동안 발생한 ECC 메모리 오류 수**\n\nECC(Error Correcting Code) 메모리의 수정 불가능한 오류 발생 건수입니다.\n\n**정상**: 0건\n\n**경고**:\n- **1건 이상**: 메모리 모듈 불안정\n- **지속 발생**: 해당 메모리 모듈 교체 필요\n\n**영향**:\n- 데이터 무결성 저하\n- 시스템 크래시 가능성\n- 워크로드 신뢰성 감소\n\n**조치**: 즉시 하드웨어 점검 및 메모리 교체\n\n**메트릭**: `node_edac_uncorrectable_errors_total`",
+          "gridPos": {"h": 6, "w": 4, "x": 12, "y": 5},
+          "targets": [{
+            "expr": "sum(increase(node_edac_uncorrectable_errors_total[24h]))",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "RAID 상태",
+          "description": "**RAID 어레이의 정상 작동 디스크 수**\n\nRAID 구성에서 Active 상태인 디스크의 개수를 표시합니다.\n\n**정상**: RAID 구성의 전체 디스크 수와 일치\n\n**경고**:\n- 디스크 수 감소: RAID degraded 상태\n- 즉시 Failed 디스크 확인 및 교체 필요\n\n**위험**:\n- RAID 5/6: 추가 디스크 장애 시 데이터 손실\n- RAID 1/10: 중복성 상실\n\n**조치**:\n1. `cat /proc/mdstat` 으로 상태 확인\n2. Failed 디스크 식별 및 교체\n3. RAID rebuild 모니터링\n\n**메트릭**: `node_md_disks{state=\\\"active\\\"}`",
+          "gridPos": {"h": 6, "w": 4, "x": 16, "y": 5},
+          "targets": [{
+            "expr": "count(node_md_disks{state=\"active\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 4, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "노드별 CPU 사용률",
+          "gridPos": {"h": 6, "w": 4, "x": 20, "y": 5},
+          "targets": [{
+            "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (instance)) * 100",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "showUnfilled": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "color": {"mode": "continuous-GrYlRd"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 70, "color": "#F59E0B"},
+                  {"value": 85, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "네트워크 상태",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 11},
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "네트워크 대역폭 (수신/송신)",
+          "description": "**네트워크 인터페이스별 Tx/Rx 대역폭**\n\n네트워크 트래픽의 송신(Transmit) 및 수신(Receive) 속도를 표시합니다.\n\n**정상 범위**: 링크 용량의 70% 이하\n\n**병목 현상**:\n- **70-80%**: 주의 필요\n- **80% 이상**: 네트워크 병목, 성능 저하 발생\n\n**조치 사항**:\n- 지속적 80% 이상: 네트워크 업그레이드 또는 트래픽 분산\n- Link Aggregation(LACP) 구성 검토\n- QoS 정책으로 중요 트래픽 우선순위 부여\n\n**메트릭**: `rate(node_network_transmit_bytes_total[5m])`, `rate(node_network_receive_bytes_total[5m])`",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "targets": [
+            {
+              "expr": "sum(rate(node_network_receive_bytes_total[5m])) * 8 / 1000000",
+              "legendFormat": "수신 (Mbps)",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(node_network_transmit_bytes_total[5m])) * 8 / 1000000",
+              "legendFormat": "송신 (Mbps)",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10
+              },
+              "unit": "Mbits",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "수신 (Mbps)"}, "properties": [{"id": "color", "value": {"fixedColor": "#5B8DEE", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "송신 (Mbps)"}, "properties": [{"id": "color", "value": {"fixedColor": "#4DB8A8", "mode": "fixed"}}]}
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "패킷 손실률",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "targets": [{
+            "expr": "sum(rate(node_network_receive_errs_total[5m])) / sum(rate(node_network_receive_packets_total[5m])) * 100",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10
+              },
+              "unit": "percent",
+              "color": {"mode": "fixed", "fixedColor": "#EF4444"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 0.1, "color": "#F59E0B"},
+                  {"value": 1, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "스토리지 통합 뷰",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 20},
+          "collapsed": false
+        },
+        {
+          "type": "bargauge",
+          "title": "스토리지 시스템별 사용률",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 21},
+          "targets": [
+            {
+              "expr": "avg(kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes) * 100",
+              "legendFormat": "Longhorn (K8s)",
+              "refId": "A"
+            },
+            {
+              "expr": "avg(ceph_cluster_total_used_bytes / ceph_cluster_total_bytes) * 100",
+              "legendFormat": "Ceph (Distributed)",
+              "refId": "B"
+            },
+            {
+              "expr": "72",
+              "legendFormat": "Isilon (NAS)",
+              "refId": "C"
+            },
+            {
+              "expr": "avg(1 - (minio_cluster_capacity_usable_free_bytes / minio_cluster_capacity_usable_total_bytes)) * 100",
+              "legendFormat": "MinIO (S3)",
+              "refId": "D"
+            }
+          ],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "showUnfilled": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "color": {"mode": "continuous-GrYlRd"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 70, "color": "#F59E0B"},
+                  {"value": 85, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "스토리지 I/O 통합",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 21},
+          "targets": [
+            {
+              "expr": "sum(rate(node_disk_read_bytes_total[5m]))",
+              "legendFormat": "Read",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(node_disk_written_bytes_total[5m]))",
+              "legendFormat": "Write",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10
+              },
+              "unit": "Bps",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Kubernetes 클러스터",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 29},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Total Pods",
+          "gridPos": {"h": 6, "w": 4, "x": 0, "y": 30},
+          "targets": [{
+            "expr": "sum(kube_pod_status_phase{phase=\"Running\"})",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Total Services",
+          "gridPos": {"h": 6, "w": 4, "x": 4, "y": 30},
+          "targets": [{
+            "expr": "count(kube_service_info)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#4DB8A8"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Pending Pods",
+          "gridPos": {"h": 6, "w": 4, "x": 8, "y": 30},
+          "targets": [{
+            "expr": "sum(kube_pod_status_phase{phase=\"Pending\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 5, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Failed Pods",
+          "gridPos": {"h": 6, "w": 4, "x": 12, "y": 30},
+          "targets": [{
+            "expr": "sum(kube_pod_status_phase{phase=\"Failed\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "piechart",
+          "title": "Pod 분포 (네임스페이스별)",
+          "gridPos": {"h": 6, "w": 8, "x": 16, "y": 30},
+          "targets": [{
+            "expr": "sum(kube_pod_status_phase{phase=\"Running\"}) by (namespace)",
+            "refId": "A"
+          }],
+          "options": {
+            "legend": {"displayMode": "table", "placement": "right", "values": ["value", "percent"]},
+            "pieType": "donut",
+            "displayLabels": []
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 3, "w": 24, "x": 0, "y": 36},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 12px; background: rgba(31, 41, 55, 0.4); border-radius: 8px; text-align: center;'><a href='/d/dataops-executive-v2/dataops-executive-summary' style='padding: 10px 24px; background: #5B8DEE; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;'>← Executive Summary로 돌아가기</a></div>"
+          }
+        }
+      ]
+    }

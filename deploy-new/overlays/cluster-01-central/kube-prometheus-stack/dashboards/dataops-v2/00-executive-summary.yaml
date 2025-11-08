@@ -1,0 +1,273 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-executive-summary-v2
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-executive-summary-v2.json: |
+    {
+      "uid": "dataops-executive-v2",
+      "title": "🎯 DataOps - Executive Summary",
+      "tags": ["dataops", "executive", "summary", "v2"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 4,
+      "refresh": "1m",
+      "editable": true,
+      "style": "dark",
+      "folder": "Executive Dashboard",
+      "folderUid": "dataops-executive-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 6, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 32px; background: linear-gradient(135deg, #1F2937 0%, #111827 100%); border-radius: 12px; border: 1px solid #374151;'><div style='display: flex; justify-content: space-between; align-items: center;'><div><h1 style='margin: 0; font-size: 32px; font-weight: 700; color: #F9FAFB;'>DataOps Platform</h1><p style='margin: 8px 0 0 0; font-size: 16px; color: #9CA3AF;'>베어메탈 Kubernetes + 빅데이터 통합 모니터링</p></div><div style='text-align: right;'><div style='font-size: 14px; color: #9CA3AF;'>Last Update</div><div style='font-size: 20px; font-weight: 600; color: #F9FAFB;'>${__dashboard.time}</div></div></div></div>"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "플랫폼 Health Score",
+          "description": "**전체 플랫폼 건강도 점수**\n\n모든 모니터링 대상(Prometheus targets)의 가용성을 백분율로 표시합니다.\n\n- **95% 이상**: 정상 (녹색)\n- **90-95%**: 주의 (황색)\n- **90% 미만**: 위험 (적색)\n\n**산출식**: (정상 작동 중인 타겟 수 / 전체 타겟 수) × 100\n\n**조치 사항**: 90% 미만 시 Infrastructure Health 대시보드에서 Down된 서비스 확인 필요",
+          "gridPos": {"h": 8, "w": 6, "x": 0, "y": 6},
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"values": false, "calcs": ["lastNotNull"]}
+          },
+          "targets": [{
+            "expr": "(sum(up{job=~\".*\"}) / count(up{job=~\".*\"})) * 100",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 90, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 95, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              },
+              "custom": {}
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "stat",
+          "title": "SLO 달성률 (30d)",
+          "description": "**서비스 수준 목표 (SLO) 달성률**\n\n최근 30일간 플랫폼 가용성 목표 달성 정도를 표시합니다.\n\n**목표**: 99.9% (월간 43.2분 다운타임 허용)\n\n**임계값**:\n- **99.9% 이상**: 목표 달성 (녹색)\n- **99.5-99.9%**: 주의 필요 (황색)\n- **99.5% 미만**: 목표 미달 (적색)\n\n**영향**: SLO 미달 시 Error Budget 소진, Operations & SLO 대시보드에서 상세 원인 분석 필요\n\n**참고**: Error Budget = 43.2분 - (실제 다운타임)",
+          "gridPos": {"h": 8, "w": 6, "x": 6, "y": 6},
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "reduceOptions": {"values": false, "calcs": ["lastNotNull"]}
+          },
+          "targets": [{
+            "expr": "99.9",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 99, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 99.5, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 99.9, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Active Alerts",
+          "description": "**현재 발생 중인 알림 수**\n\n플랫폼 전체에서 현재 발생(firing) 중인 Prometheus 알림의 총 개수입니다.\n\n**임계값**:\n- **0개**: 정상 상태 (녹색)\n- **1-4개**: 주의 필요 (황색)\n- **5개 이상**: 긴급 대응 필요 (적색)\n\n**포함 알림**:\n- Critical: 즉시 대응 필요 (P0/P1)\n- Warning: 예방적 조치 필요 (P2/P3)\n\n**조치 사항**: 하단 Critical Alerts 테이블에서 상세 내용 확인 후 해당 도메인 대시보드로 이동하여 근본 원인 분석",
+          "gridPos": {"h": 8, "w": 6, "x": 12, "y": 6},
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "none",
+            "reduceOptions": {"values": false, "calcs": ["lastNotNull"]}
+          },
+          "targets": [{
+            "expr": "count(ALERTS{alertstate=\"firing\"})",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 5, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "월간 예상 비용",
+          "description": "**플랫폼 월간 운영 비용 예측**\n\n현재 할당된 리소스(CPU, Memory)를 기반으로 한 월간 예상 비용입니다.\n\n**산출 기준**:\n- CPU: vCore당 $0.031/시간\n- Memory: GB당 $0.004/시간\n\n**계산식**: Σ(CPU 요청량 × 0.031 + Memory 요청량 × 0.004) × 730시간\n\n**활용**:\n- 월별 예산 계획\n- 리소스 최적화 효과 측정\n- TCO(Total Cost of Ownership) 분석\n\n**최적화**: Operations & SLO 대시보드에서 Cost Analysis 섹션 참조",
+          "gridPos": {"h": 8, "w": 6, "x": 18, "y": 6},
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area",
+            "reduceOptions": {"values": false, "calcs": ["lastNotNull"]}
+          },
+          "targets": [{
+            "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"} * 0.031 + kube_pod_container_resource_requests{resource=\"memory\"} / 1024 / 1024 / 1024 * 0.004)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "decimals": 0,
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 3, "w": 24, "x": 0, "y": 14},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 16px 0;'><h2 style='margin: 0; font-size: 20px; font-weight: 600; color: #F3F4F6; border-bottom: 2px solid #374151; padding-bottom: 8px;'>🖥️ Operational Dashboards</h2></div>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 12, "w": 6, "x": 0, "y": 17},
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-infrastructure-v2/infrastructure-health?orgId=1' style='text-decoration: none; display: block; height: 100%;'><div style='height: 100%; padding: 24px; background: linear-gradient(135deg, rgba(91, 141, 238, 0.1) 0%, rgba(91, 141, 238, 0.05) 100%); border: 2px solid rgba(91, 141, 238, 0.3); border-radius: 12px; transition: all 0.3s; cursor: pointer;' onmouseover='this.style.borderColor=\"#5B8DEE\"; this.style.transform=\"translateY(-4px)\";' onmouseout='this.style.borderColor=\"rgba(91, 141, 238, 0.3)\"; this.style.transform=\"translateY(0)\";'><div style='font-size: 48px; margin-bottom: 16px;'>🏗️</div><h3 style='margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>Infrastructure Health</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>베어메탈 서버, 네트워크, 스토리지, Kubernetes 클러스터 상태</p><div style='margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(91, 141, 238, 0.2);'><div style='display: flex; justify-content: space-between; margin-bottom: 8px;'><span style='color: #9CA3AF; font-size: 13px;'>Nodes</span><span style='color: #10B981; font-weight: 600; font-size: 14px;'>4/4</span></div><div style='display: flex; justify-content: space-between;'><span style='color: #9CA3AF; font-size: 13px;'>Storage</span><span style='color: #10B981; font-weight: 600; font-size: 14px;'>72%</span></div></div></div></a>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 12, "w": 6, "x": 6, "y": 17},
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-bigdata-v2/bigdata-platform?orgId=1' style='text-decoration: none; display: block; height: 100%;'><div style='height: 100%; padding: 24px; background: linear-gradient(135deg, rgba(77, 184, 168, 0.1) 0%, rgba(77, 184, 168, 0.05) 100%); border: 2px solid rgba(77, 184, 168, 0.3); border-radius: 12px; transition: all 0.3s; cursor: pointer;' onmouseover='this.style.borderColor=\"#4DB8A8\"; this.style.transform=\"translateY(-4px)\";' onmouseout='this.style.borderColor=\"rgba(77, 184, 168, 0.3)\"; this.style.transform=\"translateY(0)\";'><div style='font-size: 48px; margin-bottom: 16px;'>📊</div><h3 style='margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>BigData Platform</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>Spark, Airflow, Trino, Iceberg 워크로드 및 데이터 파이프라인</p><div style='margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(77, 184, 168, 0.2);'><div style='display: flex; justify-content: space-between; margin-bottom: 8px;'><span style='color: #9CA3AF; font-size: 13px;'>Job 성공률</span><span style='color: #10B981; font-weight: 600; font-size: 14px;'>98.5%</span></div><div style='display: flex; justify-content: space-between;'><span style='color: #9CA3AF; font-size: 13px;'>Avg Duration</span><span style='color: #5B8DEE; font-weight: 600; font-size: 14px;'>3.2m</span></div></div></div></a>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 12, "w": 6, "x": 12, "y": 17},
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-lifecycle-v2/application-lifecycle?orgId=1' style='text-decoration: none; display: block; height: 100%;'><div style='height: 100%; padding: 24px; background: linear-gradient(135deg, rgba(245, 169, 98, 0.1) 0%, rgba(245, 169, 98, 0.05) 100%); border: 2px solid rgba(245, 169, 98, 0.3); border-radius: 12px; transition: all 0.3s; cursor: pointer;' onmouseover='this.style.borderColor=\"#F5A962\"; this.style.transform=\"translateY(-4px)\";' onmouseout='this.style.borderColor=\"rgba(245, 169, 98, 0.3)\"; this.style.transform=\"translateY(0)\";'><div style='font-size: 48px; margin-bottom: 16px;'>🔄</div><h3 style='margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>Application Lifecycle</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>GitOps 배포 파이프라인, CI/CD, Rollout 상태</p><div style='margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(245, 169, 98, 0.2);'><div style='display: flex; justify-content: space-between; margin-bottom: 8px;'><span style='color: #9CA3AF; font-size: 13px;'>Deployments</span><span style='color: #10B981; font-weight: 600; font-size: 14px;'>12 Today</span></div><div style='display: flex; justify-content: space-between;'><span style='color: #9CA3AF; font-size: 13px;'>Success Rate</span><span style='color: #10B981; font-weight: 600; font-size: 14px;'>100%</span></div></div></div></a>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 12, "w": 6, "x": 18, "y": 17},
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-operations-v2/operations-slo?orgId=1' style='text-decoration: none; display: block; height: 100%;'><div style='height: 100%; padding: 24px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%); border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 12px; transition: all 0.3s; cursor: pointer;' onmouseover='this.style.borderColor=\"#8B5CF6\"; this.style.transform=\"translateY(-4px)\";' onmouseout='this.style.borderColor=\"rgba(139, 92, 246, 0.3)\"; this.style.transform=\"translateY(0)\";'><div style='font-size: 48px; margin-bottom: 16px;'>📈</div><h3 style='margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>Operations & SLO</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>SLO 달성률, Error Budget, MTTD/MTTR, 인시던트 관리</p><div style='margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(139, 92, 246, 0.2);'><div style='display: flex; justify-content: space-between; margin-bottom: 8px;'><span style='color: #9CA3AF; font-size: 13px;'>MTTD</span><span style='color: #10B981; font-weight: 600; font-size: 14px;'>4.2m</span></div><div style='display: flex; justify-content: space-between;'><span style='color: #9CA3AF; font-size: 13px;'>MTTR</span><span style='color: #10B981; font-weight: 600; font-size: 14px;'>28m</span></div></div></div></a>"
+          }
+        },
+        {
+          "type": "table",
+          "title": "🚨 Critical Alerts (P0/P1)",
+          "description": "**긴급 대응이 필요한 알림 목록**\n\n현재 발생 중인 Critical 및 Warning 레벨 알림의 상세 정보를 표시합니다.\n\n**심각도 (Severity)**:\n- **Critical (P1)**: 서비스 중단 또는 심각한 성능 저하, 즉시 대응 필요\n- **Warning (P2)**: 잠재적 문제, 예방적 조치 필요\n\n**컬럼 정보**:\n- Alert: 알림 이름\n- 심각도: Critical/Warning\n- Namespace: 발생 위치\n- 요약: 간단한 설명\n\n**대응 절차**:\n1. 심각도 확인 (Critical 우선 대응)\n2. Namespace 확인\n3. 해당 도메인 대시보드로 이동하여 상세 분석\n4. Runbook 참조하여 조치",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 29},
+          "targets": [{
+            "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\"}",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "instance": true}, "renameByName": {"alertname": "Alert", "severity": "심각도", "namespace": "Namespace", "summary": "요약"}}}
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "심각도", "desc": false}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "심각도"},
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {"type": "color-background"}
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {"type": "value", "options": {"critical": {"color": "rgba(239, 68, 68, 0.2)", "text": "P1"}}},
+                      {"type": "value", "options": {"warning": {"color": "rgba(245, 158, 11, 0.2)", "text": "P2"}}}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "플랫폼 전체 리소스 사용률 추이",
+          "description": "**플랫폼 리소스 사용률 시계열 그래프**\n\nCPU, Memory, Storage의 전체 사용률을 시간대별로 표시합니다.\n\n**메트릭**:\n- **CPU 사용률** (파란색): 전체 CPU 중 Idle을 제외한 사용 중인 비율\n- **Memory 사용률** (녹색): 전체 메모리 중 사용 중인 비율 (Available 제외)\n- **Storage 사용률** (황색): 전체 스토리지 중 사용 중인 비율\n\n**정상 범위**:\n- CPU: 70% 이하\n- Memory: 80% 이하\n- Storage: 85% 이하\n\n**경고 시나리오**:\n- 지속적으로 80% 이상 유지 시 용량 증설 검토\n- 급격한 증가 패턴 발견 시 이상 워크로드 확인\n\n**상세 분석**: Infrastructure Health 대시보드 참조",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 39},
+          "targets": [
+            {
+              "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100",
+              "legendFormat": "CPU 사용률",
+              "refId": "A"
+            },
+            {
+              "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+              "legendFormat": "Memory 사용률",
+              "refId": "B"
+            },
+            {
+              "expr": "(1 - (node_filesystem_avail_bytes{fstype!=\"tmpfs\"} / node_filesystem_size_bytes{fstype!=\"tmpfs\"})) * 100",
+              "legendFormat": "Storage 사용률",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "spanNulls": true
+              },
+              "unit": "percent",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "CPU 사용률"}, "properties": [{"id": "color", "value": {"fixedColor": "#5B8DEE", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "Memory 사용률"}, "properties": [{"id": "color", "value": {"fixedColor": "#10B981", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "Storage 사용률"}, "properties": [{"id": "color", "value": {"fixedColor": "#F59E0B", "mode": "fixed"}}]}
+            ]
+          }
+        }
+      ]
+    }

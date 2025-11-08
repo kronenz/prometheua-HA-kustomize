@@ -1,0 +1,258 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-multi-cluster-overview
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+data:
+  multi-cluster-overview.json: "{\n  \"uid\": \"multi-cluster-overview\",\n  \"title\"\
+    : \"\U0001F310 멀티클러스터 통합 모니터링\",\n  \"tags\": [\n    \"multi-cluster\",\n    \"\
+    thanos\",\n    \"overview\"\n  ],\n  \"timezone\": \"browser\",\n  \"schemaVersion\"\
+    : 27,\n  \"version\": 1,\n  \"refresh\": \"30s\",\n  \"templating\": {\n    \"\
+    list\": [\n      {\n        \"name\": \"datasource\",\n        \"type\": \"datasource\"\
+    ,\n        \"label\": \"Data Source\",\n        \"query\": \"prometheus\",\n \
+    \       \"current\": {\n          \"selected\": false,\n          \"text\": \"\
+    Prometheus\",\n          \"value\": \"Prometheus\"\n        },\n        \"hide\"\
+    : 0,\n        \"includeAll\": false,\n        \"multi\": false,\n        \"options\"\
+    : [],\n        \"refresh\": 1,\n        \"regex\": \"\",\n        \"skipUrlSync\"\
+    : false\n      },\n      {\n        \"name\": \"cluster\",\n        \"type\":\
+    \ \"query\",\n        \"label\": \"Cluster\",\n        \"datasource\": {\n   \
+    \       \"type\": \"prometheus\",\n          \"uid\": \"${datasource}\"\n    \
+    \    },\n        \"query\": \"label_values(kube_node_info, cluster)\",\n     \
+    \   \"refresh\": 2,\n        \"multi\": true,\n        \"includeAll\": true,\n\
+    \        \"allValue\": \".*\",\n        \"current\": {\n          \"selected\"\
+    : true,\n          \"text\": \"All\",\n          \"value\": \"$__all\"\n     \
+    \   },\n        \"options\": [],\n        \"regex\": \"\",\n        \"sort\":\
+    \ 1\n      },\n      {\n        \"name\": \"node\",\n        \"type\": \"query\"\
+    ,\n        \"label\": \"Node\",\n        \"datasource\": {\n          \"type\"\
+    : \"prometheus\",\n          \"uid\": \"${datasource}\"\n        },\n        \"\
+    query\": \"label_values(kube_node_info{cluster=~\\\"$cluster\\\"}, node)\",\n\
+    \        \"refresh\": 2,\n        \"multi\": true,\n        \"includeAll\": true,\n\
+    \        \"allValue\": \".*\",\n        \"current\": {\n          \"selected\"\
+    : true,\n          \"text\": \"All\",\n          \"value\": \"$__all\"\n     \
+    \   },\n        \"options\": [],\n        \"regex\": \"\",\n        \"sort\":\
+    \ 1\n      }\n    ]\n  },\n  \"panels\": [\n    {\n      \"id\": 1,\n      \"\
+    type\": \"text\",\n      \"title\": \"\",\n      \"gridPos\": {\n        \"x\"\
+    : 0,\n        \"y\": 0,\n        \"w\": 24,\n        \"h\": 3\n      },\n    \
+    \  \"options\": {\n        \"mode\": \"html\",\n        \"content\": \"<div style=\\\
+    \"text-align: center; padding: 24px; background: linear-gradient(135deg, #1a1d29\
+    \ 0%, #2d3748 100%); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);\
+    \ border: 1px solid rgba(100,210,255,0.15);\\\">\\n  <h1 style=\\\"font-family:\
+    \ 'BMDOHYEON', sans-serif; font-size: 36px; font-weight: 700; color: #ffffff;\
+    \ margin: 0 0 8px 0;\\\">\U0001F310 멀티클러스터 통합 모니터링</h1>\\n  <p style=\\\"font-size:\
+    \ 14px; color: #a0aec0; margin: 0;\\\">Multi-Cluster Unified Monitoring Dashboard</p>\\\
+    n</div>\"\n      }\n    },\n    {\n      \"id\": 2,\n      \"type\": \"stat\"\
+    ,\n      \"title\": \"총 클러스터 수\",\n      \"gridPos\": {\n        \"x\": 0,\n \
+    \       \"y\": 3,\n        \"w\": 6,\n        \"h\": 4\n      },\n      \"targets\"\
+    : [\n        {\n          \"expr\": \"count(count by (cluster) (kube_node_info))\"\
+    ,\n          \"refId\": \"A\",\n          \"datasource\": {\n            \"type\"\
+    : \"prometheus\",\n            \"uid\": \"${datasource}\"\n          }\n     \
+    \   }\n      ],\n      \"options\": {\n        \"graphMode\": \"none\",\n    \
+    \    \"colorMode\": \"value\",\n        \"orientation\": \"auto\",\n        \"\
+    textMode\": \"value_and_name\"\n      },\n      \"fieldConfig\": {\n        \"\
+    defaults\": {\n          \"unit\": \"short\",\n          \"color\": {\n      \
+    \      \"mode\": \"thresholds\"\n          },\n          \"thresholds\": {\n \
+    \           \"mode\": \"absolute\",\n            \"steps\": [\n              {\n\
+    \                \"value\": null,\n                \"color\": \"green\"\n    \
+    \          },\n              {\n                \"value\": 3,\n              \
+    \  \"color\": \"yellow\"\n              },\n              {\n                \"\
+    value\": 5,\n                \"color\": \"red\"\n              }\n           \
+    \ ]\n          }\n        }\n      }\n    },\n    {\n      \"id\": 3,\n      \"\
+    type\": \"stat\",\n      \"title\": \"총 노드 수\",\n      \"gridPos\": {\n      \
+    \  \"x\": 6,\n        \"y\": 3,\n        \"w\": 6,\n        \"h\": 4\n      },\n\
+    \      \"targets\": [\n        {\n          \"expr\": \"count(kube_node_info{cluster=~\\\
+    \"$cluster\\\"})\",\n          \"refId\": \"A\",\n          \"datasource\": {\n\
+    \            \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\
+    \n          }\n        }\n      ],\n      \"options\": {\n        \"graphMode\"\
+    : \"none\",\n        \"colorMode\": \"value\",\n        \"orientation\": \"auto\"\
+    ,\n        \"textMode\": \"value_and_name\"\n      },\n      \"fieldConfig\":\
+    \ {\n        \"defaults\": {\n          \"unit\": \"short\",\n          \"color\"\
+    : {\n            \"mode\": \"thresholds\"\n          },\n          \"thresholds\"\
+    : {\n            \"mode\": \"absolute\",\n            \"steps\": [\n         \
+    \     {\n                \"value\": null,\n                \"color\": \"green\"\
+    \n              }\n            ]\n          }\n        }\n      }\n    },\n  \
+    \  {\n      \"id\": 4,\n      \"type\": \"stat\",\n      \"title\": \"총 Pod 수\"\
+    ,\n      \"gridPos\": {\n        \"x\": 12,\n        \"y\": 3,\n        \"w\"\
+    : 6,\n        \"h\": 4\n      },\n      \"targets\": [\n        {\n          \"\
+    expr\": \"sum(kube_pod_info{cluster=~\\\"$cluster\\\"})\",\n          \"refId\"\
+    : \"A\",\n          \"datasource\": {\n            \"type\": \"prometheus\",\n\
+    \            \"uid\": \"${datasource}\"\n          }\n        }\n      ],\n  \
+    \    \"options\": {\n        \"graphMode\": \"area\",\n        \"colorMode\":\
+    \ \"value\",\n        \"orientation\": \"auto\",\n        \"textMode\": \"value_and_name\"\
+    \n      },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"unit\"\
+    : \"short\",\n          \"color\": {\n            \"mode\": \"palette-classic\"\
+    \n          }\n        }\n      }\n    },\n    {\n      \"id\": 5,\n      \"type\"\
+    : \"stat\",\n      \"title\": \"총 Namespace 수\",\n      \"gridPos\": {\n     \
+    \   \"x\": 18,\n        \"y\": 3,\n        \"w\": 6,\n        \"h\": 4\n     \
+    \ },\n      \"targets\": [\n        {\n          \"expr\": \"count(count by (namespace,\
+    \ cluster) (kube_namespace_labels{cluster=~\\\"$cluster\\\"}))\",\n          \"\
+    refId\": \"A\",\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"${datasource}\"\n          }\n        }\n      ],\n\
+    \      \"options\": {\n        \"graphMode\": \"none\",\n        \"colorMode\"\
+    : \"value\",\n        \"orientation\": \"auto\",\n        \"textMode\": \"value_and_name\"\
+    \n      },\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"unit\"\
+    : \"short\",\n          \"color\": {\n            \"mode\": \"thresholds\"\n \
+    \         },\n          \"thresholds\": {\n            \"mode\": \"absolute\"\
+    ,\n            \"steps\": [\n              {\n                \"value\": null,\n\
+    \                \"color\": \"blue\"\n              }\n            ]\n       \
+    \   }\n        }\n      }\n    },\n    {\n      \"id\": 6,\n      \"type\": \"\
+    timeseries\",\n      \"title\": \"클러스터별 CPU 사용률\",\n      \"gridPos\": {\n   \
+    \     \"x\": 0,\n        \"y\": 7,\n        \"w\": 12,\n        \"h\": 8\n   \
+    \   },\n      \"targets\": [\n        {\n          \"expr\": \"sum by (cluster)\
+    \ (rate(container_cpu_usage_seconds_total{cluster=~\\\"$cluster\\\", container!=\\\
+    \"\\\"}[5m])) / sum by (cluster) (machine_cpu_cores{cluster=~\\\"$cluster\\\"\
+    }) * 100\",\n          \"refId\": \"A\",\n          \"legendFormat\": \"{{cluster}}\"\
+    ,\n          \"datasource\": {\n            \"type\": \"prometheus\",\n      \
+    \      \"uid\": \"${datasource}\"\n          }\n        }\n      ],\n      \"\
+    fieldConfig\": {\n        \"defaults\": {\n          \"unit\": \"percent\",\n\
+    \          \"color\": {\n            \"mode\": \"palette-classic\"\n         \
+    \ },\n          \"custom\": {\n            \"axisLabel\": \"CPU Usage %\",\n \
+    \           \"drawStyle\": \"line\",\n            \"lineInterpolation\": \"smooth\"\
+    ,\n            \"fillOpacity\": 10,\n            \"showPoints\": \"never\"\n \
+    \         }\n        }\n      },\n      \"options\": {\n        \"legend\": {\n\
+    \          \"displayMode\": \"list\",\n          \"placement\": \"bottom\",\n\
+    \          \"showLegend\": true\n        },\n        \"tooltip\": {\n        \
+    \  \"mode\": \"multi\"\n        }\n      }\n    },\n    {\n      \"id\": 7,\n\
+    \      \"type\": \"timeseries\",\n      \"title\": \"클러스터별 메모리 사용률\",\n      \"\
+    gridPos\": {\n        \"x\": 12,\n        \"y\": 7,\n        \"w\": 12,\n    \
+    \    \"h\": 8\n      },\n      \"targets\": [\n        {\n          \"expr\":\
+    \ \"sum by (cluster) (container_memory_working_set_bytes{cluster=~\\\"$cluster\\\
+    \", container!=\\\"\\\"}) / sum by (cluster) (machine_memory_bytes{cluster=~\\\
+    \"$cluster\\\"}) * 100\",\n          \"refId\": \"A\",\n          \"legendFormat\"\
+    : \"{{cluster}}\",\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"${datasource}\"\n          }\n        }\n      ],\n\
+    \      \"fieldConfig\": {\n        \"defaults\": {\n          \"unit\": \"percent\"\
+    ,\n          \"color\": {\n            \"mode\": \"palette-classic\"\n       \
+    \   },\n          \"custom\": {\n            \"axisLabel\": \"Memory Usage %\"\
+    ,\n            \"drawStyle\": \"line\",\n            \"lineInterpolation\": \"\
+    smooth\",\n            \"fillOpacity\": 10,\n            \"showPoints\": \"never\"\
+    \n          }\n        }\n      },\n      \"options\": {\n        \"legend\":\
+    \ {\n          \"displayMode\": \"list\",\n          \"placement\": \"bottom\"\
+    ,\n          \"showLegend\": true\n        },\n        \"tooltip\": {\n      \
+    \    \"mode\": \"multi\"\n        }\n      }\n    },\n    {\n      \"id\": 8,\n\
+    \      \"type\": \"table\",\n      \"title\": \"클러스터별 노드 상태\",\n      \"gridPos\"\
+    : {\n        \"x\": 0,\n        \"y\": 15,\n        \"w\": 12,\n        \"h\"\
+    : 8\n      },\n      \"targets\": [\n        {\n          \"expr\": \"kube_node_info{cluster=~\\\
+    \"$cluster\\\"}\",\n          \"refId\": \"A\",\n          \"format\": \"table\"\
+    ,\n          \"instant\": true,\n          \"datasource\": {\n            \"type\"\
+    : \"prometheus\",\n            \"uid\": \"${datasource}\"\n          }\n     \
+    \   },\n        {\n          \"expr\": \"kube_node_status_condition{cluster=~\\\
+    \"$cluster\\\", condition=\\\"Ready\\\", status=\\\"true\\\"}\",\n          \"\
+    refId\": \"B\",\n          \"format\": \"table\",\n          \"instant\": true,\n\
+    \          \"datasource\": {\n            \"type\": \"prometheus\",\n        \
+    \    \"uid\": \"${datasource}\"\n          }\n        }\n      ],\n      \"transformations\"\
+    : [\n        {\n          \"id\": \"merge\",\n          \"options\": {}\n    \
+    \    },\n        {\n          \"id\": \"organize\",\n          \"options\": {\n\
+    \            \"excludeByName\": {\n              \"Time\": true,\n           \
+    \   \"__name__\": true,\n              \"container\": true,\n              \"\
+    endpoint\": true,\n              \"instance\": true,\n              \"job\": true,\n\
+    \              \"namespace\": true,\n              \"pod\": true,\n          \
+    \    \"service\": true\n            },\n            \"indexByName\": {\n     \
+    \         \"cluster\": 0,\n              \"node\": 1,\n              \"kernel_version\"\
+    : 2,\n              \"kubelet_version\": 3,\n              \"os_image\": 4,\n\
+    \              \"condition\": 5,\n              \"status\": 6\n            },\n\
+    \            \"renameByName\": {\n              \"cluster\": \"Cluster\",\n  \
+    \            \"node\": \"Node\",\n              \"kernel_version\": \"Kernel\"\
+    ,\n              \"kubelet_version\": \"Kubelet\",\n              \"os_image\"\
+    : \"OS\",\n              \"condition\": \"Condition\",\n              \"status\"\
+    : \"Status\"\n            }\n          }\n        }\n      ],\n      \"options\"\
+    : {\n        \"showHeader\": true,\n        \"sortBy\": [\n          {\n     \
+    \       \"displayName\": \"Cluster\",\n            \"desc\": false\n         \
+    \ }\n        ]\n      }\n    },\n    {\n      \"id\": 9,\n      \"type\": \"bargauge\"\
+    ,\n      \"title\": \"클러스터별 Pod 수\",\n      \"gridPos\": {\n        \"x\": 12,\n\
+    \        \"y\": 15,\n        \"w\": 12,\n        \"h\": 8\n      },\n      \"\
+    targets\": [\n        {\n          \"expr\": \"sum by (cluster) (kube_pod_info{cluster=~\\\
+    \"$cluster\\\"})\",\n          \"refId\": \"A\",\n          \"legendFormat\":\
+    \ \"{{cluster}}\",\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"${datasource}\"\n          }\n        }\n      ],\n\
+    \      \"options\": {\n        \"orientation\": \"horizontal\",\n        \"displayMode\"\
+    : \"gradient\",\n        \"showUnfilled\": true\n      },\n      \"fieldConfig\"\
+    : {\n        \"defaults\": {\n          \"unit\": \"short\",\n          \"color\"\
+    : {\n            \"mode\": \"palette-classic\"\n          },\n          \"thresholds\"\
+    : {\n            \"mode\": \"absolute\",\n            \"steps\": [\n         \
+    \     {\n                \"value\": null,\n                \"color\": \"green\"\
+    \n              },\n              {\n                \"value\": 50,\n        \
+    \        \"color\": \"yellow\"\n              },\n              {\n          \
+    \      \"value\": 100,\n                \"color\": \"red\"\n              }\n\
+    \            ]\n          }\n        }\n      }\n    },\n    {\n      \"id\":\
+    \ 10,\n      \"type\": \"timeseries\",\n      \"title\": \"클러스터별 네트워크 수신 (Bytes/s)\"\
+    ,\n      \"gridPos\": {\n        \"x\": 0,\n        \"y\": 23,\n        \"w\"\
+    : 12,\n        \"h\": 8\n      },\n      \"targets\": [\n        {\n         \
+    \ \"expr\": \"sum by (cluster) (rate(container_network_receive_bytes_total{cluster=~\\\
+    \"$cluster\\\"}[5m]))\",\n          \"refId\": \"A\",\n          \"legendFormat\"\
+    : \"{{cluster}}\",\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"${datasource}\"\n          }\n        }\n      ],\n\
+    \      \"fieldConfig\": {\n        \"defaults\": {\n          \"unit\": \"Bps\"\
+    ,\n          \"color\": {\n            \"mode\": \"palette-classic\"\n       \
+    \   },\n          \"custom\": {\n            \"axisLabel\": \"Receive Bytes/s\"\
+    ,\n            \"drawStyle\": \"line\",\n            \"lineInterpolation\": \"\
+    smooth\",\n            \"fillOpacity\": 10\n          }\n        }\n      },\n\
+    \      \"options\": {\n        \"legend\": {\n          \"displayMode\": \"list\"\
+    ,\n          \"placement\": \"bottom\",\n          \"showLegend\": true\n    \
+    \    }\n      }\n    },\n    {\n      \"id\": 11,\n      \"type\": \"timeseries\"\
+    ,\n      \"title\": \"클러스터별 네트워크 송신 (Bytes/s)\",\n      \"gridPos\": {\n     \
+    \   \"x\": 12,\n        \"y\": 23,\n        \"w\": 12,\n        \"h\": 8\n   \
+    \   },\n      \"targets\": [\n        {\n          \"expr\": \"sum by (cluster)\
+    \ (rate(container_network_transmit_bytes_total{cluster=~\\\"$cluster\\\"}[5m]))\"\
+    ,\n          \"refId\": \"A\",\n          \"legendFormat\": \"{{cluster}}\",\n\
+    \          \"datasource\": {\n            \"type\": \"prometheus\",\n        \
+    \    \"uid\": \"${datasource}\"\n          }\n        }\n      ],\n      \"fieldConfig\"\
+    : {\n        \"defaults\": {\n          \"unit\": \"Bps\",\n          \"color\"\
+    : {\n            \"mode\": \"palette-classic\"\n          },\n          \"custom\"\
+    : {\n            \"axisLabel\": \"Transmit Bytes/s\",\n            \"drawStyle\"\
+    : \"line\",\n            \"lineInterpolation\": \"smooth\",\n            \"fillOpacity\"\
+    : 10\n          }\n        }\n      },\n      \"options\": {\n        \"legend\"\
+    : {\n          \"displayMode\": \"list\",\n          \"placement\": \"bottom\"\
+    ,\n          \"showLegend\": true\n        }\n      }\n    },\n    {\n      \"\
+    id\": 12,\n      \"type\": \"table\",\n      \"title\": \"클러스터별 리소스 현황\",\n  \
+    \    \"gridPos\": {\n        \"x\": 0,\n        \"y\": 31,\n        \"w\": 24,\n\
+    \        \"h\": 8\n      },\n      \"targets\": [\n        {\n          \"expr\"\
+    : \"sum by (cluster) (machine_cpu_cores{cluster=~\\\"$cluster\\\"})\",\n     \
+    \     \"refId\": \"A\",\n          \"format\": \"table\",\n          \"instant\"\
+    : true,\n          \"datasource\": {\n            \"type\": \"prometheus\",\n\
+    \            \"uid\": \"${datasource}\"\n          }\n        },\n        {\n\
+    \          \"expr\": \"sum by (cluster) (machine_memory_bytes{cluster=~\\\"$cluster\\\
+    \"})\",\n          \"refId\": \"B\",\n          \"format\": \"table\",\n     \
+    \     \"instant\": true,\n          \"datasource\": {\n            \"type\": \"\
+    prometheus\",\n            \"uid\": \"${datasource}\"\n          }\n        },\n\
+    \        {\n          \"expr\": \"sum by (cluster) (kube_node_info{cluster=~\\\
+    \"$cluster\\\"})\",\n          \"refId\": \"C\",\n          \"format\": \"table\"\
+    ,\n          \"instant\": true,\n          \"datasource\": {\n            \"type\"\
+    : \"prometheus\",\n            \"uid\": \"${datasource}\"\n          }\n     \
+    \   },\n        {\n          \"expr\": \"sum by (cluster) (kube_pod_info{cluster=~\\\
+    \"$cluster\\\"})\",\n          \"refId\": \"D\",\n          \"format\": \"table\"\
+    ,\n          \"instant\": true,\n          \"datasource\": {\n            \"type\"\
+    : \"prometheus\",\n            \"uid\": \"${datasource}\"\n          }\n     \
+    \   },\n        {\n          \"expr\": \"sum by (cluster) (rate(container_cpu_usage_seconds_total{cluster=~\\\
+    \"$cluster\\\", container!=\\\"\\\"}[5m]))\",\n          \"refId\": \"E\",\n \
+    \         \"format\": \"table\",\n          \"instant\": true,\n          \"datasource\"\
+    : {\n            \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\
+    \n          }\n        },\n        {\n          \"expr\": \"sum by (cluster) (container_memory_working_set_bytes{cluster=~\\\
+    \"$cluster\\\", container!=\\\"\\\"})\",\n          \"refId\": \"F\",\n      \
+    \    \"format\": \"table\",\n          \"instant\": true,\n          \"datasource\"\
+    : {\n            \"type\": \"prometheus\",\n            \"uid\": \"${datasource}\"\
+    \n          }\n        }\n      ],\n      \"transformations\": [\n        {\n\
+    \          \"id\": \"merge\",\n          \"options\": {}\n        },\n       \
+    \ {\n          \"id\": \"organize\",\n          \"options\": {\n            \"\
+    excludeByName\": {\n              \"Time\": true\n            },\n           \
+    \ \"indexByName\": {\n              \"cluster\": 0,\n              \"Value #A\"\
+    : 1,\n              \"Value #B\": 2,\n              \"Value #C\": 3,\n       \
+    \       \"Value #D\": 4,\n              \"Value #E\": 5,\n              \"Value\
+    \ #F\": 6\n            },\n            \"renameByName\": {\n              \"cluster\"\
+    : \"Cluster\",\n              \"Value #A\": \"Total CPU Cores\",\n           \
+    \   \"Value #B\": \"Total Memory\",\n              \"Value #C\": \"Nodes\",\n\
+    \              \"Value #D\": \"Pods\",\n              \"Value #E\": \"CPU Usage\"\
+    ,\n              \"Value #F\": \"Memory Usage\"\n            }\n          }\n\
+    \        }\n      ],\n      \"options\": {\n        \"showHeader\": true,\n  \
+    \      \"sortBy\": [\n          {\n            \"displayName\": \"Cluster\",\n\
+    \            \"desc\": false\n          }\n        ]\n      },\n      \"fieldConfig\"\
+    : {\n        \"overrides\": [\n          {\n            \"matcher\": {\n     \
+    \         \"id\": \"byName\",\n              \"options\": \"Total Memory\"\n \
+    \           },\n            \"properties\": [\n              {\n             \
+    \   \"id\": \"unit\",\n                \"value\": \"bytes\"\n              }\n\
+    \            ]\n          },\n          {\n            \"matcher\": {\n      \
+    \        \"id\": \"byName\",\n              \"options\": \"Memory Usage\"\n  \
+    \          },\n            \"properties\": [\n              {\n              \
+    \  \"id\": \"unit\",\n                \"value\": \"bytes\"\n              }\n\
+    \            ]\n          }\n        ]\n      }\n    }\n  ]\n}"

@@ -1,0 +1,337 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-resource-capacity
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-resource-capacity.json: |
+    {
+      "uid": "dataops-resource-capacity",
+      "title": "💾 DataOps - 리소스 가용량",
+      "tags": ["dataops", "resources", "capacity"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "editable": true,
+      "panels": [
+        {
+          "type": "text",
+          "title": "📊 리소스 가용량 개요",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 20px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border-radius: 8px;'><h2 style='margin:0'>💾 리소스 가용량 모니터링</h2><p style='margin-top:10px; font-size:16px'>클러스터 전체 CPU, Memory, Storage, Network 가용량 모니터링</p><div style='margin-top:15px; display:flex; justify-content:space-around;'><div><strong>CPU 사용률</strong><br/><span style='font-size:24px'>{{cpu_usage}}%</span></div><div><strong>Memory 사용률</strong><br/><span style='font-size:24px'>{{memory_usage}}%</span></div><div><strong>Storage 사용률</strong><br/><span style='font-size:24px'>{{storage_usage}}%</span></div><div><strong>가용 노드</strong><br/><span style='font-size:24px'>{{available_nodes}}</span></div></div></div>"
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "전체 CPU 사용률",
+          "gridPos": {"h": 8, "w": 6, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 70, "color": "yellow"},
+                  {"value": 85, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "전체 Memory 사용률",
+          "gridPos": {"h": 8, "w": 6, "x": 6, "y": 4},
+          "targets": [{
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 75, "color": "yellow"},
+                  {"value": 90, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "전체 Storage 사용률",
+          "gridPos": {"h": 8, "w": 6, "x": 12, "y": 4},
+          "targets": [{
+            "expr": "(1 - (node_filesystem_avail_bytes{fstype!=\"tmpfs\",fstype!=\"devtmpfs\"} / node_filesystem_size_bytes{fstype!=\"tmpfs\",fstype!=\"devtmpfs\"})) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 80, "color": "yellow"},
+                  {"value": 90, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "가용 노드 수",
+          "gridPos": {"h": 8, "w": 6, "x": 18, "y": 4},
+          "targets": [{
+            "expr": "count(kube_node_status_condition{condition=\"Ready\",status=\"true\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "value_and_name"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 1, "color": "yellow"},
+                  {"value": 3, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "노드별 CPU 사용률",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "targets": [{
+            "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (instance)) * 100",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "fillOpacity": 10
+              },
+              "unit": "percent",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "노드별 Memory 사용률",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "targets": [{
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "fillOpacity": 10
+              },
+              "unit": "percent",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "table",
+          "title": "네임스페이스별 리소스 Request/Limit",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 20},
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"}) by (namespace)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\"}) by (namespace)",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            },
+            {
+              "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\"}) by (namespace)",
+              "format": "table",
+              "instant": true,
+              "refId": "C"
+            },
+            {
+              "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\"}) by (namespace)",
+              "format": "table",
+              "instant": true,
+              "refId": "D"
+            }
+          ],
+          "transformations": [
+            {"id": "merge"},
+            {"id": "organize", "options": {"renameByName": {"namespace": "네임스페이스", "Value #A": "CPU Request", "Value #B": "CPU Limit", "Value #C": "Memory Request", "Value #D": "Memory Limit"}}}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Network I/O (수신/송신)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+          "targets": [
+            {
+              "expr": "sum(rate(node_network_receive_bytes_total[5m])) by (instance)",
+              "legendFormat": "수신 - {{instance}}",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(node_network_transmit_bytes_total[5m])) by (instance)",
+              "legendFormat": "송신 - {{instance}}",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "fillOpacity": 10
+              },
+              "unit": "Bps",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Disk I/O (읽기/쓰기)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+          "targets": [
+            {
+              "expr": "sum(rate(node_disk_read_bytes_total[5m])) by (instance)",
+              "legendFormat": "읽기 - {{instance}}",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(node_disk_written_bytes_total[5m])) by (instance)",
+              "legendFormat": "쓰기 - {{instance}}",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "fillOpacity": 10
+              },
+              "unit": "Bps",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "PVC 사용량 Top 10",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 38},
+          "targets": [{
+            "expr": "topk(10, kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes * 100)",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "showUnfilled": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "color": {"mode": "continuous-GrYlRd"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 70, "color": "yellow"},
+                  {"value": 85, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "리소스 부족 예상 시간",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 38},
+          "targets": [{
+            "expr": "predict_linear(node_filesystem_avail_bytes{fstype!=\"tmpfs\"}[1h], 7*24*3600)",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "value"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "dtdurations",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 172800, "color": "yellow"},
+                  {"value": 604800, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "🔗 관련 링크",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 46},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 15px; background: #f5f5f5; border-radius: 8px;'><div style='display: flex; justify-content: space-around; align-items: center;'><a href='/d/dataops-gitops-pipeline/dataops-gitops-pipeline' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>← GitOps 파이프라인</a><a href='/d/dataops-main-nav/dataops-platform-main-navigation' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>메인으로</a><a href='/d/dataops-workload-execution/dataops-workload-execution' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>워크로드 실행 →</a></div></div>"
+          }
+        }
+      ]
+    }

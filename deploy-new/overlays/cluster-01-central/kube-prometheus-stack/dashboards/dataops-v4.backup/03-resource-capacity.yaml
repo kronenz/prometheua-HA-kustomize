@@ -1,0 +1,404 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-resource-v4
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-resource-v4.json: |
+    {
+      "uid": "dataops-resource-v4",
+      "title": "3. Resource Capacity - Infrastructure Resources",
+      "tags": ["dataops", "resource", "capacity", "cpu", "memory", "storage", "v4"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "editable": true,
+      "style": "dark",
+      "folder": "DataOps E2E",
+      "folderUid": "dataops-e2e-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1A1F2E;padding:20px;border-radius:8px;border-left:4px solid #B19CD9'><div style='display:flex;justify-content:space-between;align-items:center'><div style='display:flex;align-items:center;gap:16px'><div style='width:48px;height:48px;background:rgba(177,156,217,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid rgba(177,156,217,0.3)'>💽</div><div><div style='font-size:22px;font-weight:700;color:#E5E7EB'>Resource Capacity</div><div style='font-size:13px;color:#9CA3AF;margin-top:4px'>인프라 자원 가용성 및 용량 계획 모니터링</div></div></div><div style='text-align:right'><a href='/d/dataops-portal-e2e-v4' style='padding:10px 18px;background:rgba(177,156,217,0.15);border:1px solid rgba(177,156,217,0.3);border-radius:6px;color:#B19CD9;text-decoration:none;font-size:13px;font-weight:500;transition:all 0.2s' onmouseover='this.style.background=\"rgba(177,156,217,0.25)\"' onmouseout='this.style.background=\"rgba(177,156,217,0.15)\"'>← Back to Portal</a></div></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Cluster Resource Overview",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+          "collapsed": false
+        },
+        {
+          "type": "gauge",
+          "title": "Cluster CPU Usage",
+          "description": "**클러스터 전체 CPU 사용률**\n\n**계산식**:\n```promql\nsum(rate(container_cpu_usage_seconds_total{\n  container!=\"\"\n}[5m])) / \nsum(machine_cpu_cores) * 100\n```\n\n**의미**: 전체 클러스터의 CPU 코어 중 실제 사용 중인 비율\n\n**CPU 사용률 구성 요소**:\n- **User Space**: 애플리케이션 실행 시간\n- **System**: 커널 시스템 콜 시간\n- **I/O Wait**: 디스크/네트워크 대기 시간\n- **Idle**: 유휴 시간\n\n**정상 범위**:\n- 🟢 <70%: 여유 있음 - 추가 워크로드 가능\n- 🟡 70-85%: 적정 - 용량 계획 시작\n- 🔴 >85%: 포화 - 즉시 증설 필요\n\n**높은 CPU 사용률 원인**:\n1. **워크로드 증가**: 트래픽, 배치 작업 증가\n2. **비효율적 코드**: CPU Intensive 알고리즘\n3. **리소스 제한 부족**: Limits 미설정으로 독점\n4. **컨텍스트 스위칭**: 과도한 Pod 수\n5. **암호화 작업**: TLS/SSL 핸드셰이크\n\n**CPU Throttling 확인**:\n```promql\nsum(rate(container_cpu_cfs_throttled_seconds_total[5m])) \nby (namespace, pod)\n```\n- Throttling > 0: CPU Limit에 도달\n- 성능 저하 발생\n\n**용량 계획 (Capacity Planning)**:\n- **현재 사용률**: 75%\n- **피크 사용률**: 85%\n- **버퍼**: 15% 여유 필요\n- **증설 시점**: 평균 70% 도달 시\n\n**최적화 방법**:\n1. **HPA 설정**: CPU 기반 Auto-scaling\n2. **Requests 적정화**: 과다 할당 방지\n3. **비효율 코드 개선**: Profiling\n4. **캐싱 활용**: 반복 계산 최소화\n5. **Batch Job 분산**: 피크 시간 회피\n\n**Node별 CPU 분산**:\n```bash\n# Node별 CPU 사용률\nkubectl top nodes\n\n# 특정 Node의 Pod 확인\nkubectl get pods --field-selector spec.nodeName=<node-name>\n```\n\n**알림 설정**:\n- CPU > 80% (5분): P3 알림\n- CPU > 85% (10분): P2 알림\n- CPU > 90% (5분): P1 알림\n\n**관련 메트릭**: \n- CPU Requests vs Limits\n- CPU Throttling Rate\n- Node CPU Usage\n\n**SLO**: 평균 <75%, p95 <85%",
+          "gridPos": {"h": 8, "w": 6, "x": 0, "y": 5},
+          "targets": [{
+            "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) / sum(machine_cpu_cores) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#81C995"},
+                  {"value": 70, "color": "#FFD97D"},
+                  {"value": 85, "color": "#F48B8B"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "Cluster Memory Usage",
+          "description": "**클러스터 전체 메모리 사용률**\n\n**계산식**:\n```promql\nsum(container_memory_working_set_bytes{\n  container!=\"\"\n}) / \nsum(machine_memory_bytes) * 100\n```\n\n**의미**: 전체 메모리 중 실제 사용 중인 Working Set 비율\n\n**Working Set이란?**\n- 활성 사용 중인 메모리 (Anonymous + Active File Cache)\n- OOMKiller 판단 기준\n- RSS + Page Cache 중 최근 사용 부분\n\n**메모리 vs CPU 차이**:\n- **CPU**: 시간 분할 가능 (Throttling)\n- **Memory**: 비압축성 자원 (OOM 발생)\n\n**정상 범위**:\n- 🟢 <75%: 안전 - 버퍼 충분\n- 🟡 75-85%: 주의 - 증설 검토\n- 🔴 >85%: 위험 - OOM 가능성\n\n**높은 메모리 사용률 원인**:\n1. **메모리 누수**: Heap 증가, GC 미작동\n2. **캐시 과다**: Redis, Memcached 비대화\n3. **대용량 데이터**: Spark, Trino 처리\n4. **Limits 부재**: 무제한 메모리 사용\n5. **파일 캐시**: Page Cache 증가\n\n**OOMKilled 확인**:\n```promql\nsum(rate(\n  container_memory_failures_total{\n    failure_type=\"oom\"\n  }[5m]\n)) by (namespace, pod)\n```\n\n**메모리 구성**:\n```\n총 메모리 (machine_memory_bytes)\n├─ Working Set (Working Set Bytes)\n│  ├─ Anonymous (Heap, Stack)\n│  └─ Active File Cache\n├─ Inactive File Cache\n└─ Available (여유 메모리)\n```\n\n**용량 계획**:\n- **현재**: 80GB 사용 / 128GB 총량 (62.5%)\n- **증가율**: 월 5% 증가\n- **예상 포화**: 8개월 후\n- **권장 조치**: 6개월 내 증설\n\n**최적화 방법**:\n1. **Requests/Limits 적정화**:\n```yaml\nresources:\n  requests:\n    memory: \"1Gi\"    # 실제 필요량\n  limits:\n    memory: \"2Gi\"    # 최대 허용량\n```\n\n2. **메모리 누수 탐지**:\n```bash\n# Heap Dump 분석\nkubectl exec <pod> -- jmap -heap 1\n\n# Go: pprof\ncurl http://pod-ip:6060/debug/pprof/heap\n```\n\n3. **GC 튜닝**:\n- Java: `-Xmx4g -Xms4g -XX:+UseG1GC`\n- Go: `GOGC=100` (default)\n\n4. **Swap 비활성화**: Kubernetes Best Practice\n\n**Node별 메모리 분산**:\n```bash\n# 메모리 사용 Top Pod\nkubectl top pods --all-namespaces --sort-by=memory\n\n# OOMKilled Pod\nkubectl get events --field-selector reason=OOMKilling\n```\n\n**알림**:\n- Memory > 80% (10분): P3\n- Memory > 85% (5분): P2\n- OOMKilled 발생: P1\n\n**SLO**: 평균 <75%, p95 <85%",
+          "gridPos": {"h": 8, "w": 6, "x": 6, "y": 5},
+          "targets": [{
+            "expr": "sum(container_memory_working_set_bytes{container!=\"\"}) / sum(machine_memory_bytes) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#81C995"},
+                  {"value": 75, "color": "#FFD97D"},
+                  {"value": 85, "color": "#F48B8B"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Available CPU Cores",
+          "description": "**할당 가능한 CPU 코어 수**\n\n**계산식**:\n```promql\nsum(machine_cpu_cores) - \nsum(kube_pod_container_resource_requests{\n  resource=\"cpu\"\n})\n```\n\n**의미**: 전체 CPU 코어에서 이미 할당(Requests)된 코어를 제외한 여유 코어 수\n\n**CPU Requests vs Limits**:\n- **Requests**: 스케줄러 보장량 (최소 할당)\n- **Limits**: 최대 사용 가능량 (Throttling 기준)\n\n**스케줄링 원리**:\n```\n1. Pod 생성 요청\n2. Scheduler가 Requests 기준으로 Node 선택\n3. Available CPU >= Pod Requests 인 Node에 할당\n4. 여유 없으면 Pending 상태\n```\n\n**정상 범위**:\n- 🟢 >10 cores: 충분 - 여러 워크로드 배포 가능\n- 🟡 5-10 cores: 주의 - 대형 워크로드 제한적\n- 🔴 <5 cores: 위험 - 신규 배포 어려움\n\n**여유 없을 때 증상**:\n- Pod가 Pending 상태\n- Insufficient CPU 에러\n- 신규 배포 실패\n- HPA Scale Out 불가\n\n**오버커밋(Overcommit)**:\n```\nTotal CPU: 64 cores\nRequests Total: 60 cores (93%)\nActual Usage: 40 cores (62%)\n→ 오버커밋: 60 - 40 = 20 cores 낭비\n```\n\n**Requests 적정화 전략**:\n1. **실제 사용량 측정**:\n```promql\navg_over_time(\n  container_cpu_usage_seconds_total[7d]\n)\n```\n\n2. **Requests 조정**:\n   - 측정값의 1.2배 설정\n   - 예: 평균 0.5 core → Requests 0.6\n\n3. **VPA (Vertical Pod Autoscaler)**:\n   - 자동으로 Requests 조정\n   - 히스토리 기반 추천\n\n**용량 증설 우선순위**:\n1. **Available < 5 cores**: 긴급 증설\n2. **5-10 cores**: 계획된 증설\n3. **>10 cores**: 모니터링 유지\n\n**Node 추가 시 고려사항**:\n- Node 1대당 평균 16 cores\n- 시스템 예약: 1 core (kubelet, system)\n- 실제 가용: 15 cores\n- 4개 Node 추가 → +60 cores\n\n**비용 최적화**:\n- Requests 적정화로 오버커밋 감소\n- 사용하지 않는 Pod 정리\n- Spot Instance 활용\n- Resource Quota로 팀별 제한\n\n**모니터링 대시보드**:\n- CPU Requests vs Actual Usage\n- Overcommit Ratio\n- Per-namespace CPU Allocation\n\n**알림**: Available < 10 cores → P3\n\n**관련 메트릭**: CPU Usage, Pending Pods",
+          "gridPos": {"h": 8, "w": 6, "x": 12, "y": 5},
+          "targets": [{
+            "expr": "sum(machine_cpu_cores) - sum(kube_pod_container_resource_requests{resource=\"cpu\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 1,
+              "color": {"mode": "fixed", "fixedColor": "#B19CD9"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#F48B8B"},
+                  {"value": 5, "color": "#FFD97D"},
+                  {"value": 10, "color": "#B19CD9"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Available Memory",
+          "description": "**할당 가능한 메모리 용량**\n\n**계산식**:\n```promql\nsum(machine_memory_bytes) - \nsum(kube_pod_container_resource_requests{\n  resource=\"memory\"\n})\n```\n\n**의미**: 전체 메모리에서 이미 할당(Requests)된 용량을 제외한 여유 메모리\n\n**단위 변환**:\n- Bytes → GB: / 1024³\n- 예: 53,687,091,200 bytes = 50 GB\n\n**정상 범위**:\n- 🟢 >50 GB: 충분 - 대형 워크로드 가능\n- 🟡 20-50 GB: 주의 - 중소형만 가능\n- 🔴 <20 GB: 위험 - 배치 작업 제한\n\n**메모리 부족 시 증상**:\n```\nEvents:\n  Warning  FailedScheduling  \n    0/4 nodes are available: \n    4 Insufficient memory.\n```\n\n**메모리 Requests 설정 가이드**:\n\n1. **경량 서비스** (API, Web):\n```yaml\nrequests:\n  memory: \"256Mi\"\nlimits:\n  memory: \"512Mi\"\n```\n\n2. **중량 서비스** (캐시, DB):\n```yaml\nrequests:\n  memory: \"2Gi\"\nlimits:\n  memory: \"4Gi\"\n```\n\n3. **대용량 처리** (Spark, Trino):\n```yaml\nrequests:\n  memory: \"8Gi\"\nlimits:\n  memory: \"16Gi\"\n```\n\n**Requests vs Limits 비율**:\n- **안정적 서비스**: Requests = Limits (Guaranteed QoS)\n- **버스트 허용**: Limits = Requests × 1.5\n- **Best Effort**: Requests 미설정 (비권장)\n\n**QoS (Quality of Service) 클래스**:\n1. **Guaranteed**: Requests = Limits\n   - 최우선 보호\n   - OOM 시 마지막에 종료\n\n2. **Burstable**: Requests < Limits\n   - 중간 우선순위\n   - 메모리 압박 시 일부 종료\n\n3. **BestEffort**: Requests/Limits 없음\n   - 최하위 우선순위\n   - 메모리 부족 시 먼저 종료\n\n**메모리 압박 시나리오**:\n```\n1. Node 메모리 85% 도달\n2. kubelet이 메모리 회수 시도\n3. BestEffort Pod 먼저 Eviction\n4. 그래도 부족하면 Burstable Eviction\n5. 최후에 Guaranteed 보호\n```\n\n**Huge Pages 사용 (선택적)**:\n```yaml\nresources:\n  requests:\n    memory: \"2Gi\"\n    hugepages-2Mi: \"1Gi\"  # 성능 향상\n```\n- DB, 빅데이터에 유용\n- TLB Miss 감소\n- 성능 10-30% 향상\n\n**용량 증설 계획**:\n```\n현재 Available: 50 GB\n대형 Spark Job Requests: 30 GB\n→ 증설 필요: +64 GB (Node 2개)\n```\n\n**비용 최적화**:\n1. **메모리 누수 수정**\n2. **불필요한 캐시 정리**\n3. **Batch Job 순차 실행**\n4. **Swap 활성화** (비권장, 성능 저하)\n\n**알림**: Available < 30 GB → P3\n\n**관련 메트릭**: Memory Usage, OOMKilled Events",
+          "gridPos": {"h": 8, "w": 6, "x": 18, "y": 5},
+          "targets": [{
+            "expr": "(sum(machine_memory_bytes) - sum(kube_pod_container_resource_requests{resource=\"memory\"})) / 1024 / 1024 / 1024",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decgbytes",
+              "decimals": 1,
+              "color": {"mode": "fixed", "fixedColor": "#B19CD9"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#F48B8B"},
+                  {"value": 20, "color": "#FFD97D"},
+                  {"value": 50, "color": "#B19CD9"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Storage Capacity",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 13},
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "PVC Usage by StorageClass",
+          "description": "**StorageClass별 PVC 사용률**\n\n**계산식**:\n```promql\nsum(\n  kubelet_volume_stats_used_bytes\n) by (persistentvolumeclaim, storageclass) /\nsum(\n  kubelet_volume_stats_capacity_bytes\n) by (persistentvolumeclaim, storageclass) * 100\n```\n\n**StorageClass 종류** (DataOps 환경):\n\n1. **Longhorn** (Block Storage):\n   - Kubernetes Native 분산 스토리지\n   - 3-way Replication\n   - 용도: DB, 상태 저장 앱\n   - 성능: 중간\n\n2. **Isilon** (NFS):\n   - Dell EMC Scale-out NAS\n   - 100TB 용량\n   - 용도: 공유 파일, 로그, 백업\n   - 성능: 높음 (10GbE)\n\n3. **Ceph** (Object + Block):\n   - 분산 스토리지\n   - 50TB 용량\n   - 용도: S3 Compatible, RBD\n   - 성능: 매우 높음\n\n**정상 범위**:\n- 🟢 <70%: 안전\n- 🟡 70-85%: 주의 - 확장 계획\n- 🔴 >85%: 위험 - 즉시 확장\n\n**PVC 사용률 높은 원인**:\n1. **로그 파일 누적**: 로그 로테이션 미설정\n2. **임시 파일**: /tmp 정리 안됨\n3. **데이터 증가**: DB, 캐시 성장\n4. **스냅샷/백업**: 공간 점유\n5. **삭제 안된 파일**: Soft Delete\n\n**PVC 확장 방법**:\n\n1. **동적 확장** (allowVolumeExpansion: true):\n```bash\n# PVC 크기 수정\nkubectl edit pvc my-pvc\n\nspec:\n  resources:\n    requests:\n      storage: 20Gi  # 10Gi → 20Gi\n```\n\n2. **새 PVC 생성 + 데이터 마이그레이션**:\n```bash\n# 1. 새 PVC 생성 (더 큰 용량)\n# 2. Pod에 두 PVC 모두 마운트\n# 3. rsync로 데이터 복사\n# 4. 이전 PVC 삭제\n```\n\n**StorageClass별 특성**:\n\n| StorageClass | IOPS | Throughput | 용량 | 비용 |\n|--------------|------|------------|------|------|\n| Longhorn     | 중간 | ~500 MB/s  | 무제한 | 중간 |\n| Isilon       | 높음 | ~1 GB/s    | 100TB | 높음 |\n| Ceph         | 매우높음 | ~2 GB/s | 50TB | 높음 |\n\n**사용 사례별 권장**:\n- **DB (MySQL, PostgreSQL)**: Longhorn (Block)\n- **공유 파일 시스템**: Isilon (NFS, RWX)\n- **로그/백업**: Isilon (NFS)\n- **Spark Shuffle**: Ceph (고성능 필요)\n- **Iceberg Data Lake**: MinIO S3 (별도)\n\n**PVC 모니터링 Best Practice**:\n```promql\n# 90% 이상 사용 중인 PVC\nkubelet_volume_stats_used_bytes / \nkubelet_volume_stats_capacity_bytes > 0.9\n```\n\n**자동 정리 설정**:\n```yaml\n# CronJob으로 로그 정리\nschedule: \"0 2 * * *\"  # 매일 새벽 2시\ncommand:\n- /bin/sh\n- -c\n- find /logs -mtime +7 -delete\n```\n\n**알림**:\n- PVC > 80%: P3 (1일 이내 확장)\n- PVC > 90%: P2 (4시간 이내)\n- PVC > 95%: P1 (즉시 조치)\n\n**관련 메트릭**: Storage IOPS, Throughput",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+          "targets": [{
+            "expr": "sum(kubelet_volume_stats_used_bytes) by (persistentvolumeclaim, storageclass) / sum(kubelet_volume_stats_capacity_bytes) by (persistentvolumeclaim, storageclass) * 100",
+            "refId": "A",
+            "legendFormat": "{{persistentvolumeclaim}} ({{storageclass}})"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15
+              },
+              "unit": "percent",
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#81C995"},
+                  {"value": 70, "color": "#FFD97D"},
+                  {"value": 85, "color": "#F48B8B"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Storage IOPS (Isilon/Ceph)",
+          "description": "**스토리지 초당 I/O 작업 수**\n\n**계산식**:\n```promql\n# Isilon\nrate(isilon_node_disk_ops_total[5m])\n\n# Ceph\nrate(ceph_osd_op_r[5m]) + \nrate(ceph_osd_op_w[5m])\n```\n\n**IOPS란?**\n- Input/Output Operations Per Second\n- 디스크 읽기/쓰기 작업 빈도\n- 랜덤 I/O 성능 지표\n\n**IOPS vs Throughput**:\n- **IOPS**: 작업 횟수 (4KB 블록 기준)\n- **Throughput**: 전송량 (MB/s)\n- DB는 IOPS 중요, Batch는 Throughput 중요\n\n**스토리지별 IOPS 한계**:\n\n| 스토리지 | 최대 IOPS | 특징 |\n|----------|-----------|------|\n| HDD (SATA) | 100-200 | 느림 |\n| SSD (SATA) | 10K-50K | 중간 |\n| NVMe SSD | 100K-1M | 매우 빠름 |\n| Isilon | 50K | Scale-out NAS |\n| Ceph (SSD) | 100K+ | 분산 스토리지 |\n\n**정상 범위**:\n- 🟢 <30K IOPS: 여유\n- 🟡 30-45K IOPS: 주의\n- 🔴 >45K IOPS: 포화\n\n**높은 IOPS 원인**:\n1. **DB 과부하**: SELECT 쿼리 폭증\n2. **소형 파일**: 많은 작은 파일 I/O\n3. **랜덤 읽기**: 인덱스 스캔\n4. **로그 과다**: 빈번한 쓰기\n5. **백업/복구**: 대량 I/O\n\n**IOPS 최적화**:\n\n1. **DB 최적화**:\n```sql\n-- 인덱스 추가로 랜덤 I/O 감소\nCREATE INDEX idx_user_id ON orders(user_id);\n\n-- 쿼리 캐싱\nSET query_cache_size = 268435456;  -- 256MB\n```\n\n2. **파일 시스템 최적화**:\n```bash\n# noatime: access time 업데이트 안함\nmount -o noatime,nodiratime /dev/sda1 /mnt\n```\n\n3. **I/O Scheduler 변경**:\n```bash\n# SSD는 noop 또는 deadline\necho noop > /sys/block/sda/queue/scheduler\n```\n\n4. **Caching Layer 추가**:\n   - Redis/Memcached로 DB 부하 감소\n   - CDN으로 정적 파일 캐싱\n   - Application Level Cache\n\n**Iceberg 소형 파일 문제**:\n```\n문제: 10만 개의 소형 파일 (각 1MB)\n→ IOPS 폭증 (파일 open/close 반복)\n\n해결: Compaction\n→ 100개의 대형 파일 (각 1GB)\n→ IOPS 감소, Throughput 증가\n```\n\n**모니터링 지표**:\n- **Read IOPS**: 읽기 작업 빈도\n- **Write IOPS**: 쓰기 작업 빈도\n- **Latency**: 평균 응답 시간\n- **Queue Depth**: 대기 중인 I/O 수\n\n**스토리지 병목 감지**:\n```promql\n# I/O Wait 시간\nrate(node_cpu_seconds_total{mode=\"iowait\"}[5m])\n\n# 높으면 스토리지가 병목\n```\n\n**알림**: IOPS > 40K (5분) → P2\n\n**관련 대시보드**: Workload Performance (Spark I/O)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+          "targets": [
+            {
+              "expr": "rate(isilon_node_disk_ops_total[5m])",
+              "refId": "A",
+              "legendFormat": "Isilon IOPS"
+            },
+            {
+              "expr": "rate(ceph_osd_op_r[5m]) + rate(ceph_osd_op_w[5m])",
+              "refId": "B",
+              "legendFormat": "Ceph IOPS"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15
+              },
+              "unit": "iops",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Isilon IOPS"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#7FB3E8", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Ceph IOPS"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#B19CD9", "mode": "fixed"}}]
+              }
+            ]
+          }
+        },
+        {
+          "type": "row",
+          "title": "Network Capacity",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 22},
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "Network Bandwidth (RX/TX)",
+          "description": "**네트워크 수신/송신 대역폭**\n\n**계산식**:\n```promql\n# 수신 (Receive)\nsum(rate(\n  node_network_receive_bytes_total{\n    device!~\"lo|veth.*\"\n  }[5m]\n)) * 8 / 1000000  # Mbps\n\n# 송신 (Transmit)\nsum(rate(\n  node_network_transmit_bytes_total{\n    device!~\"lo|veth.*\"\n  }[5m]\n)) * 8 / 1000000\n```\n\n**의미**: 물리 네트워크 인터페이스(eth0 등)의 초당 전송량\n\n**네트워크 인터페이스**:\n- **eth0/ens**: 물리 NIC\n- **lo**: Loopback (127.0.0.1)\n- **veth**: 가상 Ethernet (Pod 간 통신)\n- **cni**: CNI Plugin Bridge\n\n**네트워크 용량**:\n\n| 링크 타입 | 대역폭 | 실제 처리량 |\n|-----------|--------|-------------|\n| 1GbE | 1000 Mbps | ~940 Mbps |\n| 10GbE | 10000 Mbps | ~9400 Mbps |\n| 25GbE | 25000 Mbps | ~23500 Mbps |\n\n**정상 범위** (10GbE 기준):\n- 🟢 <7000 Mbps (70%): 여유\n- 🟡 7000-8500 Mbps (85%): 주의\n- 🔴 >8500 Mbps (85%): 병목\n\n**높은 대역폭 사용 원인**:\n1. **대용량 데이터 전송**: Spark Shuffle, Backup\n2. **동영상 스트리밍**: 미디어 서비스\n3. **복제 트래픽**: DB Replication, Ceph\n4. **DDoS 공격**: 비정상 트래픽\n5. **P2P 트래픽**: 분산 파일 시스템\n\n**Spark Shuffle 트래픽**:\n```\n대용량 Join 작업\n→ 100GB 데이터 Shuffle\n→ 10GbE 포화 (10-15분)\n→ Job 지연\n```\n\n**네트워크 최적화**:\n\n1. **Pod Network Policy**:\n```yaml\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: limit-egress\nspec:\n  podSelector:\n    matchLabels:\n      app: myapp\n  policyTypes:\n  - Egress\n  egress:\n  - to:\n    - podSelector:\n        matchLabels:\n          app: database\n```\n\n2. **QoS (Quality of Service)**:\n```bash\n# tc를 사용한 대역폭 제한\ntc qdisc add dev eth0 root tbf \\\n  rate 5gbit \\\n  burst 10mb \\\n  latency 50ms\n```\n\n3. **Spark Shuffle 최적화**:\n```scala\n// Partition 수 증가로 Shuffle 분산\ndf.repartition(200)\n\n// Broadcast Join (소형 테이블)\ndf1.join(broadcast(df2), \"key\")\n```\n\n4. **Compression 활성화**:\n```properties\n# Spark Shuffle Compression\nspark.shuffle.compress=true\nspark.shuffle.spill.compress=true\n```\n\n**네트워크 병목 감지**:\n```promql\n# Packet Drop 확인\nrate(node_network_receive_drop_total[5m])\n\n# TX Queue 길이\nnode_network_transmit_queue_length\n```\n\n**CNI (Cilium) 성능**:\n- eBPF 기반으로 오버헤드 최소\n- iptables 대비 30% 빠름\n- kube-proxy 대체 가능\n\n**Multi-homing (본딩)**:\n```bash\n# LACP 본딩으로 대역폭 2배\neth0 + eth1 = bond0 (20GbE)\n```\n\n**인터 클러스터 통신**:\n```\nCluster-01 (Central) ↔ Cluster-02/03/04 (Edge)\n→ Thanos Remote Write\n→ 평균 100 Mbps\n→ 피크 500 Mbps (5%)\n```\n\n**알림**:\n- Bandwidth > 80%: P3\n- Packet Drop > 0.1%: P2\n\n**관련 메트릭**: Network Errors, Packet Loss",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 23},
+          "targets": [
+            {
+              "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*\"}[5m])) * 8 / 1000000",
+              "refId": "A",
+              "legendFormat": "RX (Receive)"
+            },
+            {
+              "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|veth.*\"}[5m])) * 8 / 1000000",
+              "refId": "B",
+              "legendFormat": "TX (Transmit)"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 20
+              },
+              "unit": "Mbits",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "RX (Receive)"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#81C995", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "TX (Transmit)"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#7FB3E8", "mode": "fixed"}}]
+              }
+            ]
+          }
+        },
+        {
+          "type": "row",
+          "title": "Resource Allocation Details",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 31},
+          "collapsed": false
+        },
+        {
+          "type": "table",
+          "title": "Top CPU Consumers (by Namespace)",
+          "description": "**Namespace별 CPU 사용량 Top 10**\n\n**사용 목적**:\n- 리소스 집중 사용 Namespace 식별\n- 비용 배분 (Chargeback)\n- ResourceQuota 조정\n\n**분석 방법**:\n1. 프로덕션 Namespace가 높으면 정상\n2. 개발 Namespace가 높으면 낭비 가능성\n3. 시스템 Namespace(kube-system) 높으면 인프라 문제\n\n**조치**:\n- 높은 Namespace: HPA 설정 검토\n- 낮은 사용률: 불필요한 Pod 정리\n- 급증 패턴: Batch Job 스케줄 조정",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+          "targets": [{
+            "expr": "topk(10, sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) by (namespace))",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true},
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "Value": "CPU Cores"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "CPU Cores", "desc": true}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "CPU Cores"},
+                "properties": [
+                  {"id": "unit", "value": "short"},
+                  {"id": "decimals", "value": 2},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "rgba(129, 201, 149, 0.1)"},
+                      {"value": 5, "color": "rgba(255, 217, 125, 0.2)"},
+                      {"value": 10, "color": "rgba(244, 139, 139, 0.2)"}
+                    ]
+                  }}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "title": "Top Memory Consumers (by Pod)",
+          "description": "**Pod별 메모리 사용량 Top 10**\n\n**메모리 누수 탐지**:\n- Working Set이 지속적으로 증가하는 Pod\n- Restart 없이 메모리만 증가\n- 배포 후 시간 경과에 따라 상승\n\n**대응**:\n1. Heap Dump 수집\n2. Profiling 도구 사용\n3. GC 로그 분석\n4. 메모리 Limit 임시 증가\n5. 코드 수정 및 재배포\n\n**Spark Executor 메모리**:\n- 높은 메모리 사용은 정상 (대용량 처리)\n- OOM 빈발하면 executor.memory 증가",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+          "targets": [{
+            "expr": "topk(10, sum(container_memory_working_set_bytes{container!=\"\"}) by (namespace, pod))",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true},
+                "renameByName": {
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "Value": "Memory"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "Memory", "desc": true}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Memory"},
+                "properties": [
+                  {"id": "unit", "value": "bytes"},
+                  {"id": "decimals", "value": 2},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "rgba(129, 201, 149, 0.1)"},
+                      {"value": 2147483648, "color": "rgba(255, 217, 125, 0.2)"},
+                      {"value": 4294967296, "color": "rgba(244, 139, 139, 0.2)"}
+                    ]
+                  }}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 2, "w": 24, "x": 0, "y": 40},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1A1F2E;border-top:1px solid #374151;padding:12px;text-align:center;border-radius:0 0 8px 8px'><div style='font-size:12px;color:#6B7280'>Resource Capacity Dashboard v4.0 • Infrastructure Capacity Planning</div><div style='font-size:11px;color:#4B5563;margin-top:4px'>CPU • Memory • Storage (Isilon/Ceph/Longhorn) • Network Bandwidth</div></div>"
+          }
+        }
+      ]
+    }

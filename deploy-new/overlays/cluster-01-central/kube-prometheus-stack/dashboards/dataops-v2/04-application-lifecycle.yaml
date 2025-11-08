@@ -1,0 +1,550 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-lifecycle-v2
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-lifecycle-v2.json: |
+    {
+      "uid": "dataops-lifecycle-v2",
+      "title": "🔄 DataOps - Application Lifecycle (GitOps)",
+      "tags": ["dataops", "gitops", "jenkins", "argocd", "deployment", "v2"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 4,
+      "refresh": "30s",
+      "editable": true,
+      "style": "dark",
+      "folder": "Application Lifecycle",
+      "folderUid": "dataops-lifecycle-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: rgba(31, 41, 55, 0.6); border-radius: 8px; border-left: 4px solid #F5A962;'><div style='display: flex; justify-content: space-between; align-items: center;'><div><h2 style='margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #F9FAFB;'>🔄 Application Lifecycle (GitOps)</h2><p style='margin: 0; font-size: 14px; color: #9CA3AF;'>Portal → Bitbucket → Jenkins → ArgoCD → Kubernetes 전체 배포 파이프라인</p></div><div><a href='/d/dataops-executive-v2/executive-summary?orgId=1' style='display: inline-block; padding: 10px 20px; background: rgba(245, 169, 98, 0.15); border: 1px solid #F5A962; border-radius: 6px; color: #F5A962; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s;' onmouseover='this.style.background=\"rgba(245, 169, 98, 0.25)\";' onmouseout='this.style.background=\"rgba(245, 169, 98, 0.15)\";'>← Executive</a></div></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "배포 파이프라인 개요",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+          "collapsed": false
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 6, "w": 24, "x": 0, "y": 5},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 20px; background: linear-gradient(90deg, rgba(91, 141, 238, 0.1) 0%, rgba(77, 184, 168, 0.1) 25%, rgba(245, 169, 98, 0.1) 50%, rgba(139, 92, 246, 0.1) 75%, rgba(16, 185, 129, 0.1) 100%); border-radius: 8px; border: 1px solid rgba(107, 114, 128, 0.2);'><div style='display: flex; justify-content: space-between; align-items: center;'><div style='text-align: center; flex: 1;'><div style='font-size: 32px; margin-bottom: 8px;'>👤</div><div style='font-size: 14px; font-weight: 600; color: #F9FAFB;'>Portal</div><div style='font-size: 12px; color: #9CA3AF; margin-top: 4px;'>사용자 요청</div></div><div style='color: #6B7280; font-size: 24px;'>→</div><div style='text-align: center; flex: 1;'><div style='font-size: 32px; margin-bottom: 8px;'>📦</div><div style='font-size: 14px; font-weight: 600; color: #F9FAFB;'>Bitbucket</div><div style='font-size: 12px; color: #9CA3AF; margin-top: 4px;'>Git Push</div></div><div style='color: #6B7280; font-size: 24px;'>→</div><div style='text-align: center; flex: 1;'><div style='font-size: 32px; margin-bottom: 8px;'>🏗️</div><div style='font-size: 14px; font-weight: 600; color: #F9FAFB;'>Jenkins</div><div style='font-size: 12px; color: #9CA3AF; margin-top: 4px;'>CI Build</div></div><div style='color: #6B7280; font-size: 24px;'>→</div><div style='text-align: center; flex: 1;'><div style='font-size: 32px; margin-bottom: 8px;'>🚀</div><div style='font-size: 14px; font-weight: 600; color: #F9FAFB;'>ArgoCD</div><div style='font-size: 12px; color: #9CA3AF; margin-top: 4px;'>CD Deploy</div></div><div style='color: #6B7280; font-size: 24px;'>→</div><div style='text-align: center; flex: 1;'><div style='font-size: 32px; margin-bottom: 8px;'>☸️</div><div style='font-size: 14px; font-weight: 600; color: #F9FAFB;'>Kubernetes</div><div style='font-size: 12px; color: #9CA3AF; margin-top: 4px;'>Pod Running</div></div></div></div>"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "오늘 배포 횟수",
+          "gridPos": {"h": 6, "w": 4, "x": 0, "y": 11},
+          "targets": [{
+            "expr": "sum(increase(jenkins_builds_total[24h]))",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "배포 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 4, "x": 4, "y": 11},
+          "targets": [{
+            "expr": "sum(rate(jenkins_builds_success_total[24h])) / sum(rate(jenkins_builds_total[24h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 90, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 95, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "평균 배포 시간",
+          "gridPos": {"h": 6, "w": 4, "x": 8, "y": 11},
+          "targets": [{
+            "expr": "avg(jenkins_build_duration_seconds + argocd_sync_duration_seconds + kube_pod_start_time_seconds)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "color": {"mode": "fixed", "fixedColor": "#4DB8A8"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "실패한 배포",
+          "gridPos": {"h": 6, "w": 4, "x": 12, "y": 11},
+          "targets": [{
+            "expr": "sum(increase(jenkins_builds_failed_total[24h]))",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 5, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "진행 중인 배포",
+          "gridPos": {"h": 6, "w": 4, "x": 16, "y": 11},
+          "targets": [{
+            "expr": "count(jenkins_build_info{status=\"RUNNING\"})",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#F59E0B"}
+            }
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "배포 대기열",
+          "gridPos": {"h": 6, "w": 4, "x": 20, "y": 11},
+          "targets": [{
+            "expr": "jenkins_queue_size",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "max": 10,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 3, "color": "#F59E0B"},
+                  {"value": 7, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Jenkins CI Pipeline",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17},
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "Jenkins 빌드 성공/실패 추이",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+          "targets": [
+            {
+              "expr": "sum(rate(jenkins_builds_success_total[5m]))",
+              "legendFormat": "성공",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(jenkins_builds_failed_total[5m]))",
+              "legendFormat": "실패",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "spanNulls": true
+              },
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "성공"}, "properties": [{"id": "color", "value": {"fixedColor": "#10B981", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "실패"}, "properties": [{"id": "color", "value": {"fixedColor": "#EF4444", "mode": "fixed"}}]}
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Jenkins 빌드 Duration (P50/P95/P99)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(jenkins_build_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(jenkins_build_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P95",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(jenkins_build_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P99",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0
+              },
+              "unit": "s",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "P50"}, "properties": [{"id": "color", "value": {"fixedColor": "#10B981", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "P95"}, "properties": [{"id": "color", "value": {"fixedColor": "#F59E0B", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "P99"}, "properties": [{"id": "color", "value": {"fixedColor": "#EF4444", "mode": "fixed"}}]}
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "title": "최근 Jenkins 빌드 내역",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 26},
+          "targets": [{
+            "expr": "jenkins_build_info",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "instance": true, "job": true}, "renameByName": {"build_number": "빌드 번호", "project": "프로젝트", "status": "상태", "duration": "소요 시간", "branch": "브랜치"}}}
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "빌드 번호", "desc": true}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "상태"},
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {"type": "color-background"}
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {"type": "value", "options": {"SUCCESS": {"color": "rgba(16, 185, 129, 0.2)", "text": "✓ 성공"}}},
+                      {"type": "value", "options": {"FAILURE": {"color": "rgba(239, 68, 68, 0.2)", "text": "✗ 실패"}}},
+                      {"type": "value", "options": {"RUNNING": {"color": "rgba(245, 158, 11, 0.2)", "text": "⟳ 진행중"}}}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "row",
+          "title": "ArgoCD Deployment",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 36},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "ArgoCD 애플리케이션 수",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 37},
+          "targets": [{
+            "expr": "count(argocd_app_info)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Sync 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 37},
+          "targets": [{
+            "expr": "sum(rate(argocd_app_sync_status{status=\"Succeeded\"}[24h])) / sum(rate(argocd_app_sync_status[24h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 95, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 99, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Out of Sync",
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 37},
+          "targets": [{
+            "expr": "count(argocd_app_sync_status{sync_status=\"OutOfSync\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 5, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Health Degraded",
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 37},
+          "targets": [{
+            "expr": "count(argocd_app_info{health_status=\"Degraded\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "title": "ArgoCD 애플리케이션 상태",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 43},
+          "targets": [{
+            "expr": "argocd_app_info",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "instance": true, "job": true}, "renameByName": {"name": "애플리케이션", "namespace": "네임스페이스", "sync_status": "Sync 상태", "health_status": "Health 상태", "repo": "저장소"}}}
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "애플리케이션", "desc": false}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Sync 상태"},
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {"type": "color-background"}
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {"type": "value", "options": {"Synced": {"color": "rgba(16, 185, 129, 0.2)", "text": "✓ Synced"}}},
+                      {"type": "value", "options": {"OutOfSync": {"color": "rgba(245, 158, 11, 0.2)", "text": "⚠ OutOfSync"}}},
+                      {"type": "value", "options": {"Unknown": {"color": "rgba(107, 114, 128, 0.2)", "text": "? Unknown"}}}
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Health 상태"},
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {"type": "color-background"}
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {"type": "value", "options": {"Healthy": {"color": "rgba(16, 185, 129, 0.2)", "text": "✓ Healthy"}}},
+                      {"type": "value", "options": {"Degraded": {"color": "rgba(239, 68, 68, 0.2)", "text": "✗ Degraded"}}},
+                      {"type": "value", "options": {"Progressing": {"color": "rgba(59, 130, 246, 0.2)", "text": "⟳ Progressing"}}}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "row",
+          "title": "Pod Readiness (배포 검증)",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 53},
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "Pod Startup 시간 추이",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 54},
+          "targets": [{
+            "expr": "avg(kube_pod_start_time_seconds) by (namespace)",
+            "legendFormat": "{{namespace}}",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10
+              },
+              "unit": "s",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "네임스페이스별 Pod Readiness",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 54},
+          "targets": [{
+            "expr": "sum(kube_pod_status_ready{condition=\"true\"}) by (namespace) / sum(kube_pod_status_phase{phase=\"Running\"}) by (namespace) * 100",
+            "legendFormat": "{{namespace}}",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "showUnfilled": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "color": {"mode": "continuous-GrYlRd"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#EF4444"},
+                  {"value": 80, "color": "#F59E0B"},
+                  {"value": 95, "color": "#10B981"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Rollback & Config Drift",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 62},
+          "collapsed": false
+        },
+        {
+          "type": "table",
+          "title": "최근 Rollback 내역",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 63},
+          "targets": [{
+            "expr": "argocd_app_rollback_info",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"renameByName": {"timestamp": "시간", "application": "애플리케이션", "from_version": "From", "to_version": "To", "reason": "사유"}}}
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Config Drift 감지",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 63},
+          "targets": [{
+            "expr": "count(argocd_app_sync_status{sync_status=\"OutOfSync\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 3, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 3, "w": 24, "x": 0, "y": 71},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 12px; background: rgba(31, 41, 55, 0.4); border-radius: 8px; text-align: center;'><a href='/d/dataops-executive-v2/dataops-executive-summary' style='padding: 10px 24px; background: #F5A962; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;'>← Executive Summary로 돌아가기</a></div>"
+          }
+        }
+      ]
+    }

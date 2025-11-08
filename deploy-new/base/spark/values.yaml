@@ -1,0 +1,133 @@
+# ============================================================================
+# Apache Spark 기본 구성
+# ============================================================================
+# 용도: 배치 및 스트리밍 데이터 처리
+# 아키텍처: Master-Worker 패턴
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 이미지 설정
+# ----------------------------------------------------------------------------
+# 2025년 이후 Bitnami는 Docker Hub에서 무료 이미지를 제한합니다.
+# 대신 Amazon ECR Public Gallery를 사용합니다.
+# https://gallery.ecr.aws/bitnami/spark
+global:
+  security:
+    allowInsecureImages: true  # ECR Public 이미지 사용을 위해 필요
+
+image:
+  registry: public.ecr.aws
+  repository: bitnami/spark
+  tag: 3.5.3
+
+# ----------------------------------------------------------------------------
+# Master 설정
+# ----------------------------------------------------------------------------
+master:
+  replicaCount: 1
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+# ----------------------------------------------------------------------------
+# Worker 설정
+# ----------------------------------------------------------------------------
+worker:
+  replicaCount: 2
+
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 4Gi
+    limits:
+      cpu: 2000m
+      memory: 8Gi
+
+  # Worker별 Executor 설정
+  extraEnvVars:
+    - name: SPARK_WORKER_CORES
+      value: "2"
+    - name: SPARK_WORKER_MEMORY
+      value: "6g"
+
+# ----------------------------------------------------------------------------
+# Prometheus Metrics 활성화
+# ----------------------------------------------------------------------------
+metrics:
+  enabled: true
+
+  # Prometheus ServiceMonitor 자동 생성
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    labels:
+      release: kube-prometheus-stack
+
+  # Metrics 포트
+  master:
+    port: 8081
+
+  worker:
+    port: 8082
+
+# ----------------------------------------------------------------------------
+# 서비스 설정
+# ----------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  ports:
+    http: 8080
+    cluster: 7077
+
+# ----------------------------------------------------------------------------
+# Spark 설정 파일 (spark-defaults.conf)
+# ----------------------------------------------------------------------------
+# Spark 애플리케이션에서 사용할 기본 설정
+configuration: |
+  # 메트릭 활성화
+  spark.metrics.conf.*.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
+  spark.metrics.conf.*.sink.prometheusServlet.path=/metrics
+  spark.metrics.conf.master.sink.prometheusServlet.path=/metrics
+  spark.metrics.conf.applications.sink.prometheusServlet.path=/metrics
+
+  # Executor 기본 설정
+  spark.executor.instances=2
+  spark.executor.cores=2
+  spark.executor.memory=4g
+  spark.driver.memory=2g
+
+  # Dynamic Allocation (옵션)
+  spark.dynamicAllocation.enabled=true
+  spark.dynamicAllocation.minExecutors=1
+  spark.dynamicAllocation.maxExecutors=10
+  spark.dynamicAllocation.initialExecutors=2
+
+  # Shuffle 최적화
+  spark.shuffle.service.enabled=true
+  spark.shuffle.compress=true
+  spark.io.compression.codec=snappy
+
+  # Event Log (Spark History Server용)
+  spark.eventLog.enabled=true
+  spark.eventLog.dir=file:///tmp/spark-events
+
+  # S3 연동 설정 (향후 사용)
+  # spark.hadoop.fs.s3a.endpoint=s3.minio.miribit.lab
+  # spark.hadoop.fs.s3a.access.key=<access-key>
+  # spark.hadoop.fs.s3a.secret.key=<secret-key>
+  # spark.hadoop.fs.s3a.path.style.access=true
+  # spark.hadoop.fs.s3a.connection.ssl.enabled=false
+
+# ----------------------------------------------------------------------------
+# 볼륨 설정
+# ----------------------------------------------------------------------------
+persistence:
+  enabled: false  # 테스트 환경에서는 비활성화
+  # enabled: true
+  # storageClass: longhorn
+  # size: 10Gi

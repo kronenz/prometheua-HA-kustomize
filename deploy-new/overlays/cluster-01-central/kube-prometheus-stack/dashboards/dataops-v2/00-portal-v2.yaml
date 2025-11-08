@@ -1,0 +1,204 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-portal-v2
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-portal-v2.json: |
+    {
+      "uid": "dataops-portal-v2",
+      "title": "📊 DataOps Portal V2",
+      "tags": ["dataops", "portal", "home", "v2"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "1m",
+      "editable": true,
+      "style": "dark",
+      "folder": "DataOps Portal",
+      "folderUid": "dataops-portal-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: #1F2937; border-radius: 8px; border-bottom: 3px solid #3B82F6;'><div style='text-align: center;'><h1 style='margin: 0; font-size: 28px; font-weight: 600; color: #F9FAFB;'>DataOps Monitoring Portal</h1><p style='margin: 8px 0 0 0; font-size: 14px; color: #9CA3AF;'>Multi-Cluster Kubernetes & BigData Platform</p></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Core Dashboards",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+          "collapsed": false
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 10, "w": 6, "x": 0, "y": 5},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-executive-v2/executive-summary?orgId=1' style='display: block; text-decoration: none; height: 100%;'><div style='padding: 24px; background: #1F2937; border-radius: 8px; border-left: 4px solid #3B82F6; height: 100%; transition: all 0.2s; cursor: pointer;' onmouseover='this.style.background=\"#374151\"' onmouseout='this.style.background=\"#1F2937\"'><div style='font-size: 40px; margin-bottom: 12px;'>🎯</div><h3 style='margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>Executive Summary</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>경영진 대시보드<br>플랫폼 전체 상태 요약</p></div></a>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 10, "w": 6, "x": 6, "y": 5},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-infrastructure-v2/infrastructure-health?orgId=1' style='display: block; text-decoration: none; height: 100%;'><div style='padding: 24px; background: #1F2937; border-radius: 8px; border-left: 4px solid #10B981; height: 100%; transition: all 0.2s; cursor: pointer;' onmouseover='this.style.background=\"#374151\"' onmouseout='this.style.background=\"#1F2937\"'><div style='font-size: 40px; margin-bottom: 12px;'>🏗️</div><h3 style='margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>Infrastructure Health</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>인프라 모니터링<br>서버·네트워크·스토리지</p></div></a>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 10, "w": 6, "x": 12, "y": 5},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-bigdata-v2/bigdata-platform?orgId=1' style='display: block; text-decoration: none; height: 100%;'><div style='padding: 24px; background: #1F2937; border-radius: 8px; border-left: 4px solid #F59E0B; height: 100%; transition: all 0.2s; cursor: pointer;' onmouseover='this.style.background=\"#374151\"' onmouseout='this.style.background=\"#1F2937\"'><div style='font-size: 40px; margin-bottom: 12px;'>💾</div><h3 style='margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>BigData Platform</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>빅데이터 플랫폼<br>Spark·Airflow·Trino·Iceberg</p></div></a>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 10, "w": 6, "x": 18, "y": 5},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-operations-v2/operations-slo?orgId=1' style='display: block; text-decoration: none; height: 100%;'><div style='padding: 24px; background: #1F2937; border-radius: 8px; border-left: 4px solid #8B5CF6; height: 100%; transition: all 0.2s; cursor: pointer;' onmouseover='this.style.background=\"#374151\"' onmouseout='this.style.background=\"#1F2937\"'><div style='font-size: 40px; margin-bottom: 12px;'>📈</div><h3 style='margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>Operations & SLO</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>운영 및 SLO<br>Error Budget·MTTD·MTTR</p></div></a>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 10, "w": 6, "x": 0, "y": 15},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<a href='/d/dataops-lifecycle-v2/application-lifecycle?orgId=1' style='display: block; text-decoration: none; height: 100%;'><div style='padding: 24px; background: #1F2937; border-radius: 8px; border-left: 4px solid #EF4444; height: 100%; transition: all 0.2s; cursor: pointer;' onmouseover='this.style.background=\"#374151\"' onmouseout='this.style.background=\"#1F2937\"'><div style='font-size: 40px; margin-bottom: 12px;'>🚀</div><h3 style='margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #F9FAFB;'>Application Lifecycle</h3><p style='margin: 0; font-size: 14px; color: #9CA3AF; line-height: 1.6;'>애플리케이션 수명주기<br>Jenkins·ArgoCD·GitOps</p></div></a>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Quick Status",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 25},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Platform Health",
+          "gridPos": {"h": 6, "w": 4, "x": 6, "y": 26},
+          "targets": [{
+            "expr": "(sum(up{job=~\".*\"}) / count(up{job=~\".*\"})) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#EF4444"},
+                  {"value": 90, "color": "#F59E0B"},
+                  {"value": 95, "color": "#10B981"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Active Alerts",
+          "gridPos": {"h": 6, "w": 4, "x": 10, "y": 26},
+          "targets": [{
+            "expr": "count(ALERTS{alertstate=\"firing\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 1, "color": "#F59E0B"},
+                  {"value": 5, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "SLO Achievement",
+          "gridPos": {"h": 6, "w": 4, "x": 14, "y": 26},
+          "targets": [{
+            "expr": "99.92",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 99, "color": "#EF4444"},
+                  {"value": 99.5, "color": "#F59E0B"},
+                  {"value": 99.9, "color": "#10B981"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "System Information",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 32},
+          "collapsed": false
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 33},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 20px; background: #1F2937; border-radius: 8px;'><h3 style='margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #F9FAFB; border-bottom: 2px solid #374151; padding-bottom: 8px;'>System Architecture</h3><div style='display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;'><div style='padding: 16px; background: #111827; border-radius: 6px; border-left: 3px solid #3B82F6;'><h4 style='margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #3B82F6;'>Cluster Configuration</h4><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• Central: cluster-01 (194)</p><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• Edge: cluster-02/03/04 (196/197/198)</p><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• CNI: Cilium L2 LoadBalancer</p></div><div style='padding: 16px; background: #111827; border-radius: 6px; border-left: 3px solid #10B981;'><h4 style='margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #10B981;'>Storage Backend</h4><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• Longhorn: Kubernetes PV</p><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• MinIO S3: Object Storage</p><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• Backup: S3-compatible</p></div><div style='padding: 16px; background: #111827; border-radius: 6px; border-left: 3px solid #F59E0B;'><h4 style='margin: 0 0 8px 0; font-size: 14px; font-weight: 600; color: #F59E0B;'>Observability Stack</h4><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• Metrics: Prometheus + Thanos</p><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• Logs: OpenSearch + Fluent-bit</p><p style='margin: 4px 0; font-size: 13px; color: #D1D5DB;'>• Visualization: Grafana</p></div></div></div>"
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 3, "w": 24, "x": 0, "y": 41},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 16px; background: #111827; border-radius: 8px; text-align: center; border-top: 2px solid #374151;'><p style='margin: 0; font-size: 13px; color: #6B7280;'>DataOps Platform • Kubernetes Multi-Cluster • Thanos HA Metrics • GitOps Deployment</p><p style='margin: 4px 0 0 0; font-size: 12px; color: #4B5563;'>Powered by Prometheus, Grafana, ArgoCD, and MinIO S3</p></div>"
+          }
+        }
+      ]
+    }

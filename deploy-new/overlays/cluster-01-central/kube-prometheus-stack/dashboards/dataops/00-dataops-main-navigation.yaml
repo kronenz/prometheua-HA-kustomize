@@ -1,0 +1,229 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-main-navigation
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-main-navigation.json: |
+    {
+      "uid": "dataops-main-nav",
+      "title": "🌐 DataOps Platform - Main Navigation",
+      "tags": ["dataops", "navigation", "overview"],
+      "timezone": "browser",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "30s",
+      "editable": true,
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 4},
+          "options": {
+            "mode": "html",
+            "content": "<div style='text-align: center; padding: 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);'><h1 style='font-size: 48px; font-weight: 800; color: #ffffff; margin: 0 0 12px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>🌐 DataOps Platform</h1><p style='font-size: 18px; color: #f0f0f0; margin: 0; font-weight: 500;'>End-to-End Monitoring & Observability Portal</p><p style='font-size: 14px; color: #e0e0e0; margin: 8px 0 0 0;'>Spark • Airflow • Trino • Iceberg • S3 • Hive Metastore</p></div>"
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "전체 플랫폼 상태",
+          "gridPos": {"x": 0, "y": 4, "w": 6, "h": 4},
+          "targets": [{
+            "expr": "avg(up{job=~'spark.*|airflow.*|trino.*'})",
+            "refId": "A"
+          }],
+          "options": {
+            "graphMode": "none",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": null, "color": "red"},
+                  {"value": 0.95, "color": "yellow"},
+                  {"value": 0.99, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "실행 중인 워크로드",
+          "gridPos": {"x": 6, "y": 4, "w": 6, "h": 4},
+          "targets": [{
+            "expr": "sum(spark_job_active_count) + sum(airflow_dag_running) + sum(trino_running_queries)",
+            "refId": "A"
+          }],
+          "options": {
+            "graphMode": "area",
+            "colorMode": "value",
+            "textMode": "value_and_name"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "금일 실패한 Job",
+          "gridPos": {"x": 12, "y": 4, "w": 6, "h": 4},
+          "targets": [{
+            "expr": "sum(increase(spark_job_failed_total[24h])) + sum(increase(airflow_dag_failed[24h])) + sum(increase(trino_query_failed[24h]))",
+            "refId": "A"
+          }],
+          "options": {
+            "graphMode": "area",
+            "colorMode": "value",
+            "textMode": "value_and_name"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": null, "color": "green"},
+                  {"value": 10, "color": "yellow"},
+                  {"value": 50, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "리소스 사용률 (전체)",
+          "gridPos": {"x": 18, "y": 4, "w": 6, "h": 4},
+          "targets": [{
+            "expr": "avg((1 - avg(rate(node_cpu_seconds_total{mode='idle'}[5m]))) * 100)",
+            "refId": "A",
+            "legendFormat": "CPU"
+          }, {
+            "expr": "avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)",
+            "refId": "B",
+            "legendFormat": "Memory"
+          }],
+          "options": {
+            "graphMode": "area",
+            "colorMode": "value"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": null, "color": "green"},
+                  {"value": 70, "color": "yellow"},
+                  {"value": 85, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": 10,
+          "type": "text",
+          "title": "",
+          "gridPos": {"x": 0, "y": 8, "w": 12, "h": 10},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: transform 0.2s;' onclick=\"window.location.href='/d/dataops-gitops-pipeline'\" onmouseover=\"this.style.transform='scale(1.02)'\" onmouseout=\"this.style.transform='scale(1)''\"><div style='text-align: center;'><div style='font-size: 64px; margin-bottom: 16px;'>🚀</div><h2 style='font-size: 28px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;'>GitOps 배포 파이프라인</h2><p style='font-size: 14px; color: #f0f0f0; margin: 0;'>Bitbucket → Jenkins → ArgoCD → Kubernetes</p><p style='font-size: 12px; color: #e0e0e0; margin: 8px 0 0 0;'>배포 상태 • CI/CD 모니터링 • 배포 검증</p></div></div>"
+          }
+        },
+        {
+          "id": 11,
+          "type": "text",
+          "title": "",
+          "gridPos": {"x": 12, "y": 8, "w": 12, "h": 10},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: transform 0.2s;' onclick=\"window.location.href='/d/dataops-resource-capacity'\" onmouseover=\"this.style.transform='scale(1.02)'\" onmouseout=\"this.style.transform='scale(1)''\"><div style='text-align: center;'><div style='font-size: 64px; margin-bottom: 16px;'>📊</div><h2 style='font-size: 28px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;'>리소스 가용량 모니터링</h2><p style='font-size: 14px; color: #f0f0f0; margin: 0;'>CPU • Memory • Storage • Network</p><p style='font-size: 12px; color: #e0e0e0; margin: 8px 0 0 0;'>실시간 사용률 • 용량 예측 • 리소스 최적화</p></div></div>"
+          }
+        },
+        {
+          "id": 12,
+          "type": "text",
+          "title": "",
+          "gridPos": {"x": 0, "y": 18, "w": 12, "h": 10},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 12px; height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: transform 0.2s;' onclick=\"window.location.href='/d/dataops-workload-execution'\" onmouseover=\"this.style.transform='scale(1.02)'\" onmouseout=\"this.style.transform='scale(1)''\"><div style='text-align: center;'><div style='font-size: 64px; margin-bottom: 16px;'>⚙️</div><h2 style='font-size: 28px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;'>워크로드 실행 모니터링</h2><p style='font-size: 14px; color: #f0f0f0; margin: 0;'>Spark • Airflow • Trino</p><p style='font-size: 12px; color: #e0e0e0; margin: 8px 0 0 0;'>Job 실행 상태 • 성능 메트릭 • 리소스 사용량</p></div></div>"
+          }
+        },
+        {
+          "id": 13,
+          "type": "text",
+          "title": "",
+          "gridPos": {"x": 12, "y": 18, "w": 12, "h": 10},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 12px; height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: transform 0.2s;' onclick=\"window.location.href='/d/dataops-data-pipeline'\" onmouseover=\"this.style.transform='scale(1.02)'\" onmouseout=\"this.style.transform='scale(1)''\"><div style='text-align: center;'><div style='font-size: 64px; margin-bottom: 16px;'>🔍</div><h2 style='font-size: 28px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;'>데이터 파이프라인 헬스</h2><p style='font-size: 14px; color: #f0f0f0; margin: 0;'>Iceberg • S3 • Hive Metastore • Oracle</p><p style='font-size: 12px; color: #e0e0e0; margin: 8px 0 0 0;'>스토리지 상태 • 메타데이터 • 데이터 품질</p></div></div>"
+          }
+        },
+        {
+          "id": 14,
+          "type": "text",
+          "title": "",
+          "gridPos": {"x": 0, "y": 28, "w": 12, "h": 10},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); border-radius: 12px; height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: transform 0.2s;' onclick=\"window.location.href='/d/dataops-optimization'\" onmouseover=\"this.style.transform='scale(1.02)'\" onmouseout=\"this.style.transform='scale(1)''\"><div style='text-align: center;'><div style='font-size: 64px; margin-bottom: 16px;'>🛠️</div><h2 style='font-size: 28px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;'>최적화 & 트러블슈팅</h2><p style='font-size: 14px; color: #f0f0f0; margin: 0;'>성능 분석 • 에러 추적 • 비용 최적화</p><p style='font-size: 12px; color: #e0e0e0; margin: 8px 0 0 0;'>슬로우 쿼리 • 실패 분석 • 권장사항</p></div></div>"
+          }
+        },
+        {
+          "id": 15,
+          "type": "text",
+          "title": "",
+          "gridPos": {"x": 12, "y": 28, "w": 12, "h": 10},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); border-radius: 12px; height: 100%; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: transform 0.2s;' onclick=\"window.location.href='/d/dataops-e2e-analytics'\" onmouseover=\"this.style.transform='scale(1.02)'\" onmouseout=\"this.style.transform='scale(1)''\"><div style='text-align: center;'><div style='font-size: 64px; margin-bottom: 16px;'>📈</div><h2 style='font-size: 28px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;'>End-to-End Analytics</h2><p style='font-size: 14px; color: #f0f0f0; margin: 0;'>전체 파이프라인 • SLI/SLO • 비즈니스 메트릭</p><p style='font-size: 12px; color: #e0e0e0; margin: 8px 0 0 0;'>E2E 레이턴시 • 데이터 처리량 • 가용성</p></div></div>"
+          }
+        },
+        {
+          "id": 20,
+          "type": "table",
+          "title": "최근 알림 (Critical/High)",
+          "gridPos": {"x": 0, "y": 38, "w": 24, "h": 8},
+          "targets": [{
+            "expr": "ALERTS{severity=~'critical|high', alertstate='firing'}",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }],
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "severity"},
+                "properties": [{
+                  "id": "custom.displayMode",
+                  "value": "color-background"
+                }]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "Time", "desc": true}]
+          }
+        }
+      ]
+    }

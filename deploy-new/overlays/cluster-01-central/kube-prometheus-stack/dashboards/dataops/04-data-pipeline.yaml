@@ -1,0 +1,219 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-data-pipeline
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-data-pipeline.json: |
+    {
+      "uid": "dataops-data-pipeline",
+      "title": "🗄️ DataOps - 데이터 파이프라인",
+      "tags": ["dataops", "data", "iceberg", "s3", "hive"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "1m",
+      "editable": true,
+      "panels": [
+        {
+          "type": "text",
+          "title": "📊 데이터 파이프라인 개요",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 20px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border-radius: 8px;'><h2 style='margin:0'>🗄️ 데이터 파이프라인 모니터링</h2><p style='margin-top:10px; font-size:16px'>Iceberg, S3, Hive Metastore, Oracle 데이터 레이어 모니터링</p></div>"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Iceberg Table 수",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "count(iceberg_table_info)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "thresholds"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "blue"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "S3 GET Latency (P95)",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 4},
+          "targets": [{
+            "expr": "histogram_quantile(0.95, sum(rate(s3_request_duration_seconds_bucket{operation=\"GET\"}[5m])) by (le))",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 0.1, "color": "yellow"},
+                  {"value": 0.5, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Hive Metastore 응답시간",
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 4},
+          "targets": [{
+            "expr": "avg(hive_metastore_response_time_seconds)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 1, "color": "yellow"},
+                  {"value": 3, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Oracle 연결 풀 사용률",
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 4},
+          "targets": [{
+            "expr": "oracle_connection_pool_active / oracle_connection_pool_max * 100",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 70, "color": "yellow"},
+                  {"value": 90, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Iceberg Table Size Growth",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+          "targets": [{
+            "expr": "rate(iceberg_table_size_bytes[24h]) / 1024 / 1024 / 1024",
+            "legendFormat": "{{table_name}}",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "unit": "decgbytes"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "S3 Error Rate",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+          "targets": [{
+            "expr": "sum(rate(s3_request_errors_total[5m])) / sum(rate(s3_requests_total[5m])) * 100",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 0.1, "color": "yellow"},
+                  {"value": 1, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "title": "Iceberg Table 상세 정보",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 18},
+          "targets": [{
+            "expr": "iceberg_table_info",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"renameByName": {"table_name": "테이블명", "snapshot_count": "Snapshot 수", "small_files_ratio": "Small Files 비율", "size_bytes": "크기"}}}
+          ]
+        },
+        {
+          "type": "bargauge",
+          "title": "Iceberg Small Files Ratio (목표: <30%)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+          "targets": [{
+            "expr": "iceberg_table_small_files_count / iceberg_table_total_files_count * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 30, "color": "yellow"},
+                  {"value": 50, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Oracle Query Duration (P95)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+          "targets": [{
+            "expr": "histogram_quantile(0.95, sum(rate(oracle_query_duration_seconds_bucket[5m])) by (le))",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "unit": "s"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "🔗 관련 링크",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 36},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 15px; background: #f5f5f5; border-radius: 8px;'><div style='display: flex; justify-content: space-around;'><a href='/d/dataops-workload-execution/dataops-workload-execution' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>← 워크로드 실행</a><a href='/d/dataops-main-nav/dataops-platform-main-navigation' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>메인으로</a><a href='/d/dataops-optimization/dataops-optimization' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>최적화 →</a></div></div>"
+          }
+        }
+      ]
+    }

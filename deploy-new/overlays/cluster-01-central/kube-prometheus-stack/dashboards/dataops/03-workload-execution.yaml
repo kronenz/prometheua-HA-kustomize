@@ -1,0 +1,211 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-workload-execution
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-workload-execution.json: |
+    {
+      "uid": "dataops-workload-execution",
+      "title": "⚙️ DataOps - 워크로드 실행",
+      "tags": ["dataops", "workload", "spark", "airflow", "trino"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "editable": true,
+      "panels": [
+        {
+          "type": "text",
+          "title": "📊 워크로드 실행 개요",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 20px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 8px;'><h2 style='margin:0'>⚙️ 워크로드 실행 모니터링</h2><p style='margin-top:10px; font-size:16px'>Spark, Airflow, Trino 워크로드 성능 및 실행 상태 모니터링</p></div>"
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Spark Job 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 8, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "sum(rate(spark_job_status{status=\"SUCCEEDED\"}[24h])) / sum(rate(spark_job_status[24h])) * 100",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 90, "color": "yellow"},
+                  {"value": 95, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Airflow DAG 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 8, "x": 8, "y": 4},
+          "targets": [{
+            "expr": "sum(rate(airflow_dag_run_status{status=\"success\"}[24h])) / sum(rate(airflow_dag_run_status[24h])) * 100",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 95, "color": "yellow"},
+                  {"value": 99, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Trino Query 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 8, "x": 16, "y": 4},
+          "targets": [{
+            "expr": "sum(rate(trino_query_completed{state=\"FINISHED\"}[24h])) / sum(rate(trino_query_completed[24h])) * 100",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "red"},
+                  {"value": 95, "color": "yellow"},
+                  {"value": 98, "color": "green"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Spark Job Duration (P50/P95/P99)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(spark_job_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(spark_job_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P95",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(spark_job_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P99",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "unit": "s"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Airflow Task Duration",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+          "targets": [{
+            "expr": "histogram_quantile(0.95, sum(rate(airflow_task_duration_seconds_bucket[5m])) by (le, dag_id))",
+            "legendFormat": "{{dag_id}}",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "unit": "s"
+            }
+          }
+        },
+        {
+          "type": "table",
+          "title": "Spark Job 실행 내역",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 18},
+          "targets": [{
+            "expr": "spark_job_info",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"renameByName": {"job_id": "Job ID", "status": "상태", "duration": "소요시간", "executor_count": "Executor 수"}}}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Trino Query 실행 추이",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+          "targets": [
+            {
+              "expr": "sum(rate(trino_query_completed{state=\"FINISHED\"}[5m]))",
+              "legendFormat": "완료",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(trino_query_completed{state=\"FAILED\"}[5m]))",
+              "legendFormat": "실패",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"}
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "Spark GC Time Ratio",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+          "targets": [{
+            "expr": "sum(rate(jvm_gc_collection_seconds_sum{job=\"spark\"}[5m])) / sum(rate(jvm_gc_collection_seconds_count{job=\"spark\"}[5m])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 5, "color": "yellow"},
+                  {"value": 10, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "🔗 관련 링크",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 36},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 15px; background: #f5f5f5; border-radius: 8px;'><div style='display: flex; justify-content: space-around;'><a href='/d/dataops-resource-capacity/dataops-resource-capacity' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>← 리소스 가용량</a><a href='/d/dataops-main-nav/dataops-platform-main-navigation' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>메인으로</a><a href='/d/dataops-data-pipeline/dataops-data-pipeline' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>데이터 파이프라인 →</a></div></div>"
+          }
+        }
+      ]
+    }

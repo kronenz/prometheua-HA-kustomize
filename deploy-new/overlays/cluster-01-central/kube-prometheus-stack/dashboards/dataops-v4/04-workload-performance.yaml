@@ -1,0 +1,670 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-workload-v4
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-workload-v4.json: |
+    {
+      "uid": "dataops-workload-v4",
+      "title": "DataOps - 4. Workload Performance",
+      "tags": ["dataops", "workload", "spark", "Spark", "Spark"],
+      "timezone": "Asia/Seoul",
+      "schemaVersion": 39,
+      "version": 4,
+      "refresh": "30s",
+      "graphTooltip": 1,
+      "editable": true,
+      "style": "dark",
+      "panels": [
+        {
+          "type": "text",
+          "id": 1,
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "markdown",
+            "content": "# 🚀 Workload Performance Dashboard\n\n**목적**: 빅데이터 워크로드 실행 성능 및 안정성 모니터링\n\n**모니터링 워크로드**: Apache Spark (배치/스트리밍) | Spark Cluster (워크플로우) | Spark (분산 쿼리)\n\n[◀ 포털로 돌아가기](/d/dataops-portal-e2e-v4)"
+          },
+          "options": {
+            "code": {
+              "language": "plaintext",
+              "showLineNumbers": false,
+              "showMiniMap": false
+            },
+            "content": "# 🚀 Workload Performance Dashboard\n\n**목적**: 빅데이터 워크로드 실행 성능 및 안정성 모니터링\n\n**모니터링 워크로드**: Apache Spark (배치/스트리밍) | Spark Cluster (워크플로우) | Spark (분산 쿼리)\n\n[◀ 포털로 돌아가기](/d/dataops-portal-e2e-v4)",
+            "mode": "markdown"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 10,
+          "title": "Spark Job Success Rate",
+          "description": "**Apache Spark Job 성공률 (최근 1시간)**\n\n**계산식**:\nsum(rate(spark_application_completed_total{result=\"succeeded\"}[1h])) / \nsum(rate(spark_application_completed_total[1h])) * 100\n\n**메트릭 설명**:\n- Spark 애플리케이션의 완료 상태별 개수를 집계\n- succeeded 상태의 비율을 계산하여 성공률 산출\n- 배치 Job과 Streaming Job 모두 포함\n\n**정상 범위**:\n- 🟢 95% 이상: 우수 (안정적인 Job 실행)\n- 🟡 90-95%: 양호 (간헐적 실패)\n- 🔴 90% 미만: 위험 (근본 원인 분석 필요)\n\n**실패 원인 분석**:\n1. **메모리 부족**: executor-memory, driver-memory 설정 검토\n2. **데이터 스큐**: 파티션 불균형으로 인한 일부 Container 지연\n3. **의존성 오류**: 외부 시스템 (S3, Hive Metastore) 연결 실패\n4. **리소스 경쟁**: 클러스터 리소스 부족\n\n**조치 사항**:\n- Spark History Server에서 실패한 Job의 상세 로그 확인\n- Event Timeline에서 병목 Stage 식별\n- 리소스 요청량 (cores, memory) 재조정\n\n**SLO**: >95% (주간 평균)\n**관련 메트릭**: Stage Duration, Executor Memory Usage",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+          "targets": [
+            {
+              "expr": "sum(rate(spark_application_completed_total{result=\"succeeded\"}[1h])) / sum(rate(spark_application_completed_total[1h])) * 100",
+              "refId": "A",
+              "legendFormat": "Success Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.3)"},
+                  {"value": 90, "color": "rgba(255, 180, 71, 0.3)"},
+                  {"value": 95, "color": "rgba(255, 180, 71, 0.5)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 11,
+          "title": "Spark Cluster Health (%)",
+          "description": "**Spark Cluster Pod 실행 성공률 (최근 1시간)**\n\n**계산식**:\nsum(rate(Spark_podrun_success[1h])) / \nsum(rate(Spark_podrun_total[1h])) * 100\n\n**메트릭 설명**:\n- Spark Cluster Pod Run의 성공/실패/스킵 상태 집계\n- 전체 실행 대비 성공 비율 계산\n- 워크플로우 안정성의 핵심 지표\n\n**정상 범위**:\n- 🟢 98% 이상: 우수 (자동화 파이프라인 안정)\n- 🟡 95-98%: 양호 (일부 Container 재시도 발생)\n- 🔴 95% 미만: 위험 (파이프라인 신뢰성 저하)\n\n**실패 원인 분석**:\n1. **Upstream 의존성**: 선행 Container 실패로 인한 연쇄 실패\n2. **외부 연동 오류**: API 호출, DB 연결, 파일 시스템 접근 실패\n3. **데이터 품질**: 입력 데이터 검증 실패\n4. **리소스 제약**: Worker 부족으로 Container 대기 시간 초과\n\n**조치 사항**:\n- Spark Cluster UI에서 실패한 Container의 로그 확인\n- Container Instance 상태 (queued, running, failed, retry) 분석\n- Pod 설정의 retry, timeout 파라미터 검토\n- 외부 시스템 Health Check\n\n**SLO**: >98% (주간 평균)\n**관련 메트릭**: Container Duration, Scheduler Latency",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 4},
+          "targets": [
+            {
+              "expr": "(count(kube_pod_status_phase{namespace="spark", phase="Running"}) / count(kube_pod_info{namespace="spark"})) * 100",
+              "refId": "A",
+              "legendFormat": "Pod Success Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.3)"},
+                  {"value": 95, "color": "rgba(255, 180, 71, 0.3)"},
+                  {"value": 98, "color": "rgba(255, 180, 71, 0.5)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 12,
+          "title": "Spark Application Success Rate",
+          "description": "**Spark 쿼리 실행 성공률 (최근 1시간)**\n\n**계산식**:\nsum(rate(Spark_execution_application_completed{application_state=\"FINISHED\"}[1h])) / \nsum(rate(Spark_execution_application_completed[1h])) * 100\n\n**메트릭 설명**:\n- Spark 쿼리의 최종 상태 (FINISHED, FAILED, CANCELED) 집계\n- 정상 완료된 쿼리의 비율 산출\n- 분산 쿼리 엔진의 안정성 지표\n\n**정상 범위**:\n- 🟢 97% 이상: 우수 (안정적인 쿼리 실행)\n- 🟡 93-97%: 양호 (일부 복잡한 쿼리 실패)\n- 🔴 93% 미만: 위험 (데이터 소스 또는 리소스 문제)\n\n**실패 원인 분석**:\n1. **메모리 부족**: application.max-memory-per-node 초과\n2. **타임아웃**: application.max-execution-time 초과 (복잡한 Join)\n3. **Connector 오류**: Hive Metastore, S3 연결 실패\n4. **데이터 스캔 과다**: 파티션 프루닝 미적용\n\n**조치 사항**:\n- Spark UI에서 실패 쿼리의 Application Plan 분석\n- Split 분포 및 Worker 부하 확인\n- Hive Metastore 및 S3 연결 상태 점검\n- 쿼리 최적화 (파티션 필터, Predicate Pushdown)\n\n**SLO**: >97% (주간 평균)\n**관련 메트릭**: Application p95 Latency, Running Queries",
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 4},
+          "targets": [
+            {
+              "expr": "sum(rate(Spark_execution_application_completed{application_state=\"FINISHED\"}[1h])) / sum(rate(Spark_execution_application_completed[1h])) * 100",
+              "refId": "A",
+              "legendFormat": "Application Success Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.3)"},
+                  {"value": 93, "color": "rgba(255, 180, 71, 0.3)"},
+                  {"value": 97, "color": "rgba(255, 180, 71, 0.5)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "gauge",
+          "id": 13,
+          "title": "Active Workload Count",
+          "description": "**현재 실행 중인 워크로드 개수**\n\n**계산식**:\nsum(spark_application_running) + \nsum(Spark_podrun_running) + \nsum(Spark_execution_application_running)\n\n**메트릭 설명**:\n- 3가지 워크로드 엔진의 실행 중인 작업 합계\n- 클러스터 부하 상태의 실시간 지표\n- 리소스 할당 계획에 활용\n\n**정상 범위**:\n- 🟢 0-50개: 여유 있음\n- 🟡 50-100개: 적정 부하\n- 🔴 100개 이상: 높은 부하 (리소스 경쟁)\n\n**조치 사항**:\n- 100개 이상 시 Job Queue 분석\n- 리소스 사용률 (CPU, Memory) 모니터링\n- 우선순위 낮은 Job 일시 중지 고려\n\n**참고**: 동시 실행 제한은 리소스 Quota로 관리",
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 4},
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{namespace="spark", phase="Running"})",
+              "refId": "A",
+              "legendFormat": "Active Count"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(255, 180, 71, 0.3)"},
+                  {"value": 50, "color": "rgba(255, 180, 71, 0.4)"},
+                  {"value": 100, "color": "rgba(244, 139, 139, 0.3)"}
+                ]
+              },
+              "min": 0,
+              "max": 150
+            }
+          },
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 20,
+          "title": "Spark Job Execution Rate (Jobs/min)",
+          "description": "**Spark Job 실행 빈도 (분당 시작 개수)**\n\n**계산식**:\nsum(rate(spark_application_started_total[5m])) * 60\n\n**메트릭 설명**:\n- 5분 단위로 측정한 초당 Job 시작 개수를 분당으로 환산\n- 배치 워크로드의 처리량 지표\n- 시간대별 부하 패턴 파악\n\n**패턴 분석**:\n- **피크 시간대**: 통상 09:00-11:00, 14:00-16:00\n- **배치 윈도우**: 새벽 02:00-05:00 (대용량 ETL)\n- **실시간 스트리밍**: 일정한 실행률 유지\n\n**이상 징후**:\n- 급격한 증가: Job Submission 폭주 (스케줄러 오류)\n- 급격한 감소: 클러스터 장애 또는 스케줄러 중단\n- 0으로 떨어짐: Spark Submit 서비스 장애\n\n**조치 사항**:\n- 비정상 패턴 발견 시 스케줄러 (Spark Cluster) 로그 확인\n- 리소스 부족으로 Job이 대기열에 쌓이는지 점검\n- 동시 실행 제한 (spark.scheduler.maxConcurrentJobs) 검토\n\n**정상 범위**: 평균 10-30 jobs/min (피크 시 50-80)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+          "targets": [
+            {
+              "expr": "sum(rate(spark_application_started_total[5m])) * 60",
+              "refId": "A",
+              "legendFormat": "Job Start Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(255, 180, 71, 0.8)"}
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "none"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 21,
+          "title": "Spark Cluster Container Execution Rate (Containers/min)",
+          "description": "**Spark Cluster Container 실행 빈도 (분당 시작 개수)**\n\n**계산식**:\nsum(rate(Spark_container_started_total[5m])) * 60\n\n**메트릭 설명**:\n- Spark Cluster에서 스케줄링된 Container의 시작 빈도\n- Pod 내 Container들의 병렬 실행 포함\n- 워크플로우 처리량의 핵심 지표\n\n**패턴 분석**:\n- **정시 Spike**: Pod 스케줄 시작 시점 (예: 매시 정각)\n- **평탄화**: Container가 Worker Pool에서 고르게 처리됨\n- **계단식 증가**: 순차 Container들의 단계별 실행\n\n**이상 징후**:\n- 급격한 증가 후 멈춤: Worker 부족으로 Queue 적체\n- 0으로 떨어짐: Scheduler 또는 Executor 장애\n- 불규칙한 Spike: Container 재시도 폭주\n\n**조치 사항**:\n- Container State 분포 확인 (queued, running, success, failed)\n- Worker Slot 가용량 점검 (Spark_pool_open_slots)\n- Executor (CeleryExecutor, KubernetesExecutor) 로그 확인\n- Pod의 concurrency, max_active_containers 설정 검토\n\n**정상 범위**: 평균 50-150 containers/min (Pod 개수에 비례)\n**관련 메트릭**: Container Duration, Pool Utilization",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{namespace="spark", phase="Running"})",
+              "refId": "A",
+              "legendFormat": "Container Start Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(255, 180, 71, 0.8)"}
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "none"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 30,
+          "title": "Spark Stage Duration p95 (seconds)",
+          "description": "**Spark Stage 실행 시간 95 백분위수**\n\n**계산식**:\nhistogram_quantile(0.95, \n  sum(rate(spark_stage_duration_seconds_bucket[5m])) by (app_name, le)\n)\n\n**메트릭 설명**:\n- Spark Job 내 Stage별 실행 시간의 p95 값\n- 95%의 Stage가 이 시간 내에 완료됨을 의미\n- 성능 병목 구간 식별의 핵심 지표\n\n**정상 범위**:\n- 🟢 0-60초: 우수 (작은 데이터셋 또는 최적화된 쿼리)\n- 🟡 60-300초: 양호 (중간 규모 데이터 처리)\n- 🔴 300초 이상: 주의 (대용량 데이터 또는 비효율적 연산)\n\n**성능 병목 원인**:\n1. **Shuffle 과다**: Wide Transformation (groupBy, join)으로 인한 네트워크 I/O\n2. **데이터 스큐**: 특정 파티션에 데이터 집중으로 Straggler Container 발생\n3. **GC 압박**: Executor 메모리 부족으로 Garbage Collection 빈번\n4. **디스크 Spill**: 메모리 부족 시 임시 디스크 사용\n\n**최적화 방법**:\n- **파티션 재분배**: repartition() 또는 coalesce()로 균등 분배\n- **Broadcast Join**: 작은 테이블을 Driver에서 Broadcast\n- **메모리 증설**: executor-memory, driver-memory 증가\n- **Predicate Pushdown**: 불필요한 데이터 스캔 최소화\n\n**SLO**: p95 < 180초 (3분)\n**관련 메트릭**: Executor Memory Usage, GC Time Ratio",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 18},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(spark_stage_duration_seconds_bucket[5m])) by (app_name, le))",
+              "refId": "A",
+              "legendFormat": "{{app_name}} p95"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 60, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 300, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 31,
+          "title": "Spark Cluster Container Duration p95 (seconds)",
+          "description": "**Spark Cluster Container 실행 시간 95 백분위수**\n\n**계산식**:\nhistogram_quantile(0.95, \n  sum(rate(Spark_container_duration_seconds_bucket[5m])) by (pod_id, container_id, le)\n)\n\n**메트릭 설명**:\n- Pod 내 각 Container의 실행 시간 p95 값\n- 95%의 Container 실행이 이 시간 내에 완료\n- Container 성능 추이 및 SLA 준수 모니터링\n\n**정상 범위**:\n- 🟢 0-120초: 우수 (경량 Container 또는 API 호출)\n- 🟡 120-600초: 양호 (데이터 전처리, 중간 규모 쿼리)\n- 🔴 600초 이상: 주의 (장시간 실행 Container, SLA 초과 위험)\n\n**지연 원인 분석**:\n1. **외부 API 지연**: HTTP 호출의 Timeout 또는 Rate Limit\n2. **DB 쿼리 성능**: 인덱스 부재 또는 Full Table Scan\n3. **파일 시스템 I/O**: S3, NFS에서 대용량 파일 읽기/쓰기\n4. **리소스 대기**: Worker Slot 부족으로 Container 대기\n\n**최적화 방법**:\n- **Container 분리**: 장시간 Container를 여러 단계로 분할\n- **병렬 처리**: Container Group 또는 Dynamic Container Mapping 활용\n- **리소스 할당**: Container에 적절한 Queue 및 Pool 지정\n- **Timeout 설정**: execution_timeout으로 무한 대기 방지\n\n**SLO**: p95 < 300초 (5분)\n**SLA 설정**: Container별 sla 파라미터 정의 권장\n**관련 메트릭**: Scheduler Latency, Pod Success Rate",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 18},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(Spark_container_duration_seconds_bucket[5m])) by (pod_id, container_id, le))",
+              "refId": "A",
+              "legendFormat": "{{pod_id}}/{{container_id}} p95"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 120, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 600, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 32,
+          "title": "Spark Application p95 Latency (seconds)",
+          "description": "**Spark 쿼리 실행 시간 95 백분위수**\n\n**계산식**:\nhistogram_quantile(0.95, \n  sum(rate(Spark_execution_application_execution_time_seconds_bucket[5m])) by (cluster, le)\n)\n\n**메트릭 설명**:\n- Spark 쿼리의 실행 완료 시간 p95 값\n- 쿼리 파싱, 계획, 실행, 결과 반환의 전체 소요 시간\n- 사용자 체감 성능의 핵심 지표\n\n**정상 범위**:\n- 🟢 0-10초: 우수 (실시간 대시보드 쿼리)\n- 🟡 10-60초: 양호 (분석 쿼리, 복잡한 Join)\n- 🔴 60초 이상: 주의 (최적화 필요)\n\n**성능 병목 원인**:\n1. **Full Table Scan**: 파티션 필터 누락으로 전체 데이터 스캔\n2. **Cross Join**: 카디널리티가 높은 테이블 간 Join\n3. **메모리 부족**: Spill to Disk 발생\n4. **Split 불균형**: 데이터 분포 불균형으로 Worker 간 부하 차이\n\n**쿼리 최적화**:\n- **파티션 프루닝**: WHERE 절에 파티션 컬럼 (date, region) 필터 추가\n- **Predicate Pushdown**: Connector에서 불필요한 데이터 필터링\n- **통계 정보**: ANALYZE TABLE로 CBO (Cost-Based Optimizer) 개선\n- **리소스 그룹**: application.max-memory-per-node 조정\n\n**쿼리 분류**:\n- **Interactive**: p95 < 10초 목표\n- **Batch**: p95 < 60초 목표\n- **ETL**: 실행 시간보다 안정성 우선\n\n**SLO**: p95 < 30초 (전체 쿼리 평균)\n**관련 메트릭**: Application Success Rate, Running Queries",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 18},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(Spark_execution_application_execution_time_seconds_bucket[5m])) by (cluster, le))",
+              "refId": "A",
+              "legendFormat": "{{cluster}} p95"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 10, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 60, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 40,
+          "title": "Spark Executor Memory Usage (GB)",
+          "description": "**Spark Executor의 메모리 사용량**\n\n**계산식**:\nsum(spark_executor_memory_used_bytes) by (app_name, executor_id) / 1024 / 1024 / 1024\n\n**메트릭 설명**:\n- 각 Executor가 사용 중인 Heap 메모리 용량\n- Storage (캐시된 RDD/DataFrame)와 Execution (Container 실행) 메모리 포함\n- OOM (Out Of Memory) 위험 모니터링\n\n**정상 범위**:\n- Executor 메모리 할당량의 80% 이하 유지 권장\n- 예: 8GB 할당 시 6.4GB 이하\n\n**높은 메모리 사용 원인**:\n1. **캐시 과다**: persist() 또는 cache()로 메모리에 저장된 데이터 누적\n2. **Shuffle 버퍼**: Wide Transformation 시 임시 데이터 적재\n3. **메모리 누수**: 장시간 실행 Streaming Job의 누적\n4. **대용량 Broadcast**: Driver에서 Executor로 전송한 큰 변수\n\n**OOM 발생 시 조치**:\n- **메모리 증설**: --executor-memory 파라미터 증가\n- **캐시 해제**: unpersist()로 불필요한 캐시 제거\n- **파티션 증가**: 데이터를 더 작은 단위로 분할\n- **메모리 비율 조정**: spark.memory.fraction (기본 0.6)\n\n**GC 관계**:\n- 메모리 사용률 > 90% 시 Full GC 빈번 발생\n- GC Time Ratio와 함께 모니터링 필요\n\n**SLO**: 평균 사용률 < 70%\n**경고**: 특정 Executor가 90% 초과 시 Alert\n**관련 메트릭**: GC Time Ratio, Stage Duration",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace="spark", pod=~"spark-worker.*"}) / 1024 / 1024",
+              "refId": "A",
+              "legendFormat": "{{app_name}} / {{executor_id}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decgbytes",
+              "decimals": 2,
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"}
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 41,
+          "title": "Spark GC Time Ratio (%)",
+          "description": "**Spark Executor의 Garbage Collection 시간 비율**\n\n**계산식**:\nsum(rate(spark_executor_jvm_gc_time_seconds_total[5m])) by (app_name) / \nsum(rate(spark_executor_runtime_seconds_total[5m])) by (app_name) * 100\n\n**메트릭 설명**:\n- Executor의 총 실행 시간 대비 GC에 소요된 시간 비율\n- JVM Heap 메모리 관리 효율성 지표\n- 높은 비율은 메모리 압박 상태를 의미\n\n**정상 범위**:\n- 🟢 0-10%: 우수 (충분한 메모리, 효율적 실행)\n- 🟡 10-20%: 양호 (간헐적 GC, 성능 영향 경미)\n- 🔴 20% 이상: 위험 (빈번한 GC, 심각한 성능 저하)\n\n**높은 GC Time 원인**:\n1. **메모리 부족**: Executor 메모리가 워크로드에 비해 작음\n2. **메모리 누수**: 장시간 실행 중 객체 해제 안 됨\n3. **비효율적 코드**: 불필요한 객체 생성 (예: 루프 내 반복 생성)\n4. **Full GC 빈번**: Old Generation 메모리 고갈\n\n**최적화 방법**:\n- **메모리 증설**: --executor-memory 증가 (예: 4GB → 8GB)\n- **G1GC 사용**: --conf spark.executor.extraJavaOptions=\"-XX:+UseG1GC\"\n- **오프힙 메모리**: --conf spark.memory.offHeap.enabled=true\n- **객체 재사용**: Broadcast 변수, Accumulator 활용\n\n**성능 영향**:\n- GC Time 20% = 실제 계산에 80%만 사용\n- Stage Duration 증가 및 처리량 감소\n\n**SLO**: 평균 < 10%\n**경고**: 특정 App이 20% 초과 시 Alert\n**관련 메트릭**: Executor Memory Usage, Stage Duration",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+          "targets": [
+            {
+              "expr": "sum(rate(spark_executor_jvm_gc_time_seconds_total[5m])) by (app_name) / sum(rate(spark_executor_runtime_seconds_total[5m])) by (app_name) * 100",
+              "refId": "A",
+              "legendFormat": "{{app_name}} GC Ratio"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 10, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 20, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 50,
+          "title": "Spark Cluster Scheduler Latency (seconds)",
+          "description": "**Spark Cluster Scheduler의 Container 스케줄링 지연 시간**\n\n**계산식**:\nrate(Spark_scheduler_critical_section_duration_seconds_sum[5m]) / \nrate(Spark_scheduler_critical_section_duration_seconds_count[5m])\n\n**메트릭 설명**:\n- Pod 파일 파싱부터 Container가 Queue에 들어가기까지의 시간\n- Scheduler 성능과 안정성의 핵심 지표\n- Pod 개수, 복잡도, DB 성능에 영향받음\n\n**정상 범위**:\n- 🟢 0-5초: 우수 (즉시 스케줄링)\n- 🟡 5-15초: 양호 (다소 지연, 허용 범위)\n- 🔴 15초 이상: 위험 (스케줄링 병목, SLA 초과 위험)\n\n**지연 원인 분석**:\n1. **Pod 파일 과다**: 수백 개 이상의 Pod 파일로 파싱 부하\n2. **복잡한 Pod**: 많은 Container와 의존성 관계\n3. **메타DB 부하**: Postgres/MySQL의 느린 쿼리\n4. **Scheduler 단일화**: HA 구성 없이 단일 Scheduler 운영\n\n**최적화 방법**:\n- **Scheduler 다중화**: scheduler.replicas > 1 (HA)\n- **Pod 파일 최소화**: 동적 Pod 생성보다 정적 파일 선호\n- **메타DB 최적화**: 인덱스 추가, Connection Pool 증가\n- **파싱 주기 조정**: pod_dir_list_interval 증가 (기본 5분)\n\n**영향**:\n- Container 시작 지연으로 SLA 초과\n- 실시간 파이프라인의 데이터 지연\n\n**SLO**: 평균 < 5초, p95 < 10초\n**관련 메트릭**: Pod Processing Time, Container Queue Length",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 34},
+          "targets": [
+            {
+              "expr": "rate(Spark_scheduler_critical_section_duration_seconds_sum[5m]) / rate(Spark_scheduler_critical_section_duration_seconds_count[5m])",
+              "refId": "A",
+              "legendFormat": "Scheduler Latency"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(255, 180, 71, 0.8)"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 5, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 15, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "single"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 51,
+          "title": "Spark Running Queries",
+          "description": "**Spark에서 현재 실행 중인 쿼리 개수**\n\n**계산식**:\nsum(Spark_execution_application_running)\n\n**메트릭 설명**:\n- Coordinator에서 처리 중인 Active 쿼리 수\n- 클러스터 부하와 리소스 사용률의 실시간 지표\n- Queued 쿼리는 미포함 (대기 중)\n\n**정상 범위**:\n- 🟢 0-20개: 여유 (추가 쿼리 수용 가능)\n- 🟡 20-50개: 적정 (리소스 사용 중)\n- 🔴 50개 이상: 포화 (신규 쿼리 지연 가능)\n\n**동시 실행 영향**:\n- 각 쿼리가 클러스터 메모리/CPU를 공유\n- 복잡한 쿼리 다수 실행 시 개별 쿼리 성능 저하\n- Resource Group으로 리소스 할당 제어\n\n**패턴 분석**:\n- **평시**: 5-15개 (대시보드, Ad-hoc 쿼리)\n- **피크**: 30-50개 (업무 시간대)\n- **배치 윈도우**: 10개 이하 (대용량 ETL 위주)\n\n**제어 방법**:\n- **Application Queue**: application.max-queued 설정으로 대기열 관리\n- **Resource Group**: 팀별, 쿼리 타입별 리소스 할당\n- **Kill Application**: 장시간 실행 쿼리 강제 종료\n\n**Alert 조건**:\n- Running Queries > 50개가 10분 이상 지속\n- 특정 사용자가 10개 이상 동시 실행 (비정상)\n\n**SLO**: 평균 < 30개\n**관련 메트릭**: Application p95 Latency, Cluster Memory Usage",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 34},
+          "targets": [
+            {
+              "expr": "metrics_master_apps_Value{namespace="spark"}",
+              "refId": "A",
+              "legendFormat": "Running Queries"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 25,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(255, 180, 71, 0.8)"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 20, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 50, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "single"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "table",
+          "id": 60,
+          "title": "Top 10 Long-Running Spark Jobs",
+          "description": "**가장 오래 실행 중인 Spark Job Top 10**\n\n**계산식**:\ntopk(10, \n  (time() - spark_application_start_time_seconds) \n  * on(app_id) group_left(app_name) spark_application_info\n)\n\n**메트릭 설명**:\n- 현재 실행 중인 Spark Job을 실행 시간 기준으로 정렬\n- App Name, App ID, 실행 시간 (초) 표시\n- 장시간 실행 Job의 모니터링 및 이상 탐지\n\n**정상 범위**:\n- 배치 Job: 1-4시간 (대용량 ETL)\n- 스트리밍 Job: 무기한 (연속 실행)\n- Ad-hoc 분석: 수분-수십분\n\n**이상 징후**:\n- 예상 시간 대비 2배 이상 지연\n- 평소 10분 Job이 1시간 이상\n- 특정 Stage에서 멈춤 (Straggler Container)\n\n**원인 분석**:\n1. **데이터 스큐**: 특정 파티션에 데이터 집중\n2. **리소스 부족**: Executor 할당 대기\n3. **외부 시스템 지연**: S3, Hive Metastore 응답 느림\n4. **비효율적 쿼리**: 불필요한 Shuffle, Cross Join\n\n**조치 사항**:\n- Spark History Server에서 Job의 Stage, Container 상세 분석\n- Event Timeline에서 병목 구간 식별\n- 필요 시 Job Kill 후 파라미터 조정하여 재실행\n- 리소스 부족 시 클러스터 스케일 아웃\n\n**참고**:\n- Streaming Job은 정상적으로 장시간 실행됨\n- app_name 패턴으로 Job 타입 구분 가능",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 42},
+          "targets": [
+            {
+              "expr": "topk(10, (time() - spark_application_start_time_seconds) * on(app_id) group_left(app_name) spark_application_info)",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "app_id": false, "__name__": true, "job": true, "instance": true},
+                "indexByName": {"app_name": 0, "app_id": 1, "Value": 2},
+                "renameByName": {"app_name": "Application Name", "app_id": "App ID", "Value": "Running Time (s)"}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "left", "filterable": true}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Running Time (s)"},
+                "properties": [
+                  {"id": "unit", "value": "s"},
+                  {"id": "decimals", "value": 0},
+                  {"id": "custom.align", "value": "right"}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "id": 61,
+          "title": "Top 10 Failed Spark Cluster Containers (Last 1h)",
+          "description": "**최근 1시간 내 가장 많이 실패한 Spark Cluster Container Top 10**\n\n**계산식**:\ntopk(10, \n  sum(increase(Spark_container_failed_total[1h])) by (pod_id, container_id)\n)\n\n**메트릭 설명**:\n- Pod별, Container별 실패 횟수를 집계\n- 반복적으로 실패하는 Container 식별\n- Container 안정성 및 재시도 정책 검토\n\n**분석 포인트**:\n- **단일 실패**: 일시적 오류 (네트워크, 외부 API)\n- **반복 실패**: 구조적 문제 (코드 버그, 설정 오류)\n- **연쇄 실패**: Upstream Container 실패로 인한 다운스트림 영향\n\n**실패 원인 분류**:\n1. **코드 오류**: Python Exception, SQL 문법 오류\n2. **외부 의존성**: API 타임아웃, DB 연결 실패\n3. **데이터 품질**: 입력 데이터 검증 실패\n4. **리소스 제약**: OOM, Disk Full\n\n**Container 상태 확인**:\n- **failed**: 재시도 횟수 초과 후 최종 실패\n- **up_for_retry**: 재시도 대기 중\n- **upstream_failed**: 선행 Container 실패로 실행 안 됨\n\n**조치 사항**:\n- Spark Cluster UI > Container Logs에서 상세 에러 메시지 확인\n- Container의 retries, retry_delay 파라미터 검토\n- 외부 시스템 Health Check\n- 필요 시 Manual Clear하여 재실행\n\n**Alert 조건**:\n- 특정 Container가 1시간 내 5회 이상 실패\n- Critical Pod의 Container 단 1회 실패도 즉시 알림\n\n**관련 메트릭**: Pod Success Rate, Container Duration",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 42},
+          "targets": [
+            {
+              "expr": "topk(5, kube_pod_container_status_restarts_total{namespace="spark"})",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true},
+                "indexByName": {"pod_id": 0, "container_id": 1, "Value": 2},
+                "renameByName": {"pod_id": "Pod ID", "container_id": "Container ID", "Value": "Failure Count"}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "left", "filterable": true}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Failure Count"},
+                "properties": [
+                  {"id": "unit", "value": "short"},
+                  {"id": "decimals", "value": 0},
+                  {"id": "custom.align", "value": "right"},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                      {"value": 3, "color": "rgba(255, 217, 125, 0.3)"},
+                      {"value": 5, "color": "rgba(244, 139, 139, 0.3)"}
+                    ]
+                  }}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "id": 62,
+          "title": "Top 10 Slowest Spark Queries (Last 1h)",
+          "description": "**최근 1시간 내 가장 느린 Spark 쿼리 Top 10**\n\n**계산식**:\ntopk(10, \n  avg(rate(Spark_execution_application_execution_time_seconds_sum[1h])) by (application_id, user) / \n  avg(rate(Spark_execution_application_execution_time_seconds_count[1h])) by (application_id, user)\n)\n\n**메트릭 설명**:\n- Application ID별 평균 실행 시간을 계산하여 정렬\n- 사용자별 느린 쿼리 패턴 파악\n- 쿼리 최적화 우선순위 결정\n\n**분석 포인트**:\n- **단발성 느린 쿼리**: 데이터 규모가 큰 Ad-hoc 분석\n- **반복적 느린 쿼리**: 대시보드, 정기 리포트 (최적화 필요)\n- **악화 추세**: 데이터 증가로 인한 성능 저하\n\n**최적화 대상 선정**:\n1. **실행 빈도 높음 + 느림**: 우선순위 1 (비즈니스 영향 큼)\n2. **실행 빈도 낮음 + 매우 느림**: 우선순위 2 (리소스 독점)\n3. **점진적 느려짐**: 데이터 증가 대응 필요\n\n**Spark UI 활용**:\n- Application ID로 검색하여 Application Plan 확인\n- Stage별 실행 시간 및 데이터 스캔량 분석\n- Split 분포를 통한 데이터 스큐 확인\n\n**일반적 최적화**:\n- **파티션 필터 추가**: WHERE date >= '2024-01-01'\n- **불필요한 컬럼 제거**: SELECT * 대신 필요 컬럼만\n- **Join 순서 변경**: 작은 테이블을 왼쪽에\n- **Materialized View**: 자주 사용하는 집계 결과 미리 계산\n\n**협업**:\n- 느린 쿼리 작성자에게 피드백 제공\n- 쿼리 리뷰 프로세스 도입\n- Application Optimization 가이드 문서화\n\n**SLO**: Top 10 평균 < 60초\n**관련 메트릭**: Application Success Rate, Running Queries",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 50},
+          "targets": [
+            {
+              "expr": "topk(10, avg(rate(Spark_execution_application_execution_time_seconds_sum[1h])) by (application_id, user) / avg(rate(Spark_execution_application_execution_time_seconds_count[1h])) by (application_id, user))",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true},
+                "indexByName": {"application_id": 0, "user": 1, "Value": 2},
+                "renameByName": {"application_id": "Application ID", "user": "User", "Value": "Avg Execution Time (s)"}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "left", "filterable": true}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Avg Execution Time (s)"},
+                "properties": [
+                  {"id": "unit", "value": "s"},
+                  {"id": "decimals", "value": 1},
+                  {"id": "custom.align", "value": "right"},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                      {"value": 30, "color": "rgba(255, 217, 125, 0.3)"},
+                      {"value": 60, "color": "rgba(244, 139, 139, 0.3)"}
+                    ]
+                  }}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Application ID"},
+                "properties": [
+                  {"id": "custom.width", "value": 350}
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }

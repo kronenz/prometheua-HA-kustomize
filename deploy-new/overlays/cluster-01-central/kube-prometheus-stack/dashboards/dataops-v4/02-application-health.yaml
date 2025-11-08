@@ -1,0 +1,472 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-health-v4
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-health-v4.json: |
+    {
+      "uid": "dataops-health-v4",
+      "title": "2. Application Health - Deployment Verification",
+      "tags": ["dataops", "health", "kubernetes", "pods", "v4"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "30s",
+      "editable": true,
+      "style": "dark",
+      "folder": "DataOps E2E",
+      "folderUid": "dataops-e2e-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1A1F2E;padding:20px;border-radius:8px;border-left:4px solid #81C995'><div style='display:flex;justify-content:space-between;align-items:center'><div style='display:flex;align-items:center;gap:16px'><div style='width:48px;height:48px;background:rgba(129,201,149,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid rgba(129,201,149,0.3)'>✅</div><div><div style='font-size:22px;font-weight:700;color:#E5E7EB'>Application Health</div><div style='font-size:13px;color:#9CA3AF;margin-top:4px'>배포 검증 및 애플리케이션 정상 작동 모니터링</div></div></div><div style='text-align:right'><a href='/d/dataops-portal-e2e-v4' style='padding:10px 18px;background:rgba(129,201,149,0.15);border:1px solid rgba(129,201,149,0.3);border-radius:6px;color:#81C995;text-decoration:none;font-size:13px;font-weight:500;transition:all 0.2s' onmouseover='this.style.background=\"rgba(129,201,149,0.25)\"' onmouseout='this.style.background=\"rgba(129,201,149,0.15)\"'>← Back to Portal</a></div></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Pod Health Overview",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Pod Running Rate",
+          "description": "**정상 실행 중인 Pod 비율**\n\n**계산식**:\n```promql\ncount(kube_pod_status_phase{phase=\"Running\"}) / \ncount(kube_pod_status_phase) * 100\n```\n\n**의미**: 전체 Pod 중 Running 상태인 Pod의 비율\n\n**Pod Phase 종류**:\n- **Pending**: 스케줄링 대기 또는 이미지 다운로드 중\n- **Running**: 정상 실행 중\n- **Succeeded**: 완료됨 (Job/CronJob)\n- **Failed**: 실패로 종료됨\n- **Unknown**: 상태 확인 불가 (Node 통신 장애)\n\n**정상 범위**:\n- 🟢 98% 이상: 우수 - 대부분 Pod 정상\n- 🟡 95-98%: 양호 - 일부 Pod 문제\n- 🔴 95% 미만: 위험 - 대규모 장애 가능성\n\n**Running 비율 낮은 원인**:\n1. **Pending Pod 증가**: 리소스 부족, Node 부족\n2. **Failed Pod**: CrashLoopBackOff, Error\n3. **Unknown Pod**: Node NotReady, kubelet 장애\n4. **배포 진행 중**: Rolling Update로 일시적 감소\n\n**조치 사항**:\n- Pending Pod: `kubectl describe pod` 로 원인 확인\n- Failed Pod: 로그 확인 후 재배포 또는 수정\n- Unknown Pod: Node 상태 점검\n- 리소스 부족: CPU/Memory 증설\n\n**Best Practice**:\n- HPA (Horizontal Pod Autoscaler) 설정\n- PDB (Pod Disruption Budget) 구성\n- Resource Requests/Limits 적절히 설정\n- Readiness/Liveness Probe 구현\n\n**SLO**: >98% (일간 평균)",
+          "gridPos": {"h": 7, "w": 6, "x": 0, "y": 5},
+          "targets": [{
+            "expr": "count(kube_pod_status_phase{phase=\"Running\"}) / count(kube_pod_status_phase) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 95, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 98, "color": "rgba(129, 201, 149, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "CrashLoopBackOff Pods",
+          "description": "**크래시 루프 상태의 Pod 수**\n\n**계산식**:\n```promql\ncount(kube_pod_container_status_waiting_reason{\n  reason=\"CrashLoopBackOff\"\n})\n```\n\n**의미**: 컨테이너가 반복적으로 시작과 종료를 반복하는 Pod 개수\n\n**CrashLoopBackOff 발생 원인**:\n1. **Application Error**: 코드 버그로 즉시 종료\n2. **Missing Dependencies**: DB, 외부 서비스 연결 실패\n3. **Configuration Error**: 잘못된 환경변수, ConfigMap\n4. **Resource Limit**: Out of Memory로 강제 종료\n5. **Liveness Probe 실패**: Health Check 통과 못함\n6. **Permission Denied**: 파일/포트 접근 권한 없음\n\n**BackOff 동작 방식**:\n```\n시도1: 즉시 재시작\n시도2: 10초 후 재시작\n시도3: 20초 후 재시작\n시도4: 40초 후 재시작\n...\n최대: 5분 간격으로 재시도\n```\n\n**정상 기준**: 0개 (CrashLoop 없음)\n\n**위험도**:\n- 🟢 0개: 정상\n- 🟡 1-2개: 주의 - 특정 앱 문제\n- 🔴 3개 이상: 위험 - 즉시 조치 필요\n\n**디버깅 절차**:\n1. `kubectl get pods | grep CrashLoop`\n2. `kubectl logs <pod-name> --previous`\n3. `kubectl describe pod <pod-name>`\n4. Events에서 재시작 원인 확인\n5. 로그에서 ERROR 키워드 검색\n\n**빠른 해결 방법**:\n- 환경변수 수정: ConfigMap/Secret 확인\n- 의존성 서비스 확인: DB, Redis 등\n- 이미지 버전 롤백\n- Resource Limits 증가\n- Liveness Probe 타임아웃 조정\n\n**예방책**:\n- 로컬에서 충분한 테스트\n- Staging 환경에서 배포 검증\n- Startup Probe로 초기화 시간 확보\n- Graceful Shutdown 구현\n\n**알림**: CrashLoop > 5분 지속 시 P1 알림",
+          "gridPos": {"h": 7, "w": 6, "x": 6, "y": 5},
+          "targets": [{
+            "expr": "count(kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\"})",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "none",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 1, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 3, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Pod Restart Count (5m)",
+          "description": "**최근 5분간 Pod 재시작 빈도**\n\n**계산식**:\n```promql\nsum(rate(\n  kube_pod_container_status_restarts_total[5m]\n))\n```\n\n**의미**: 1초당 발생하는 Pod 재시작 횟수 (rate 사용)\n\n**재시작 원인**:\n1. **Liveness Probe 실패**: Health Check 통과 못함\n2. **OOMKilled**: Memory Limit 초과로 강제 종료\n3. **Application Crash**: 코드 버그로 비정상 종료\n4. **Node 장애**: Node 재부팅 시 Pod 재시작\n5. **Manual Restart**: kubectl delete pod 수동 재시작\n\n**정상 범위**:\n- 🟢 <0.1: 정상 - 거의 재시작 없음\n- 🟡 0.1-0.5: 주의 - 일부 Pod 불안정\n- 🔴 >0.5: 위험 - 다수 Pod 재시작 중\n\n**재시작 vs CrashLoop 차이**:\n- **재시작**: 1회 재시작 후 정상 작동\n- **CrashLoop**: 반복적으로 재시작 (복구 안됨)\n\n**높은 재시작률 분석**:\n1. Namespace별 재시작 확인\n2. 특정 Deployment 식별\n3. Liveness Probe 설정 검토\n4. Memory Usage 모니터링\n5. 최근 배포 이력 확인\n\n**Liveness Probe 최적화**:\n```yaml\nlivenessProbe:\n  httpGet:\n    path: /health\n    port: 8080\n  initialDelaySeconds: 30  # 충분한 시작 시간\n  periodSeconds: 10        # 체크 주기\n  timeoutSeconds: 5        # 타임아웃\n  failureThreshold: 3      # 3회 실패 후 재시작\n```\n\n**Memory OOM 방지**:\n- Requests < Limits 설정\n- 메모리 프로파일링으로 누수 확인\n- JVM Heap Size 적절히 조정\n- Go: GOGC 환경변수 튜닝\n\n**모니터링 포인트**:\n- 재시작 Spike 시 원인 조사\n- 특정 시간대 패턴 확인 (야간 배치 등)\n- Namespace별 재시작 비율\n\n**알림**: Restart Rate > 1.0 (1분 지속) 시 P2 알림",
+          "gridPos": {"h": 7, "w": 6, "x": 12, "y": 5},
+          "targets": [{
+            "expr": "sum(rate(kube_pod_container_status_restarts_total[5m]))",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "value",
+            "graphMode": "area",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "decimals": 2,
+              "color": {"mode": "fixed", "fixedColor": "#81C995"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#81C995"},
+                  {"value": 0.1, "color": "#FFD97D"},
+                  {"value": 0.5, "color": "#F48B8B"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Service Availability",
+          "description": "**Kubernetes Service 가용성**\n\n**계산식**:\n```promql\nsum(up{job=~\".*-service\"}) / \ncount(up{job=~\".*-service\"}) * 100\n```\n\n**의미**: Prometheus가 스크랩하는 Service Endpoint 중 정상 응답하는 비율\n\n**Service Endpoint 모니터링**:\n- Prometheus가 Service Discovery로 자동 탐지\n- `/metrics` 엔드포인트 Health Check\n- HTTP 200 응답 여부 확인\n\n**가용성 계산**:\n```\nup=1: Endpoint 정상 응답\nup=0: Endpoint 응답 없음 (Down)\n```\n\n**정상 범위**:\n- 🟢 100%: 완벽 - 모든 Service 정상\n- 🟡 95-100%: 양호 - 일부 Endpoint 문제\n- 🔴 95% 미만: 위험 - 다수 Service Down\n\n**가용성 저하 원인**:\n1. **Pod Down**: 모든 Pod가 CrashLoop 또는 Pending\n2. **Service Misconfiguration**: Selector 불일치\n3. **Network Policy**: Pod 간 통신 차단\n4. **Port Mismatch**: Service Port와 Container Port 불일치\n5. **Readiness Probe 실패**: Pod는 있지만 Ready 아님\n\n**Service 타입별 특성**:\n- **ClusterIP**: 클러스터 내부 통신\n- **NodePort**: 외부 노출 (30000-32767)\n- **LoadBalancer**: 클라우드 LB 사용\n- **ExternalName**: 외부 DNS 매핑\n\n**디버깅 절차**:\n1. `kubectl get svc` - Service 목록 확인\n2. `kubectl get endpoints <svc-name>` - Endpoint 확인\n3. `kubectl describe svc <svc-name>` - Selector 확인\n4. `kubectl get pods -l <selector>` - Pod 매칭 확인\n5. Pod Readiness Probe 상태 점검\n\n**Endpoint가 없는 경우**:\n```yaml\n# Selector 확인\napiVersion: v1\nkind: Service\nmetadata:\n  name: my-service\nspec:\n  selector:\n    app: my-app  # Pod Label과 일치해야 함\n  ports:\n  - port: 80\n    targetPort: 8080  # Container Port와 일치\n```\n\n**모니터링 Best Practice**:\n- Service Monitor로 자동 스크랩 설정\n- /metrics 엔드포인트 구현 (Prometheus Client)\n- Readiness Probe와 /metrics 분리\n- Health Check는 가벼운 로직으로\n\n**SLO**: 99.9% 가용성 (월간)",
+          "gridPos": {"h": 7, "w": 6, "x": 18, "y": 5},
+          "targets": [{
+            "expr": "sum(up{job=~\".*-service\"}) / count(up{job=~\".*-service\"}) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "textMode": "value_and_name",
+            "colorMode": "background",
+            "graphMode": "none",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 32
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.2)"},
+                  {"value": 95, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 100, "color": "rgba(129, 201, 149, 0.2)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Pod Status Distribution",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 12},
+          "collapsed": false
+        },
+        {
+          "type": "timeseries",
+          "title": "Pod Phase Distribution",
+          "description": "**Pod Phase 별 분포 추이**\n\n**계산식**:\n```promql\ncount(kube_pod_status_phase) by (phase)\n```\n\n**Pod Phase 설명**:\n\n1. **Pending**: \n   - 스케줄러가 Node에 할당하지 못함\n   - 이미지 다운로드 중\n   - Init Container 실행 중\n   - PVC 바인딩 대기\n\n2. **Running**:\n   - 모든 Container가 실행 중\n   - Readiness Probe 통과 여부 무관\n   - 정상 작동 상태\n\n3. **Succeeded**:\n   - Job/CronJob이 성공적으로 완료\n   - Container가 Exit Code 0으로 종료\n   - 재시작하지 않음\n\n4. **Failed**:\n   - Container가 비정상 종료 (Exit Code ≠ 0)\n   - OOMKilled, Error 등\n   - restartPolicy에 따라 재시작 가능\n\n5. **Unknown**:\n   - kubelet과 통신 불가\n   - Node NotReady\n   - Network 장애\n\n**정상 분포**:\n- Running: 90-95%\n- Pending: <5% (배포 중에만 일시적)\n- Succeeded: 5-10% (Job 완료)\n- Failed: 0% (이상적)\n- Unknown: 0%\n\n**비정상 패턴 탐지**:\n- **Pending 급증**: 리소스 부족, Node 부족\n- **Failed 증가**: 배포 실패, 코드 버그\n- **Unknown 발생**: Node 장애, kubelet 문제\n- **Running 감소**: 대규모 재시작 또는 스케일 다운\n\n**Pending Pod 해결**:\n```bash\n# Pending 원인 확인\nkubectl describe pod <pod-name>\n\n# 일반적 원인\n- Insufficient CPU/Memory\n- No nodes available\n- PersistentVolumeClaim not bound\n- Image pull error\n```\n\n**모니터링 포인트**:\n- Running 비율이 평소보다 낮으면 문제\n- Pending이 10분 이상 지속되면 조사\n- Unknown은 즉시 Node 점검\n- Failed는 로그 확인 필수\n\n**알림 설정**:\n- Pending > 5분 지속: P3\n- Failed > 10개: P2\n- Unknown > 0: P1 (Node 장애)\n\n**관련 메트릭**: Pod Ready Rate",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+          "targets": [{
+            "expr": "count(kube_pod_status_phase) by (phase)",
+            "refId": "A",
+            "legendFormat": "{{phase}}"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "stacking": {"mode": "normal"}
+              },
+              "unit": "short",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Running"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#81C995", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Pending"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#FFD97D", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Failed"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#F48B8B", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Succeeded"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#7DD3FC", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Unknown"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#9CA3AF", "mode": "fixed"}}]
+              }
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Container Waiting Reasons",
+          "description": "**컨테이너 대기 상태 원인 분석**\n\n**계산식**:\n```promql\ncount(\n  kube_pod_container_status_waiting_reason\n) by (reason)\n```\n\n**Waiting Reason 종류**:\n\n1. **CrashLoopBackOff**:\n   - 가장 흔한 에러\n   - 컨테이너 반복 재시작\n   - Application 코드 문제\n\n2. **ImagePullBackOff**:\n   - 이미지 다운로드 실패\n   - Registry 접근 불가\n   - 잘못된 이미지 태그\n   - ImagePullSecrets 미설정\n\n3. **ErrImagePull**:\n   - ImagePullBackOff의 초기 단계\n   - 첫 이미지 Pull 시도 실패\n\n4. **ContainerCreating**:\n   - 정상적인 일시 상태\n   - Init Container 실행 중\n   - Volume Mount 대기\n   - 30초 이상 지속되면 조사 필요\n\n5. **CreateContainerConfigError**:\n   - ConfigMap/Secret 참조 실패\n   - 존재하지 않는 Key 참조\n   - Volume Mount 설정 오류\n\n6. **InvalidImageName**:\n   - 이미지 이름 형식 오류\n   - 잘못된 Registry URL\n\n**정상 기준**: CrashLoop, ImagePull 에러 0개\n\n**ImagePullBackOff 해결**:\n```bash\n# 1. 이미지 이름 확인\nkubectl get pod <pod-name> -o yaml | grep image:\n\n# 2. Secret 확인\nkubectl get secret -n <namespace>\n\n# 3. Secret 적용\nkubectl create secret docker-registry regcred \\\n  --docker-server=<registry> \\\n  --docker-username=<user> \\\n  --docker-password=<password>\n\n# 4. Pod에 Secret 연결\nspec:\n  imagePullSecrets:\n  - name: regcred\n```\n\n**CrashLoopBackOff vs ImagePullBackOff**:\n- **CrashLoop**: 이미지는 받았으나 실행 실패\n- **ImagePull**: 이미지 자체를 가져오지 못함\n\n**CreateContainerConfigError 해결**:\n```yaml\n# ConfigMap이 없을 때\nenvFrom:\n- configMapRef:\n    name: my-config  # 이 ConfigMap이 존재해야 함\n\n# 해결: ConfigMap 먼저 생성\nkubectl create configmap my-config --from-literal=key=value\n```\n\n**모니터링 포인트**:\n- CrashLoop가 주기적 증가: 배포 품질 문제\n- ImagePull 에러: Registry 또는 인증 문제\n- CreateConfigError: Manifest 검증 필요\n\n**예방책**:\n- CI에서 이미지 빌드 및 Push 확인\n- Staging 환경에서 배포 테스트\n- ImagePullPolicy: IfNotPresent 설정\n- ConfigMap/Secret Pre-validation\n\n**알림**:\n- ImagePullBackOff > 5분: P2\n- CrashLoopBackOff > 5분: P1\n- CreateConfigError 발생: P2",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+          "targets": [{
+            "expr": "count(kube_pod_container_status_waiting_reason) by (reason)",
+            "refId": "A",
+            "legendFormat": "{{reason}}"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "stacking": {"mode": "normal"}
+              },
+              "unit": "short",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byRegexp", "options": "/CrashLoop.*/"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#F48B8B", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byRegexp", "options": "/ImagePull.*/"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#FFD97D", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "ContainerCreating"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#7FB3E8", "mode": "fixed"}}]
+              }
+            ]
+          }
+        },
+        {
+          "type": "row",
+          "title": "Readiness & Liveness Probes",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 21},
+          "collapsed": false
+        },
+        {
+          "type": "gauge",
+          "title": "Readiness Probe Success Rate",
+          "description": "**Readiness Probe 성공률**\n\n**계산식**:\n```promql\nsum(rate(prober_probe_total{result=\"success\"}[5m])) / \nsum(rate(prober_probe_total[5m])) * 100\n```\n\n**Readiness Probe란?**\n- Pod가 트래픽을 받을 준비가 되었는지 확인\n- 실패 시 Service Endpoint에서 제거\n- Pod는 살아있지만 요청은 전달 안 됨\n\n**Liveness vs Readiness 차이**:\n\n| 항목 | Liveness | Readiness |\n|------|----------|----------|\n| 목적 | 살았는지 확인 | 준비됐는지 확인 |\n| 실패 시 | Pod 재시작 | Endpoint 제거 |\n| 사용 시기 | Deadlock 감지 | 초기화 대기 |\n\n**정상 범위**:\n- 🟢 99% 이상: 우수\n- 🟡 95-99%: 양호\n- 🔴 95% 미만: 위험\n\n**실패 원인**:\n1. **초기화 미완료**: DB Connection Pool 준비 중\n2. **의존성 서비스 Down**: 외부 API 응답 없음\n3. **과부하 상태**: 요청 처리 지연으로 타임아웃\n4. **네트워크 지연**: Probe HTTP 요청 느림\n5. **Health Endpoint 버그**: /health API 오류\n\n**Readiness Probe 설정 예시**:\n```yaml\nreadinessProbe:\n  httpGet:\n    path: /readiness\n    port: 8080\n  initialDelaySeconds: 10  # 시작 후 10초 대기\n  periodSeconds: 5         # 5초마다 체크\n  timeoutSeconds: 3        # 3초 내 응답\n  successThreshold: 1      # 1회 성공 시 Ready\n  failureThreshold: 3      # 3회 실패 시 Not Ready\n```\n\n**Readiness Endpoint 구현**:\n```python\n# Python Flask 예시\n@app.route('/readiness')\ndef readiness():\n    # 의존성 서비스 확인\n    if not db.is_connected():\n        return \"DB not ready\", 503\n    if not redis.ping():\n        return \"Redis not ready\", 503\n    return \"OK\", 200\n```\n\n**실패율 높을 때 조치**:\n1. Probe 타임아웃 증가 (과부하 상태)\n2. initialDelaySeconds 증가 (느린 시작)\n3. Health Endpoint 최적화 (가벼운 체크)\n4. 의존성 서비스 안정화\n5. Circuit Breaker 패턴 적용\n\n**Best Practice**:\n- Readiness는 외부 의존성 포함\n- Liveness는 내부 상태만 체크\n- Health Endpoint는 캐싱 사용\n- DB Connection Pool 준비 확인\n- Startup Probe로 초기화 시간 확보\n\n**Rolling Update 시나리오**:\n```\n1. 새 Pod 시작\n2. Readiness Probe 실패 (초기화 중)\n3. Service Endpoint에 미포함\n4. 초기화 완료\n5. Readiness Probe 성공\n6. Service Endpoint에 추가\n7. 이전 Pod 종료\n```\n\n**SLO**: >99% 성공률",
+          "gridPos": {"h": 7, "w": 8, "x": 0, "y": 22},
+          "targets": [{
+            "expr": "sum(rate(prober_probe_total{result=\"success\"}[5m])) / sum(rate(prober_probe_total[5m])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 90,
+              "max": 100,
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 90, "color": "#F48B8B"},
+                  {"value": 95, "color": "#FFD97D"},
+                  {"value": 99, "color": "#81C995"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Pod Ready vs Not Ready",
+          "description": "**Pod Ready 상태 분포**\n\n**계산식**:\n```promql\n# Ready Pods\ncount(kube_pod_status_ready{condition=\"true\"})\n\n# Not Ready Pods  \ncount(kube_pod_status_ready{condition=\"false\"})\n```\n\n**Pod Ready 조건**:\n- 모든 Container가 Running\n- 모든 Readiness Probe 통과\n- Init Container 완료\n\n**Ready vs Running 차이**:\n- **Running**: Container 프로세스 실행 중\n- **Ready**: Service 트래픽 받을 준비됨\n\n**Not Ready 원인**:\n1. **Readiness Probe 실패**: Health Check 통과 못함\n2. **Init Container 실행 중**: 초기화 대기\n3. **이미지 다운로드**: Pull 진행 중\n4. **Volume Mount 대기**: PVC 바인딩 중\n5. **의존성 서비스 Down**: DB, Redis 연결 실패\n\n**정상 패턴**:\n- Ready: 전체의 95% 이상\n- Not Ready: 5% 이하 (배포 중에만)\n\n**배포 시 Ready 변화**:\n```\nRolling Update 시작\n↓\nNot Ready 일시 증가 (신규 Pod 초기화)\n↓\n신규 Pod Ready\n↓\n이전 Pod 종료\n↓\nReady 비율 정상 복구\n```\n\n**장기간 Not Ready 조사**:\n```bash\n# Not Ready Pod 확인\nkubectl get pods --field-selector=status.phase!=Running\n\n# 상세 정보\nkubectl describe pod <pod-name>\n\n# Readiness Probe 로그\nkubectl logs <pod-name> --previous\n```\n\n**HPA (Horizontal Pod Autoscaler) 영향**:\n- Not Ready Pod는 Metrics 수집 안됨\n- HPA 판단에서 제외됨\n- Scale Up 트리거 가능\n\n**모니터링 포인트**:\n- Not Ready > 10분: 배포 문제 가능성\n- 주기적 Not Ready: Readiness Probe 불안정\n- Ready 급감: 대규모 장애\n\n**알림 설정**:\n- Not Ready > 전체의 20%: P2\n- Not Ready > 50%: P1\n\n**관련 메트릭**: Readiness Probe Success Rate",
+          "gridPos": {"h": 7, "w": 8, "x": 8, "y": 22},
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_ready{condition=\"true\"})",
+              "refId": "A",
+              "legendFormat": "Ready"
+            },
+            {
+              "expr": "count(kube_pod_status_ready{condition=\"false\"})",
+              "refId": "B",
+              "legendFormat": "Not Ready"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 20
+              },
+              "unit": "short",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Ready"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#81C995", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Not Ready"},
+                "properties": [{"id": "color", "value": {"fixedColor": "#F48B8B", "mode": "fixed"}}]
+              }
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Container Restart Trend (by Namespace)",
+          "description": "**Namespace별 컨테이너 재시작 추이**\n\n**계산식**:\n```promql\nsum(\n  rate(kube_pod_container_status_restarts_total[5m])\n) by (namespace)\n```\n\n**의미**: Namespace별 초당 재시작 발생 빈도\n\n**Namespace별 분석 이유**:\n- 특정 앱/팀의 문제 식별\n- 환경별 안정성 비교 (dev/staging/prod)\n- 리소스 할당 우선순위 결정\n\n**정상 패턴**:\n- 프로덕션: 거의 0에 가까움\n- 스테이징: 낮은 재시작률 (테스트 중)\n- 개발: 상대적으로 높음 (실험적 배포)\n\n**비정상 패턴**:\n- **특정 Namespace 급증**: 해당 팀 앱 문제\n- **전체 Namespace 증가**: 인프라 문제 (Node, Network)\n- **주기적 Spike**: 스케줄된 Job 실패\n\n**높은 재시작률 Namespace 조사**:\n```bash\n# Namespace 내 재시작 많은 Pod\nkubectl top pod -n <namespace> --sort-by=restarts\n\n# 재시작 원인 확인\nkubectl describe pod -n <namespace> <pod-name>\n\n# 최근 재시작 로그\nkubectl logs -n <namespace> <pod-name> --previous\n```\n\n**일반적인 Namespace 재시작 원인**:\n\n1. **kube-system**:\n   - DNS (CoreDNS) 재시작\n   - CNI Plugin 불안정\n   - Metrics Server 문제\n\n2. **monitoring**:\n   - Prometheus OOM\n   - Grafana 재시작\n   - Exporter 문제\n\n3. **application** (비즈니스 앱):\n   - Memory Leak\n   - Liveness Probe 실패\n   - Application 버그\n\n4. **batch-jobs**:\n   - Job 실패 후 재시도\n   - 정상 동작 (Job 완료 후 종료)\n\n**ResourceQuota 영향**:\n```yaml\napiVersion: v1\nkind: ResourceQuota\nmetadata:\n  name: compute-quota\n  namespace: production\nspec:\n  hard:\n    requests.cpu: \"100\"\n    requests.memory: 200Gi\n    limits.memory: 400Gi\n```\n- Quota 초과 시 Pod 스케줄 안됨\n- OOMKilled 빈도 증가\n\n**Namespace 격리 Best Practice**:\n- 환경별 Namespace 분리 (dev/staging/prod)\n- ResourceQuota로 리소스 제한\n- NetworkPolicy로 트래픽 격리\n- LimitRange로 기본 Limits 설정\n\n**알림 설정** (Namespace별):\n- production: Restart Rate > 0.01 → P1\n- staging: Restart Rate > 0.1 → P2\n- development: Restart Rate > 0.5 → P3\n\n**관련 대시보드**: Resource Capacity (Namespace별 리소스 사용률)",
+          "gridPos": {"h": 7, "w": 8, "x": 16, "y": 22},
+          "targets": [{
+            "expr": "sum(rate(kube_pod_container_status_restarts_total[5m])) by (namespace)",
+            "refId": "A",
+            "legendFormat": "{{namespace}}"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10
+              },
+              "unit": "ops",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Problem Pods Details",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 29},
+          "collapsed": false
+        },
+        {
+          "type": "table",
+          "title": "CrashLoopBackOff Pods",
+          "description": "**현재 CrashLoop 상태인 Pod 목록**\n\n**표시 정보**:\n- Pod Name\n- Namespace\n- Container Name\n- Restart Count\n- Last State Reason\n\n**우선순위 판단**:\n- Restart Count 높음: 오래된 문제\n- Restart Count 낮음: 최근 발생\n- Namespace가 production: 긴급\n\n**빠른 해결 체크리스트**:\n1. 로그 확인: `kubectl logs <pod> --previous`\n2. Events 확인: `kubectl describe pod <pod>`\n3. 환경변수 점검: ConfigMap/Secret\n4. 리소스 확인: Memory Limits\n5. 의존성 서비스: DB, Redis 연결\n\n**즉시 조치**:\n- 프로덕션 CrashLoop: 이전 버전 롤백\n- 개발 환경: 로그 분석 후 수정\n- 5회 이상 재시작: 긴급 조사 필요",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+          "targets": [{
+            "expr": "kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\"}",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "job": true, "instance": true},
+                "renameByName": {
+                  "pod": "Pod Name",
+                  "namespace": "Namespace",
+                  "container": "Container",
+                  "reason": "Status"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "Namespace", "desc": false}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Status"},
+                "properties": [
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "mappings", "value": [
+                    {"type": "value", "options": {"CrashLoopBackOff": {"color": "rgba(244, 139, 139, 0.3)", "text": "CrashLoop"}}}
+                  ]}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Namespace"},
+                "properties": [
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "mappings", "value": [
+                    {"type": "value", "options": {"production": {"color": "rgba(244, 139, 139, 0.2)"}}}
+                  ]}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "title": "Pending Pods (>5 minutes)",
+          "description": "**5분 이상 Pending 상태인 Pod 목록**\n\n**Pending 원인 (Events에서 확인)**:\n- **Insufficient CPU/Memory**: 리소스 부족\n- **No nodes available**: Node 부족\n- **FailedScheduling**: Taint/Toleration 불일치\n- **PVC Pending**: PersistentVolume 없음\n- **ImagePullBackOff**: 이미지 다운로드 실패\n\n**조치 방법**:\n\n1. **리소스 부족**:\n   - Node 추가 또는 기존 Pod 리소스 조정\n   - Cluster Autoscaler 활성화\n   - Requests/Limits 최적화\n\n2. **Node Selector 미충족**:\n```yaml\nnodeSelector:\n  disktype: ssd  # 이 Label 가진 Node 없음\n```\n   - Node Label 확인 또는 제거\n\n3. **PVC Pending**:\n   - StorageClass 확인\n   - PV Provisioner 상태 점검\n   - 수동 PV 생성\n\n4. **Taint 문제**:\n```bash\n# Node Taint 확인\nkubectl describe node <node-name> | grep Taints\n\n# Toleration 추가\ntolerations:\n- key: \"key1\"\n  operator: \"Equal\"\n  value: \"value1\"\n  effect: \"NoSchedule\"\n```\n\n**긴급도**:\n- 5-10분 Pending: 정상 (초기화 중)\n- 10-30분: 주의 (원인 확인)\n- 30분 이상: 위험 (즉시 조치)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+          "targets": [{
+            "expr": "kube_pod_status_phase{phase=\"Pending\"}",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "job": true, "instance": true, "uid": true},
+                "renameByName": {
+                  "pod": "Pod Name",
+                  "namespace": "Namespace",
+                  "phase": "Status",
+                  "node": "Scheduled Node"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "sortBy": [{"displayName": "Namespace", "desc": false}]
+          },
+          "fieldConfig": {
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Status"},
+                "properties": [
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "mappings", "value": [
+                    {"type": "value", "options": {"Pending": {"color": "rgba(255, 217, 125, 0.3)", "text": "Pending"}}}
+                  ]}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 2, "w": 24, "x": 0, "y": 38},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='background:#1A1F2E;border-top:1px solid #374151;padding:12px;text-align:center;border-radius:0 0 8px 8px'><div style='font-size:12px;color:#6B7280'>Application Health Dashboard v4.0 • Deployment Verification</div><div style='font-size:11px;color:#4B5563;margin-top:4px'>Pod Status • Container Health • Readiness Probes • Service Availability</div></div>"
+          }
+        }
+      ]
+    }

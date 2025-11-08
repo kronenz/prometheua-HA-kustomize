@@ -1,0 +1,496 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-bigdata-v2
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-bigdata-v2.json: |
+    {
+      "uid": "dataops-bigdata-v2",
+      "title": "📊 DataOps - BigData Platform",
+      "tags": ["dataops", "bigdata", "spark", "airflow", "trino", "iceberg", "v2"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 4,
+      "refresh": "30s",
+      "editable": true,
+      "style": "dark",
+      "folder": "BigData Platform",
+      "folderUid": "dataops-bigdata-folder",
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 24px; background: rgba(31, 41, 55, 0.6); border-radius: 8px; border-left: 4px solid #4DB8A8;'><div style='display: flex; justify-content: space-between; align-items: center;'><div><h2 style='margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #F9FAFB;'>📊 BigData Platform</h2><p style='margin: 0; font-size: 14px; color: #9CA3AF;'>Spark, Airflow, Trino, Iceberg 워크로드 및 데이터 파이프라인 성능 모니터링</p></div><div><a href='/d/dataops-executive-v2/executive-summary?orgId=1' style='display: inline-block; padding: 10px 20px; background: rgba(77, 184, 168, 0.15); border: 1px solid #4DB8A8; border-radius: 6px; color: #4DB8A8; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s;' onmouseover='this.style.background=\"rgba(77, 184, 168, 0.25)\";' onmouseout='this.style.background=\"rgba(77, 184, 168, 0.15)\";'>← Executive</a></div></div></div>"
+          }
+        },
+        {
+          "type": "row",
+          "title": "Compute Layer (Spark)",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Active Spark Jobs",
+          "gridPos": {"h": 6, "w": 4, "x": 0, "y": 5},
+          "targets": [{
+            "expr": "count(spark_job_status{status=\"RUNNING\"})",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Job 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 4, "x": 4, "y": 5},
+          "targets": [{
+            "expr": "sum(rate(spark_job_status{status=\"SUCCEEDED\"}[24h])) / sum(rate(spark_job_status[24h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 90, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 95, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Total Executors",
+          "gridPos": {"h": 6, "w": 4, "x": 8, "y": 5},
+          "targets": [{
+            "expr": "sum(spark_executor_count)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#4DB8A8"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Pending Executors",
+          "gridPos": {"h": 6, "w": 4, "x": 12, "y": 5},
+          "targets": [{
+            "expr": "sum(spark_executor_pending_count)",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 5, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "GC Time Ratio (목표: <10%)",
+          "gridPos": {"h": 6, "w": 4, "x": 16, "y": 5},
+          "targets": [{
+            "expr": "sum(rate(jvm_gc_collection_seconds_sum{job=\"spark\"}[5m])) / sum(rate(jvm_gc_collection_seconds_count{job=\"spark\"}[5m])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 20,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 5, "color": "#F59E0B"},
+                  {"value": 10, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "Executor 배치 (노드별)",
+          "gridPos": {"h": 6, "w": 4, "x": 20, "y": 5},
+          "targets": [{
+            "expr": "sum(spark_executor_count) by (node)",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "continuous-BlYlRd"}
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Spark Job Duration (P50/P95/P99)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 11},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(spark_job_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(spark_job_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P95",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(spark_job_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "P99",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10},
+              "unit": "s",
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "P50"}, "properties": [{"id": "color", "value": {"fixedColor": "#10B981", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "P95"}, "properties": [{"id": "color", "value": {"fixedColor": "#F59E0B", "mode": "fixed"}}]},
+              {"matcher": {"id": "byName", "options": "P99"}, "properties": [{"id": "color", "value": {"fixedColor": "#EF4444", "mode": "fixed"}}]}
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Spark Memory Usage",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 11},
+          "targets": [
+            {
+              "expr": "sum(spark_executor_memory_used_bytes) by (application_id)",
+              "legendFormat": "{{application_id}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10},
+              "unit": "bytes",
+              "color": {"mode": "palette-classic"}
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Orchestration (Airflow)",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 19},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Active DAGs",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 20},
+          "targets": [{
+            "expr": "count(airflow_dag_status{paused=\"false\"})",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "DAG 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 20},
+          "targets": [{
+            "expr": "sum(rate(airflow_dag_run_status{status=\"success\"}[24h])) / sum(rate(airflow_dag_run_status[24h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 95, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 99, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Scheduler Lag",
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 20},
+          "targets": [{
+            "expr": "airflow_scheduler_heartbeat_seconds - time()",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 30, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 60, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Task 실패 (24h)",
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 20},
+          "targets": [{
+            "expr": "sum(increase(airflow_task_status{status=\"failed\"}[24h]))",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 10, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Query Engine (Trino)",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 26},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Trino Workers",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 27},
+          "targets": [{
+            "expr": "count(up{job=\"trino-worker\"} == 1)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#4DB8A8"}
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Query 성공률 (24h)",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 27},
+          "targets": [{
+            "expr": "sum(rate(trino_query_completed{state=\"FINISHED\"}[24h])) / sum(rate(trino_query_completed[24h])) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(239, 68, 68, 0.15)"},
+                  {"value": 95, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 98, "color": "rgba(16, 185, 129, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "gauge",
+          "title": "Cache Hit Rate",
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 27},
+          "targets": [{
+            "expr": "trino_cache_hits_total / (trino_cache_hits_total + trino_cache_misses_total) * 100",
+            "refId": "A"
+          }],
+          "options": {
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#EF4444"},
+                  {"value": 60, "color": "#F59E0B"},
+                  {"value": 80, "color": "#10B981"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Spill to Disk",
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 27},
+          "targets": [{
+            "expr": "sum(rate(trino_spill_bytes_written_total[5m]))",
+            "refId": "A"
+          }],
+          "options": {
+            "colorMode": "background"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(16, 185, 129, 0.15)"},
+                  {"value": 1000000, "color": "rgba(245, 158, 11, 0.15)"},
+                  {"value": 10000000, "color": "rgba(239, 68, 68, 0.15)"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "row",
+          "title": "Data Layer (Iceberg)",
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 33},
+          "collapsed": false
+        },
+        {
+          "type": "stat",
+          "title": "Total Tables",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 34},
+          "targets": [{
+            "expr": "count(iceberg_table_info)",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "fixed", "fixedColor": "#5B8DEE"}
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "Small Files Ratio (목표: <30%)",
+          "gridPos": {"h": 6, "w": 9, "x": 6, "y": 34},
+          "targets": [{
+            "expr": "topk(5, iceberg_table_small_files_count / iceberg_table_total_files_count * 100)",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "showUnfilled": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "color": {"mode": "continuous-RdYlGn", "reverse": true},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 30, "color": "#F59E0B"},
+                  {"value": 50, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "Snapshot Count (목표: <100)",
+          "gridPos": {"h": 6, "w": 9, "x": 15, "y": 34},
+          "targets": [{
+            "expr": "topk(5, iceberg_table_snapshot_count)",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "showUnfilled": true
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "continuous-GrYlRd"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "#10B981"},
+                  {"value": 50, "color": "#F59E0B"},
+                  {"value": 100, "color": "#EF4444"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": {"h": 3, "w": 24, "x": 0, "y": 40},
+          "transparent": true,
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 12px; background: rgba(31, 41, 55, 0.4); border-radius: 8px; text-align: center;'><a href='/d/dataops-executive-v2/dataops-executive-summary' style='padding: 10px 24px; background: #4DB8A8; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;'>← Executive Summary로 돌아가기</a></div>"
+          }
+        }
+      ]
+    }

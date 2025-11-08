@@ -1,0 +1,507 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-optimization-v4
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-optimization-v4.json: |
+    {
+      "uid": "dataops-optimization-v4",
+      "title": "DataOps - 6. Optimization & Troubleshooting",
+      "tags": ["dataops", "optimization", "troubleshooting", "performance"],
+      "timezone": "Asia/Seoul",
+      "schemaVersion": 39,
+      "version": 6,
+      "refresh": "30s",
+      "graphTooltip": 1,
+      "editable": true,
+      "style": "dark",
+      "panels": [
+        {
+          "type": "text",
+          "id": 1,
+          "title": "",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "markdown",
+            "content": "# 🔧 Optimization & Troubleshooting Dashboard\n\n**목적**: 성능 병목 지점 식별, 리소스 최적화, 문제 해결을 위한 종합 분석\n\n**분석 영역**: 클러스터 리소스 | 워크로드 성능 | 데이터 파이프라인 | 비용 최적화\n\n[◀ 포털로 돌아가기](/d/dataops-portal-e2e-v4)"
+          },
+          "options": {
+            "code": {
+              "language": "plaintext",
+              "showLineNumbers": false,
+              "showMiniMap": false
+            },
+            "content": "# 🔧 Optimization & Troubleshooting Dashboard\n\n**목적**: 성능 병목 지점 식별, 리소스 최적화, 문제 해결을 위한 종합 분석\n\n**분석 영역**: 클러스터 리소스 | 워크로드 성능 | 데이터 파이프라인 | 비용 최적화\n\n[◀ 포털로 돌아가기](/d/dataops-portal-e2e-v4)",
+            "mode": "markdown"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 10,
+          "title": "Resource Efficiency Score",
+          "description": "**리소스 효율성 점수 (0-100점)**\n\n**계산식**:\n(\n  (sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) / sum(kube_pod_container_resource_requests{resource=\"cpu\"})) * 50 +\n  (sum(container_memory_working_set_bytes{container!=\"\"}) / sum(kube_pod_container_resource_requests{resource=\"memory\"})) * 50\n)\n\n**메트릭 설명**:\n- CPU 사용률과 Memory 사용률을 각각 50점 만점으로 환산\n- 실제 사용량 대비 요청량(Request)의 비율\n- 리소스 할당 효율성 종합 지표\n\n**점수 해석**:\n- 🟢 70-85점: 이상적 (충분한 여유 + 낭비 최소)\n- 🟡 50-70점 또는 85-95점: 조정 필요\n  - 50-70: 과다 할당 (리소스 낭비)\n  - 85-95: 과소 할당 (OOM/Throttling 위험)\n- 🔴 <50점 또는 >95점: 위험\n  - <50: 심각한 리소스 낭비\n  - >95: 리소스 부족 임박\n\n**최적화 방향**:\n- **점수 낮음 (과다 할당)**: Request 값 감소\n- **점수 높음 (과소 할당)**: Request/Limit 값 증가 또는 HPA 활성화\n\n**VPA (Vertical Pod Autoscaler) 활용**:\n- VPA가 자동으로 적정 Request 값 추천\n- 히스토리 기반 학습으로 최적화\n\n**조치 사항**:\n- 50점 미만: 과다 할당된 Namespace 식별 후 Request 조정\n- 95점 이상: CPU Throttling, OOM Kill 로그 확인\n- 정기적으로 (주간) 리소스 할당 검토\n\n**SLO**: 리소스 효율성 75-80점 유지\n**관련 메트릭**: CPU/Memory Request vs Usage",
+          "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+          "targets": [
+            {
+              "expr": "(\n  (sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) / sum(kube_pod_container_resource_requests{resource=\"cpu\"})) * 50 +\n  (sum(container_memory_working_set_bytes{container!=\"\"}) / sum(kube_pod_container_resource_requests{resource=\"memory\"})) * 50\n)",
+              "refId": "A",
+              "legendFormat": "Efficiency Score"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.3)"},
+                  {"value": 50, "color": "rgba(255, 217, 125, 0.3)"},
+                  {"value": 70, "color": "rgba(244, 164, 196, 0.4)"},
+                  {"value": 85, "color": "rgba(255, 217, 125, 0.3)"},
+                  {"value": 95, "color": "rgba(244, 139, 139, 0.3)"}
+                ]
+              },
+              "color": {"mode": "thresholds"},
+              "min": 0,
+              "max": 100
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 11,
+          "title": "Cost Optimization Potential",
+          "description": "**비용 절감 가능 금액 (월간 추정, USD)**\n\n**계산식**:\n(\n  sum(kube_pod_container_resource_requests{resource=\"cpu\"}) - \n  sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]))\n) * 730 * 0.04 + \n(\n  sum(kube_pod_container_resource_requests{resource=\"memory\"}) - \n  sum(container_memory_working_set_bytes{container!=\"\"})\n) / 1024 / 1024 / 1024 * 730 * 0.005\n\n**메트릭 설명**:\n- 과다 할당된 CPU/Memory의 비용 환산\n- CPU: 1 core/hour = $0.04 (평균 클라우드 비용)\n- Memory: 1 GB/hour = $0.005\n- 730 = 월간 시간 수 (24h * 30.4일)\n\n**비용 구조**:\n- **클라우드**: 실제 사용량이 아닌 Request 기준 과금\n- **온프레미스**: 과다 할당으로 인한 신규 서버 투자 지연\n- **기회 비용**: 낭비된 리소스로 추가 워크로드 실행 가능\n\n**절감 가능 범위**:\n- 🟢 < $500/월: 양호 (최적화 잘 됨)\n- 🟡 $500-$2,000/월: 개선 가능\n- 🔴 > $2,000/월: 즉시 최적화 필요\n\n**절감 방법**:\n1. **Request 우선 조정**: 실사용량 기반 재설정\n2. **Limit 제거 고려**: CPU Limit는 Throttling 유발\n3. **QoS Class 검토**: Burstable vs Guaranteed\n4. **Spot Instance**: 배치 워크로드에 적용\n\n**실제 절감 사례**:\n- A사: Request 20% 감소 → 월 $5,000 절감\n- B사: VPA 도입 → 자동 최적화로 월 $3,000 절감\n\n**조치 사항**:\n- $2,000 이상: 상위 10개 Namespace의 리소스 재검토\n- FinOps 관점의 정기 리뷰 (월간)\n- Rightsizing 프로젝트 진행\n\n**참고**: 이 금액은 추정치이며, 실제 클라우드 비용은 지역/프로바이더에 따라 다름",
+          "gridPos": {"h": 6, "w": 6, "x": 6, "y": 4},
+          "targets": [
+            {
+              "expr": "(\n  sum(kube_pod_container_resource_requests{resource=\"cpu\"}) - \n  sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]))\n) * 730 * 0.04 + \n(\n  sum(kube_pod_container_resource_requests{resource=\"memory\"}) - \n  sum(container_memory_working_set_bytes{container!=\"\"})\n) / 1024 / 1024 / 1024 * 730 * 0.005",
+              "refId": "A",
+              "legendFormat": "Saving Potential"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 164, 196, 0.3)"},
+                  {"value": 500, "color": "rgba(255, 217, 125, 0.3)"},
+                  {"value": 2000, "color": "rgba(244, 139, 139, 0.3)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "stat",
+          "id": 12,
+          "title": "Performance Bottleneck Count",
+          "description": "**현재 감지된 성능 병목 지점 개수**\n\n**계산식**:\ncount(\n  (rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]) / \n   on(namespace,pod,container) kube_pod_container_resource_limits{resource=\"cpu\"}) > 0.9\n) +\ncount(\n  (container_memory_working_set_bytes{container!=\"\"} / \n   on(namespace,pod,container) kube_pod_container_resource_limits{resource=\"memory\"}) > 0.9\n) +\ncount(rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0.1) +\ncount(kube_pod_container_status_restarts_total > 3)\n\n**메트릭 설명**:\n- CPU Limit 90% 이상 사용 중인 컨테이너\n- Memory Limit 90% 이상 사용 중인 컨테이너\n- CPU Throttling 발생 중인 컨테이너 (10% 이상)\n- 최근 재시작 3회 이상인 컨테이너 (OOM Kill 포함)\n\n**병목 유형**:\n1. **CPU Bottleneck**: Limit 초과로 Throttling\n2. **Memory Bottleneck**: OOM Kill 위험\n3. **Network Bottleneck**: Bandwidth 포화\n4. **Storage Bottleneck**: I/O Wait 높음\n\n**정상 범위**:\n- 🟢 0-5개: 우수 (일부 순간적 병목)\n- 🟡 5-20개: 주의 (리소스 조정 검토)\n- 🔴 > 20개: 위험 (즉시 조치 필요)\n\n**우선순위 판단**:\n- **Critical**: Production 워크로드의 병목\n- **High**: 사용자 대면 서비스의 병목\n- **Medium**: 배치 Job의 성능 저하\n- **Low**: Dev/Test 환경\n\n**자동 해결 방법**:\n- **HPA (Horizontal Pod Autoscaler)**: Pod 개수 자동 증가\n- **VPA (Vertical Pod Autoscaler)**: Request/Limit 자동 조정\n- **Cluster Autoscaler**: Node 자동 추가\n\n**조치 사항**:\n- 병목 컨테이너 목록 확인 (하단 테이블 참조)\n- CPU Throttling: CPU Limit 증가 또는 제거\n- Memory 압박: Memory Limit 증가\n- 재시작 빈번: 로그에서 OOM Kill 확인\n\n**SLO**: 병목 지점 < 10개\n**Alert**: 병목 지점 > 20개가 10분 이상\n**관련 메트릭**: CPU Throttling, OOM Kill Count",
+          "gridPos": {"h": 6, "w": 6, "x": 12, "y": 4},
+          "targets": [
+            {
+              "expr": "count(\n  (rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]) / \n   on(namespace,pod,container) kube_pod_container_resource_limits{resource=\"cpu\"}) > 0.9\n) +\ncount(\n  (container_memory_working_set_bytes{container!=\"\"} / \n   on(namespace,pod,container) kube_pod_container_resource_limits{resource=\"memory\"}) > 0.9\n) +\ncount(rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0.1) +\ncount(kube_pod_container_status_restarts_total > 3)",
+              "refId": "A",
+              "legendFormat": "Bottleneck Count"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 164, 196, 0.3)"},
+                  {"value": 5, "color": "rgba(255, 217, 125, 0.3)"},
+                  {"value": 20, "color": "rgba(244, 139, 139, 0.3)"}
+                ]
+              },
+              "color": {"mode": "thresholds"}
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "orientation": "auto",
+            "textMode": "value_and_name",
+            "colorMode": "background"
+          }
+        },
+        {
+          "type": "gauge",
+          "id": 13,
+          "title": "Overall System Health",
+          "description": "**전체 시스템 건강도 점수 (0-100점)**\n\n**계산식**:\n(\n  (1 - (count(up{job=~\".*\"} == 0) / count(up{job=~\".*\"}))) * 30 +\n  (1 - (count(ALERTS{alertstate=\"firing\",severity=\"critical\"}) / 10)) * 25 +\n  (sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) / sum(machine_cpu_cores) < 0.85) * 25 +\n  (sum(container_memory_working_set_bytes{container!=\"\"}) / sum(machine_memory_bytes) < 0.85) * 20\n) * 100\n\n**메트릭 설명**:\n4가지 핵심 건강 지표의 가중 평균\n1. **서비스 가용성 (30점)**: UP 상태 서비스 비율\n2. **Alert 부재 (25점)**: Critical Alert 없음\n3. **CPU 여유 (25점)**: 클러스터 CPU < 85%\n4. **Memory 여유 (20점)**: 클러스터 Memory < 85%\n\n**점수 해석**:\n- 🟢 90-100점: 매우 건강 (모든 시스템 정상)\n- 🟡 70-90점: 양호 (일부 경미한 문제)\n- 🟠 50-70점: 주의 (여러 문제 발생)\n- 🔴 < 50점: 위험 (심각한 장애)\n\n**건강도 저하 원인**:\n- **서비스 Down**: 배포 실패, 설정 오류\n- **Critical Alert**: 리소스 부족, 애플리케이션 오류\n- **리소스 고갈**: 클러스터 용량 한계\n\n**개선 조치**:\n- 70점 이하: 즉시 상황 파악 및 대응\n- Down 서비스: kubectl describe로 원인 분석\n- Alert 확인: Alertmanager에서 상세 내역 조회\n- 리소스 부족: 스케일 아웃 또는 워크로드 조정\n\n**정기 점검**:\n- 일일: 90점 이상 유지 확인\n- 주간: 추세 분석 (점수 하락 패턴)\n- 월간: 개선 활동 평가\n\n**SLO**: 평균 건강도 > 85점\n**Alert**: 건강도 < 70점이 10분 이상\n**관련 대시보드**: 모든 대시보드 종합",
+          "gridPos": {"h": 6, "w": 6, "x": 18, "y": 4},
+          "targets": [
+            {
+              "expr": "(\n  (1 - (count(up{job=~\".*\"} == 0) / count(up{job=~\".*\"}))) * 30 +\n  (1 - (count(ALERTS{alertstate=\"firing\",severity=\"critical\"}) / 10)) * 25 +\n  (sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) / sum(machine_cpu_cores) < 0.85) * 25 +\n  (sum(container_memory_working_set_bytes{container!=\"\"}) / sum(machine_memory_bytes) < 0.85) * 20\n) * 100",
+              "refId": "A",
+              "legendFormat": "Health Score"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(244, 139, 139, 0.8)"},
+                  {"value": 50, "color": "rgba(255, 180, 71, 0.8)"},
+                  {"value": 70, "color": "rgba(255, 217, 125, 0.8)"},
+                  {"value": 90, "color": "rgba(129, 201, 149, 0.8)"}
+                ]
+              },
+              "min": 0,
+              "max": 100
+            }
+          },
+          "options": {
+            "showThresholdLabels": true,
+            "showThresholdMarkers": true
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 20,
+          "title": "CPU Throttling Rate by Namespace",
+          "description": "**Namespace별 CPU Throttling 발생률**\n\n**계산식**:\nsum(rate(container_cpu_cfs_throttled_seconds_total[5m])) by (namespace) / \nsum(rate(container_cpu_cfs_periods_total[5m])) by (namespace) * 100\n\n**메트릭 설명**:\n- CFS (Completely Fair Scheduler)에서 CPU Limit로 인해 제한된 시간 비율\n- CPU Limit 설정 시 발생하는 성능 저하 측정\n- 100% = 항상 Throttling (심각한 성능 문제)\n\n**정상 범위**:\n- 🟢 0-5%: 우수 (간헐적 Throttling, 무시 가능)\n- 🟡 5-15%: 주의 (성능 영향 시작)\n- 🔴 > 15%: 위험 (심각한 성능 저하)\n\n**Throttling 영향**:\n- API 응답 지연 증가\n- 처리량 감소\n- Latency p95/p99 증가\n- 사용자 체감 성능 저하\n\n**CPU Limit의 딜레마**:\n- **Limit 설정**: Noisy Neighbor 방지, 리소스 격리\n- **Limit 미설정**: Throttling 없음, 성능 예측 가능\n- **Best Practice**: Request만 설정, Limit 제거 (QoS: Burstable)\n\n**해결 방법**:\n1. **CPU Limit 증가**: 현재 사용량의 1.5-2배\n2. **CPU Limit 제거**: limits.cpu 삭제 (권장)\n3. **HPA 활성화**: Pod 수 증가로 부하 분산\n4. **코드 최적화**: CPU 사용량 자체를 줄임\n\n**Google의 권장사항**:\n- GKE Best Practice: CPU Limit 설정 지양\n- CPU는 압축 가능한 리소스 (Throttling만 발생, Crash 안 함)\n- Memory Limit만 엄격히 관리 (OOM Kill 방지)\n\n**조치 사항**:\n- 15% 이상 Throttling 발생 Namespace 식별\n- 해당 Deployment의 CPU Limit 검토\n- Limit 제거 후 Request만으로 재배포\n\n**SLO**: 평균 Throttling Rate < 5%\n**Alert**: 특정 Namespace의 Throttling > 20%가 10분 이상\n**관련 메트릭**: CPU Usage, Response Latency",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_cfs_throttled_seconds_total[5m])) by (namespace) / sum(rate(container_cpu_cfs_periods_total[5m])) by (namespace) * 100",
+              "refId": "A",
+              "legendFormat": "{{namespace}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 5, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 15, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 21,
+          "title": "OOM Kill Events by Namespace",
+          "description": "**Namespace별 Out Of Memory Kill 발생 횟수**\n\n**계산식**:\nsum(increase(kube_pod_container_status_terminated_reason{reason=\"OOMKilled\"}[5m])) by (namespace)\n\n**메트릭 설명**:\n- 컨테이너가 Memory Limit 초과로 강제 종료된 횟수\n- Linux Kernel의 OOM Killer가 메모리 부족 시 프로세스 Kill\n- Pod 재시작의 주요 원인 중 하나\n\n**정상 범위**:\n- 🟢 0건: 이상적 (메모리 관리 양호)\n- 🟡 1-5건/시간: 주의 (일부 Pod의 메모리 부족)\n- 🔴 > 5건/시간: 위험 (심각한 메모리 문제)\n\n**OOM Kill 원인**:\n1. **Memory Limit 과소 설정**: 실제 필요량보다 작음\n2. **메모리 누수**: 애플리케이션 버그로 메모리 지속 증가\n3. **예상치 못한 부하**: 트래픽 Spike로 메모리 급증\n4. **캐시 과다**: In-memory 캐시가 비제한 증가\n\n**OOM Kill 영향**:\n- Pod 재시작으로 서비스 중단\n- 진행 중인 작업 손실 (Stateful 워크로드)\n- CrashLoopBackOff 상태 진입 가능\n- 사용자 경험 저하\n\n**해결 방법**:\n1. **Memory Limit 증가**: 현재 사용량의 1.5-2배\n2. **메모리 누수 확인**: Heap Dump, Profiling\n3. **VPA 활용**: 자동으로 적정 Limit 추천\n4. **캐시 크기 제한**: Max Size, TTL 설정\n\n**OOM Kill 분석**:\n```bash\n# 최근 OOM Kill된 Pod 확인\nkubectl get events --all-namespaces --field-selector reason=OOMKilling\n\n# Pod의 메모리 사용량 확인\nkubectl top pod -n <namespace>\n\n# Container 로그 확인 (종료 전 로그)\nkubectl logs <pod> -n <namespace> --previous\n```\n\n**예방 조치**:\n- Request와 Limit 동일 설정 (QoS: Guaranteed)\n- Horizontal Scaling으로 부하 분산\n- 메모리 프로파일링 도구 사용 (pprof, heapster)\n\n**SLO**: OOM Kill < 2건/시간\n**Alert**: OOM Kill > 10건/시간 (특정 Namespace)\n**관련 메트릭**: Memory Usage, Pod Restart Count",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+          "targets": [
+            {
+              "expr": "sum(increase(kube_pod_container_status_terminated_reason{reason=\"OOMKilled\"}[5m])) by (namespace)",
+              "refId": "A",
+              "legendFormat": "{{namespace}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 25,
+                "drawStyle": "bars",
+                "lineInterpolation": "linear",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"}
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "right", "calcs": ["sum"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 30,
+          "title": "Network Bandwidth Saturation (%)",
+          "description": "**네트워크 대역폭 사용률**\n\n**계산식**:\n(\n  sum(rate(node_network_transmit_bytes_total{device!~\"lo|veth.*\"}[5m])) + \n  sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*\"}[5m]))\n) * 8 / (10 * 1000000000) * 100\n\n**메트릭 설명**:\n- 전체 노드의 네트워크 송수신 대역폭 합계\n- 10GbE (10 Gigabit Ethernet) 기준 사용률\n- 8을 곱하는 이유: Bytes → bits 변환\n\n**정상 범위**:\n- 🟢 0-70%: 여유 있음\n- 🟡 70-85%: 주의 (피크 시간대 허용)\n- 🔴 > 85%: 포화 (네트워크 병목)\n\n**대역폭 포화 영향**:\n- API 응답 지연\n- 데이터 전송 속도 저하\n- S3 I/O 성능 저하\n- Pod 간 통신 지연\n\n**주요 대역폭 소비자**:\n1. **S3 I/O**: Iceberg 데이터 읽기/쓰기\n2. **Pod-to-Pod**: Service Mesh (Istio, Linkerd)\n3. **External API**: 외부 서비스 호출\n4. **Logging**: Fluent-bit → OpenSearch 전송\n\n**네트워크 최적화**:\n- **S3 VPC Endpoint**: 트래픽 내부망 유지\n- **CDN/Cache**: 정적 콘텐츠 캐싱\n- **압축**: gRPC/HTTP 압축 활성화\n- **Batch 전송**: 작은 요청 묶어서 전송\n\n**10GbE vs 25GbE**:\n- 10GbE: 이론상 1.25 GB/s\n- 25GbE: 이론상 3.125 GB/s\n- 대역폭 포화 시 25GbE 업그레이드 고려\n\n**조치 사항**:\n- 85% 이상: 대역폭 소비 Top 10 Pod 식별\n- Network Policy로 불필요한 통신 차단\n- 네트워크 집약적 워크로드 분산 배치\n\n**SLO**: 평균 대역폭 사용률 < 70%, p95 < 85%\n**Alert**: 대역폭 > 90%가 10분 이상\n**관련 메트릭**: S3 Throughput, Pod Network I/O",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+          "targets": [
+            {
+              "expr": "(\n  sum(rate(node_network_transmit_bytes_total{device!~\"lo|veth.*\"}[5m])) + \n  sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*\"}[5m]))\n) * 8 / (10 * 1000000000) * 100",
+              "refId": "A",
+              "legendFormat": "Bandwidth Usage"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 25,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic", "fixedColor": "rgba(244, 164, 196, 0.8)"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 70, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 85, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "single"},
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"]}
+          }
+        },
+        {
+          "type": "timeseries",
+          "id": 31,
+          "title": "Storage I/O Wait Time (%)",
+          "description": "**스토리지 I/O 대기 시간 비율**\n\n**계산식**:\navg(rate(node_cpu_seconds_total{mode=\"iowait\"}[5m])) by (instance) * 100\n\n**메트릭 설명**:\n- CPU가 I/O 작업 완료를 대기하는 시간 비율\n- 높은 iowait = 스토리지 병목\n- 노드별 측정으로 문제 노드 식별\n\n**정상 범위**:\n- 🟢 0-10%: 정상 (I/O 병목 없음)\n- 🟡 10-30%: 주의 (스토리지 성능 저하)\n- 🔴 > 30%: 위험 (심각한 I/O 병목)\n\n**I/O Wait 원인**:\n1. **디스크 IOPS 포화**: HDD 사용 시 특히 심각\n2. **대용량 파일 I/O**: 로그, 데이터 파일 읽기/쓰기\n3. **네트워크 스토리지**: NFS, Ceph의 네트워크 지연\n4. **파일 시스템 단편화**: 오래된 파일 시스템\n\n**스토리지 유형별 특성**:\n- **Longhorn (로컬 SSD)**: 낮은 Latency, 높은 IOPS\n- **Isilon NAS**: 중간 Latency, 대용량 순차 I/O 유리\n- **Ceph**: 분산 스토리지, 네트워크 영향 받음\n- **EBS gp3**: 3,000-16,000 IOPS 설정 가능\n\n**I/O 최적화**:\n1. **SSD 사용**: HDD 대비 10-100배 빠른 IOPS\n2. **캐싱**: Redis, Memcached로 디스크 I/O 감소\n3. **Batch Write**: 작은 쓰기를 모아서 한 번에\n4. **파티션 정렬**: Database Partition, Iceberg Partition\n\n**워크로드별 스토리지 선택**:\n- **데이터베이스**: 로컬 SSD (Longhorn)\n- **대용량 파일**: NAS (Isilon)\n- **로그 수집**: 로컬 임시 저장 → S3 전송\n- **빅데이터**: S3 Direct (컨테이너 로컬 디스크 미사용)\n\n**조치 사항**:\n- iowait > 30% 노드의 워크로드 확인\n- 해당 노드의 PV 사용 Pod 식별\n- 스토리지 IOPS 모니터링 (Longhorn, Ceph 대시보드)\n- 필요 시 더 빠른 스토리지로 마이그레이션\n\n**SLO**: 평균 iowait < 15%\n**Alert**: 특정 노드의 iowait > 40%가 10분 이상\n**관련 메트릭**: Disk IOPS, Disk Latency",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+          "targets": [
+            {
+              "expr": "avg(rate(node_cpu_seconds_total{mode=\"iowait\"}[5m])) by (instance) * 100",
+              "refId": "A",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 15,
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "axisPlacement": "auto"
+              },
+              "color": {"mode": "palette-classic"},
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                  {"value": 10, "color": "rgba(255, 217, 125, 0.2)"},
+                  {"value": 30, "color": "rgba(244, 139, 139, 0.2)"}
+                ]
+              }
+            }
+          },
+          "options": {
+            "tooltip": {"mode": "multi", "sort": "desc"},
+            "legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"]}
+          }
+        },
+        {
+          "type": "table",
+          "id": 40,
+          "title": "Top 10 Resource Wasting Pods",
+          "description": "**리소스 낭비가 가장 심한 Pod Top 10**\n\n**계산식**:\ntopk(10, \n  sum(\n    (kube_pod_container_resource_requests{resource=\"cpu\"} - \n     rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) * 730 * 0.04\n  ) by (namespace, pod)\n)\n\n**메트릭 설명**:\n- Request된 CPU에서 실제 사용량을 뺀 낭비량\n- 월간 비용으로 환산 (USD)\n- 우선 최적화 대상 식별\n\n**분석 포인트**:\n- **높은 낭비**: Request가 과다 설정됨\n- **낭비 원인**: 초기 Request를 크게 설정 후 미조정\n- **최적화 효과**: 상위 10개만 조정해도 큰 절감\n\n**Request 조정 방법**:\n1. **실사용량 확인**: 최근 1주일 p95 값\n2. **여유 추가**: 실사용량 * 1.2-1.5 (20-50% 버퍼)\n3. **배포 후 모니터링**: OOM Kill, CPU Throttling 미발생 확인\n\n**VPA 권장사항 활용**:\n```bash\n# VPA 리소스 확인\nkubectl get vpa -n <namespace>\n\n# VPA 권장사항 조회\nkubectl describe vpa <vpa-name> -n <namespace>\n```\n\n**주의사항**:\n- **Production 환경**: 점진적으로 조정 (한 번에 크게 줄이지 않음)\n- **트래픽 패턴**: 피크 시간대 고려\n- **HPA 연동**: HPA와 함께 사용 시 여유 적게\n\n**조치 사항**:\n- 상위 10개 Pod의 Deployment 식별\n- Request 값을 실사용량 + 30% 수준으로 조정\n- 1주일 모니터링 후 추가 미세 조정\n\n**예상 효과**:\n- 상위 10개 Pod 최적화 → 전체 절감의 50-70%\n- 클러스터 가용 리소스 증가 → 신규 워크로드 수용",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+          "targets": [
+            {
+              "expr": "topk(10, \n  sum(\n    (kube_pod_container_resource_requests{resource=\"cpu\"} - \n     rate(container_cpu_usage_seconds_total{container!=\"\"}[5m])) * 730 * 0.04\n  ) by (namespace, pod)\n)",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true},
+                "indexByName": {"namespace": 0, "pod": 1, "Value": 2},
+                "renameByName": {"namespace": "Namespace", "pod": "Pod", "Value": "Wasted Cost (USD/month)"}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "left", "filterable": true}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Wasted Cost (USD/month)"},
+                "properties": [
+                  {"id": "unit", "value": "currencyUSD"},
+                  {"id": "decimals", "value": 2},
+                  {"id": "custom.align", "value": "right"},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                      {"value": 50, "color": "rgba(255, 217, 125, 0.3)"},
+                      {"value": 100, "color": "rgba(244, 139, 139, 0.3)"}
+                    ]
+                  }}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "id": 41,
+          "title": "Performance Bottleneck Details",
+          "description": "**성능 병목이 발생 중인 컨테이너 상세 목록**\n\n**계산식**:\n(\n  rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]) / \n  on(namespace,pod,container) kube_pod_container_resource_limits{resource=\"cpu\"}\n) > 0.9\nOR\n(\n  container_memory_working_set_bytes{container!=\"\"} / \n  on(namespace,pod,container) kube_pod_container_resource_limits{resource=\"memory\"}\n) > 0.9\n\n**메트릭 설명**:\n- CPU 또는 Memory Limit의 90% 이상 사용 중\n- Namespace, Pod, Container 단위로 식별\n- 실시간 병목 지점 상세 정보\n\n**컬럼 정보**:\n- **Namespace**: 워크로드 그룹\n- **Pod**: 실행 중인 Pod명\n- **Container**: 컨테이너명\n- **Resource**: CPU 또는 Memory\n- **Usage %**: Limit 대비 사용률\n\n**우선순위 판단**:\n- **Usage > 95%**: 즉시 조치 (OOM Kill, Throttling 임박)\n- **Usage 90-95%**: 1시간 내 조치\n- **Production NS**: 다른 환경보다 우선\n\n**조치 방법**:\n1. **임시 조치**: Limit 값 즉시 증가 (kubectl patch)\n2. **근본 해결**: HPA/VPA 활성화\n3. **코드 개선**: 리소스 사용 최적화\n\n**kubectl 명령어**:\n```bash\n# Pod의 리소스 확인\nkubectl top pod <pod-name> -n <namespace>\n\n# Limit 증가 (임시)\nkubectl set resources deployment <deployment> \\\n  --limits=cpu=2,memory=4Gi -n <namespace>\n\n# HPA 생성\nkubectl autoscale deployment <deployment> \\\n  --cpu-percent=80 --min=2 --max=10 -n <namespace>\n```\n\n**참고**:\n- 이 테이블이 비어 있으면 = 병목 없음 (이상적)\n- 지속적으로 나타나는 Pod = 구조적 문제",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+          "targets": [
+            {
+              "expr": "(rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]) / on(namespace,pod,container) kube_pod_container_resource_limits{resource=\"cpu\"}) > 0.9",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            },
+            {
+              "expr": "(container_memory_working_set_bytes{container!=\"\"} / on(namespace,pod,container) kube_pod_container_resource_limits{resource=\"memory\"}) > 0.9",
+              "refId": "B",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge"
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true, "id": true, "image": true},
+                "indexByName": {"namespace": 0, "pod": 1, "container": 2, "resource": 3, "Value": 4},
+                "renameByName": {"namespace": "Namespace", "pod": "Pod", "container": "Container", "resource": "Resource", "Value": "Usage %"}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "left", "filterable": true}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Usage %"},
+                "properties": [
+                  {"id": "unit", "value": "percentunit"},
+                  {"id": "decimals", "value": 1},
+                  {"id": "custom.align", "value": "right"},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0.9, "color": "rgba(255, 217, 125, 0.3)"},
+                      {"value": 0.95, "color": "rgba(244, 139, 139, 0.3)"}
+                    ]
+                  }}
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "id": 50,
+          "title": "Slow Application Analysis (Spark - Last 1h)",
+          "description": "**느린 Spark 쿼리 분석 (최근 1시간)**\n\n**계산식**:\ntopk(20, \n  avg(rate(Spark_execution_application_execution_time_seconds_sum[1h])) by (application_id, user, source) / \n  avg(rate(Spark_execution_application_execution_time_seconds_count[1h])) by (application_id, user, source)\n)\n\n**메트릭 설명**:\n- 평균 실행 시간이 긴 쿼리 Top 20\n- 사용자, 쿼리 소스(Dashboard, CLI, API) 포함\n- 최적화 우선순위 결정\n\n**쿼리 최적화 체크리스트**:\n1. **파티션 프루닝**: WHERE 절에 파티션 컬럼 추가\n2. **컬럼 프로젝션**: SELECT * 대신 필요 컬럼만\n3. **Join 순서**: 작은 테이블을 먼저\n4. **Predicate Pushdown**: 필터를 가능한 일찍\n5. **통계 정보**: ANALYZE TABLE 실행\n\n**Spark UI 분석 방법**:\n1. Application ID로 Spark UI 접속\n2. Application Plan 확인 (Logical, Distributed)\n3. Stage별 실행 시간 및 데이터 스캔량\n4. Split 분포 확인 (데이터 스큐 탐지)\n\n**일반적인 성능 패턴**:\n- **Full Table Scan**: 파티션 필터 누락\n- **Cross Join**: 조인 조건 누락\n- **Large Shuffle**: groupBy 키 카디널리티 높음\n- **Data Skew**: 특정 Worker에 부하 집중\n\n**소스별 최적화**:\n- **Dashboard**: 결과 캐싱, Materialized View\n- **Ad-hoc**: 교육, Application Review\n- **ETL**: Spark 사용 고려 (대량 처리)\n\n**조치 사항**:\n- Application ID로 Spark UI에서 상세 분석\n- 사용자에게 최적화 가이드 제공\n- 빈번한 느린 쿼리 → Materialized View 생성\n\n**참고**: 쿼리 텍스트는 메트릭에 포함 안 됨 (Spark UI에서 확인)",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 34},
+          "targets": [
+            {
+              "expr": "topk(20, \n  avg(rate(Spark_execution_application_execution_time_seconds_sum[1h])) by (application_id, user, source) / \n  avg(rate(Spark_execution_application_execution_time_seconds_count[1h])) by (application_id, user, source)\n)",
+              "refId": "A",
+              "format": "table",
+              "instant": true
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true},
+                "indexByName": {"application_id": 0, "user": 1, "source": 2, "Value": 3},
+                "renameByName": {"application_id": "Application ID", "user": "User", "source": "Source", "Value": "Avg Execution Time (s)"}
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"align": "left", "filterable": true}
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "Avg Execution Time (s)"},
+                "properties": [
+                  {"id": "unit", "value": "s"},
+                  {"id": "decimals", "value": 1},
+                  {"id": "custom.align", "value": "right"},
+                  {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+                  {"id": "thresholds", "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"value": 0, "color": "rgba(129, 201, 149, 0.2)"},
+                      {"value": 30, "color": "rgba(255, 217, 125, 0.3)"},
+                      {"value": 60, "color": "rgba(244, 139, 139, 0.3)"}
+                    ]
+                  }}
+                ]
+              },
+              {
+                "matcher": {"id": "byName", "options": "Application ID"},
+                "properties": [
+                  {"id": "custom.width", "value": 350},
+                  {"id": "links", "value": [{
+                    "title": "Open in Spark UI",
+                    "url": "http://Spark.k8s-cluster-01.miribit.lab/ui/application/${__value.raw}"
+                  }]}
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }

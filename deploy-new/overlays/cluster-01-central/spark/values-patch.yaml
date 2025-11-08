@@ -1,0 +1,11 @@
+# Cluster-01-Central 환경에 맞는 Spark 설정 오버라이드
+
+# Worker 수 증가 (중앙 클러스터)
+worker:
+  replicaCount: 3
+
+# 스토리지 활성화
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 20Gi

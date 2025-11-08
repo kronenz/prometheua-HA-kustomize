@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dataops-optimization
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dataops-optimization.json: |
+    {
+      "uid": "dataops-optimization",
+      "title": "🔧 DataOps - 최적화 & 트러블슈팅",
+      "tags": ["dataops", "optimization", "troubleshooting"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "1m",
+      "editable": true,
+      "panels": [
+        {
+          "type": "text",
+          "title": "📊 최적화 & 트러블슈팅",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 20px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; border-radius: 8px;'><h2 style='margin:0'>🔧 최적화 & 트러블슈팅</h2><p style='margin-top:10px; font-size:16px'>성능 최적화, 비용 분석, 에러 모니터링</p></div>"
+          }
+        },
+        {
+          "type": "table",
+          "title": "⚠️ 최근 에러 로그 (Top 20)",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "topk(20, sum(rate(log_messages{level=\"error\"}[5m])) by (service, message))",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"renameByName": {"service": "서비스", "message": "에러 메시지", "Value": "발생 빈도"}}}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Spark GC Time Ratio (목표: <10%)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+          "targets": [{
+            "expr": "sum(rate(jvm_gc_collection_seconds_sum{job=\"spark\"}[5m])) / sum(rate(jvm_gc_collection_seconds_count{job=\"spark\"}[5m])) * 100",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "unit": "percent",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "green"},
+                  {"value": 5, "color": "yellow"},
+                  {"value": 10, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "bargauge",
+          "title": "Slow Query Top 10 (>10초)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+          "targets": [{
+            "expr": "topk(10, max(query_duration_seconds{duration_seconds>10}) by (query_id))",
+            "refId": "A"
+          }],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"value": 0, "color": "yellow"},
+                  {"value": 30, "color": "red"}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "title": "💰 리소스 비용 분석 (네임스페이스별)",
+          "gridPos": {"h": 10, "w": 24, "x": 0, "y": 22},
+          "targets": [{
+            "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\"} * 0.031 + kube_pod_container_resource_requests{resource=\"memory\"} / 1024 / 1024 / 1024 * 0.004) by (namespace)",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }],
+          "transformations": [
+            {"id": "organize", "options": {"renameByName": {"namespace": "네임스페이스", "Value": "월간 예상 비용 ($)"}}}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Iceberg Small Files 추이",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+          "targets": [{
+            "expr": "iceberg_table_small_files_count",
+            "legendFormat": "{{table_name}}",
+            "refId": "A"
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"}
+            }
+          }
+        },
+        {
+          "type": "piechart",
+          "title": "에러 타입 분포",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+          "targets": [{
+            "expr": "sum(rate(log_messages{level=\"error\"}[1h])) by (error_type)",
+            "refId": "A"
+          }],
+          "options": {
+            "legend": {"displayMode": "list", "placement": "right"},
+            "pieType": "donut"
+          }
+        },
+        {
+          "type": "text",
+          "title": "🔗 관련 링크",
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 40},
+          "options": {
+            "mode": "html",
+            "content": "<div style='padding: 15px; background: #f5f5f5; border-radius: 8px;'><div style='display: flex; justify-content: space-around;'><a href='/d/dataops-data-pipeline/dataops-data-pipeline' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>← 데이터 파이프라인</a><a href='/d/dataops-main-nav/dataops-platform-main-navigation' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>메인으로</a><a href='/d/dataops-e2e-analytics/dataops-e2e-analytics' style='padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;'>E2E Analytics →</a></div></div>"
+          }
+        }
+      ]
+    }
