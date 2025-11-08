@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-k8s-network-monitoring-v1
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  k8s-network-monitoring-v1.json: |
+    {
+      "uid": "k8s-network-monitoring-v1",
+      "title": "쿠버네티스-03-인프라-네트워크 모니터링",
+      "tags": ["kubernetes", "infrastructure", "network", "cilium", "ingress", "korean", "v1"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "title": "📋 네트워크 모니터링",
+          "type": "text",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 2},
+          "options": {"mode": "markdown", "content": "# 🌐 Kubernetes 네트워크 모니터링 (Cilium CNI + Ingress Nginx)\n\n**빠른 이동**: [🏠 개요](d/k8s-cluster-overview-v1) | [🖥️ 노드](d/k8s-node-resources-v1) | [💾 스토리지](d/k8s-storage-capacity-v1) | [📦 워크로드](d/k8s-workload-status-v1) | [⚡ 성능](d/k8s-performance-analysis-v1)"}
+        },
+        {
+          "title": "1️⃣ 네트워크 수신 속도",
+          "type": "stat",
+          "gridPos": {"x": 0, "y": 2, "w": 6, "h": 3},
+          "targets": [{"expr": "sum(rate(container_network_receive_bytes_total{pod!=\"\"}[5m]))", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#A8D8D8"}]}, "unit": "Bps"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "2️⃣ 네트워크 전송 속도",
+          "type": "stat",
+          "gridPos": {"x": 6, "y": 2, "w": 6, "h": 3},
+          "targets": [{"expr": "sum(rate(container_network_transmit_bytes_total{pod!=\"\"}[5m]))", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#A8D8D8"}]}, "unit": "Bps"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "3️⃣ Ingress 요청 수",
+          "type": "stat",
+          "gridPos": {"x": 12, "y": 2, "w": 6, "h": 3},
+          "targets": [{"expr": "sum(rate(nginx_ingress_controller_requests[5m]))", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#6FB8B8"}]}, "unit": "reqps"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "4️⃣ Ingress 응답 시간 (P95)",
+          "type": "stat",
+          "gridPos": {"x": 18, "y": 2, "w": 6, "h": 3},
+          "targets": [{"expr": "histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le))", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FCF3CF"}, {"value": 3, "color": "#FADBD8"}]}, "unit": "s", "decimals": 3}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "📈 Pod 네트워크 수신 속도 (Top 10)",
+          "type": "timeseries",
+          "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+          "targets": [{"expr": "topk(10, rate(container_network_receive_bytes_total{pod!=\"\"}[5m]))", "legendFormat": "{{namespace}}/{{pod}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 10, "pointSize": 5, "spanNulls": true}, "unit": "Bps"}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "max"]}}
+        },
+        {
+          "title": "📊 Pod 네트워크 전송 속도 (Top 10)",
+          "type": "timeseries",
+          "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+          "targets": [{"expr": "topk(10, rate(container_network_transmit_bytes_total{pod!=\"\"}[5m]))", "legendFormat": "{{namespace}}/{{pod}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 10, "pointSize": 5, "spanNulls": true}, "unit": "Bps"}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "max"]}}
+        },
+        {
+          "title": "🌐 Ingress별 요청 수",
+          "type": "timeseries",
+          "gridPos": {"x": 0, "y": 13, "w": 12, "h": 8},
+          "targets": [{"expr": "sum(rate(nginx_ingress_controller_requests[5m])) by (host)", "legendFormat": "{{host}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 20, "pointSize": 5, "spanNulls": true}, "unit": "reqps"}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "mean", "max"]}}
+        },
+        {
+          "title": "⏱️ Ingress 응답 시간 분포",
+          "type": "timeseries",
+          "gridPos": {"x": 12, "y": 13, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "histogram_quantile(0.50, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P50", "refId": "A"},
+            {"expr": "histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P95", "refId": "B"},
+            {"expr": "histogram_quantile(0.99, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P99", "refId": "C"}
+          ],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 20, "pointSize": 5, "spanNulls": true}, "unit": "s"}},
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}}
+        },
+        {
+          "title": "⚠️ 네트워크 에러",
+          "type": "timeseries",
+          "gridPos": {"x": 0, "y": 21, "w": 24, "h": 6},
+          "targets": [{"expr": "sum(rate(node_network_receive_errs_total[5m]) + rate(node_network_transmit_errs_total[5m])) by (instance)", "legendFormat": "{{instance}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 10, "pointSize": 5, "spanNulls": true}, "unit": "short"}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "sum"]}}
+        }
+      ]
+    }

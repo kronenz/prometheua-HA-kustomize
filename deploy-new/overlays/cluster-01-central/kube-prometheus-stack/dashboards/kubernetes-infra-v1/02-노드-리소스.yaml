@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-k8s-node-resources-v1
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  k8s-node-resources-v1.json: |
+    {
+      "uid": "k8s-node-resources-v1",
+      "title": "쿠버네티스-02-인프라-노드 리소스",
+      "tags": ["kubernetes", "infrastructure", "node", "resources", "korean", "v1"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "title": "📋 노드 리소스 모니터링",
+          "type": "text",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 2},
+          "options": {
+            "mode": "markdown",
+            "content": "# 🖥️ Kubernetes 노드 리소스 상세 모니터링\n\n**빠른 이동**: [🏠 개요](d/k8s-cluster-overview-v1) | [🌐 네트워크](d/k8s-network-monitoring-v1) | [💾 스토리지](d/k8s-storage-capacity-v1) | [📦 워크로드](d/k8s-workload-status-v1) | [⚡ 성능](d/k8s-performance-analysis-v1)"
+          }
+        },
+        {
+          "title": "1️⃣ 총 노드 수",
+          "type": "stat",
+          "gridPos": {"x": 0, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "count(kube_node_info)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#B8E5C5"}]}, "unit": "short"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "2️⃣ Ready 노드",
+          "type": "stat",
+          "gridPos": {"x": 4, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "count(kube_node_status_condition{condition=\"Ready\",status=\"true\"})", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#FADBD8"}, {"value": 3, "color": "#FCF3CF"}, {"value": 4, "color": "#D5F4E6"}]}, "unit": "short"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "3️⃣ 평균 CPU 사용률",
+          "type": "stat",
+          "gridPos": {"x": 8, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 70, "color": "#FCF3CF"}, {"value": 85, "color": "#FADBD8"}]}, "unit": "percent", "decimals": 1}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "4️⃣ 평균 메모리 사용률",
+          "type": "stat",
+          "gridPos": {"x": 12, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "(1 - avg(node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 75, "color": "#FCF3CF"}, {"value": 90, "color": "#FADBD8"}]}, "unit": "percent", "decimals": 1}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "5️⃣ 평균 디스크 사용률",
+          "type": "stat",
+          "gridPos": {"x": 16, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "avg((node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_free_bytes{mountpoint=\"/\"}) / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 80, "color": "#FCF3CF"}, {"value": 90, "color": "#FADBD8"}]}, "unit": "percent", "decimals": 1}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "6️⃣ 평균 Load Average",
+          "type": "stat",
+          "gridPos": {"x": 20, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "avg(node_load5)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#B8E5C5"}]}, "unit": "short", "decimals": 2}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "📊 노드별 CPU 사용률",
+          "type": "timeseries",
+          "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+          "targets": [{"expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (instance) * 100)", "legendFormat": "{{instance}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 20, "pointSize": 5, "spanNulls": true}, "unit": "percent", "max": 100}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "mean", "max"]}}
+        },
+        {
+          "title": "💾 노드별 메모리 사용률",
+          "type": "timeseries",
+          "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+          "targets": [{"expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100", "legendFormat": "{{instance}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 20, "pointSize": 5, "spanNulls": true}, "unit": "percent", "max": 100}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "mean", "max"]}}
+        },
+        {
+          "title": "💿 노드별 디스크 사용률",
+          "type": "table",
+          "gridPos": {"x": 0, "y": 13, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "node_filesystem_size_bytes{mountpoint=\"/\"}", "format": "table", "instant": true, "refId": "A"},
+            {"expr": "node_filesystem_free_bytes{mountpoint=\"/\"}", "format": "table", "instant": true, "refId": "B"}
+          ],
+          "transformations": [
+            {"id": "merge"},
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "__name__": true, "device": true, "fstype": true, "mountpoint": true}, "renameByName": {"instance": "노드", "Value #A": "총 용량", "Value #B": "여유 공간"}}}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"align": "left"}}, "overrides": [
+            {"matcher": {"id": "byName", "options": "총 용량"}, "properties": [{"id": "unit", "value": "bytes"}]},
+            {"matcher": {"id": "byName", "options": "여유 공간"}, "properties": [{"id": "unit", "value": "bytes"}]}
+          ]},
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        },
+        {
+          "title": "📈 노드별 Load Average (5m)",
+          "type": "timeseries",
+          "gridPos": {"x": 12, "y": 13, "w": 12, "h": 8},
+          "targets": [{"expr": "node_load5", "legendFormat": "{{instance}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 10, "pointSize": 5, "spanNulls": true}, "unit": "short"}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "mean", "max"]}}
+        }
+      ]
+    }

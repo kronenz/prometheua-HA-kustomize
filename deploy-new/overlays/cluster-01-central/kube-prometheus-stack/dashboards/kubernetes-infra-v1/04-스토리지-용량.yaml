@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-k8s-storage-capacity-v1
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  k8s-storage-capacity-v1.json: |
+    {
+      "uid": "k8s-storage-capacity-v1",
+      "title": "쿠버네티스-04-인프라-스토리지 용량",
+      "tags": ["kubernetes", "infrastructure", "storage", "longhorn", "pvc", "korean", "v1"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "title": "📋 스토리지 용량 관리",
+          "type": "text",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 2},
+          "options": {"mode": "markdown", "content": "# 💾 Kubernetes 스토리지 용량 모니터링 (Longhorn + PVC)\n\n**빠른 이동**: [🏠 개요](d/k8s-cluster-overview-v1) | [🖥️ 노드](d/k8s-node-resources-v1) | [🌐 네트워크](d/k8s-network-monitoring-v1) | [📦 워크로드](d/k8s-workload-status-v1) | [⚡ 성능](d/k8s-performance-analysis-v1)"}
+        },
+        {
+          "title": "1️⃣ Longhorn 볼륨 수",
+          "type": "stat",
+          "gridPos": {"x": 0, "y": 2, "w": 6, "h": 3},
+          "targets": [{"expr": "count(longhorn_volume_actual_size_bytes) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5C9E8"}]}, "unit": "short"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "2️⃣ Longhorn 용량 사용률",
+          "type": "stat",
+          "gridPos": {"x": 6, "y": 2, "w": 6, "h": 3},
+          "targets": [{"expr": "sum(longhorn_volume_actual_size_bytes) / sum(longhorn_node_storage_capacity_bytes) * 100 or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 70, "color": "#FCF3CF"}, {"value": 85, "color": "#FADBD8"}]}, "unit": "percent", "decimals": 1}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "3️⃣ PVC 총 용량",
+          "type": "stat",
+          "gridPos": {"x": 12, "y": 2, "w": 6, "h": 3},
+          "targets": [{"expr": "sum(kubelet_volume_stats_capacity_bytes)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#B19CD9"}]}, "unit": "bytes"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "4️⃣ PVC 사용 중 용량",
+          "type": "stat",
+          "gridPos": {"x": 18, "y": 2, "w": 6, "h": 3},
+          "targets": [{"expr": "sum(kubelet_volume_stats_used_bytes)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#B19CD9"}]}, "unit": "bytes"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "📊 Longhorn 볼륨별 사용량",
+          "type": "table",
+          "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "longhorn_volume_actual_size_bytes", "format": "table", "instant": true, "refId": "A"},
+            {"expr": "longhorn_volume_state", "format": "table", "instant": true, "refId": "B"}
+          ],
+          "transformations": [
+            {"id": "merge"},
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true, "pvc": true, "Value #B": true}, "renameByName": {"volume": "볼륨", "namespace": "Namespace", "Value #A": "사용 용량"}}}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"align": "left"}}, "overrides": [{"matcher": {"id": "byName", "options": "사용 용량"}, "properties": [{"id": "unit", "value": "bytes"}]}]},
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        },
+        {
+          "title": "💿 PVC 용량 사용률 (Top 10)",
+          "type": "table",
+          "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "topk(10, kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes * 100)", "format": "table", "instant": true, "refId": "A"}
+          ],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true}, "renameByName": {"namespace": "Namespace", "persistentvolumeclaim": "PVC", "Value": "사용률 %"}}}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"align": "left"}}, "overrides": [
+            {"matcher": {"id": "byName", "options": "사용률 %"}, "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 70, "color": "#FCF3CF"}, {"value": 90, "color": "#FADBD8"}]}},
+              {"id": "unit", "value": "percent"},
+              {"id": "decimals", "value": 1}
+            ]}
+          ]},
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        },
+        {
+          "title": "📈 Longhorn 용량 추이",
+          "type": "timeseries",
+          "gridPos": {"x": 0, "y": 13, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "sum(longhorn_node_storage_capacity_bytes) or vector(0)", "legendFormat": "총 용량", "refId": "A"},
+            {"expr": "sum(longhorn_volume_actual_size_bytes) or vector(0)", "legendFormat": "사용 중", "refId": "B"}
+          ],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 20, "pointSize": 5, "spanNulls": true}, "unit": "bytes"}},
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}}
+        },
+        {
+          "title": "💾 PVC 용량 추이",
+          "type": "timeseries",
+          "gridPos": {"x": 12, "y": 13, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "sum(kubelet_volume_stats_capacity_bytes)", "legendFormat": "총 용량", "refId": "A"},
+            {"expr": "sum(kubelet_volume_stats_used_bytes)", "legendFormat": "사용 중", "refId": "B"}
+          ],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 20, "pointSize": 5, "spanNulls": true}, "unit": "bytes"}},
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}}
+        },
+        {
+          "title": "📊 스토리지 IOPS",
+          "type": "timeseries",
+          "gridPos": {"x": 0, "y": 21, "w": 24, "h": 6},
+          "targets": [{"expr": "sum(rate(node_disk_reads_completed_total[5m]) + rate(node_disk_writes_completed_total[5m])) by (instance)", "legendFormat": "{{instance}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 10, "pointSize": 5, "spanNulls": true}, "unit": "iops"}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "mean", "max"]}}
+        }
+      ]
+    }

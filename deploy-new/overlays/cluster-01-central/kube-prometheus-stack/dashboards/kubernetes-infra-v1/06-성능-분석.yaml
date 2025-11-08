@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-k8s-performance-analysis-v1
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  k8s-performance-analysis-v1.json: |
+    {
+      "uid": "k8s-performance-analysis-v1",
+      "title": "쿠버네티스-06-인프라-성능 분석",
+      "tags": ["kubernetes", "infrastructure", "performance", "optimization", "korean", "v1"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "title": "📋 성능 분석 및 최적화",
+          "type": "text",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 2},
+          "options": {"mode": "markdown", "content": "# ⚡ Kubernetes 성능 분석 및 최적화 권장\n\n**빠른 이동**: [🏠 개요](d/k8s-cluster-overview-v1) | [🖥️ 노드](d/k8s-node-resources-v1) | [🌐 네트워크](d/k8s-network-monitoring-v1) | [💾 스토리지](d/k8s-storage-capacity-v1) | [📦 워크로드](d/k8s-workload-status-v1)"}
+        },
+        {
+          "title": "1️⃣ CPU Throttled Containers",
+          "type": "stat",
+          "gridPos": {"x": 0, "y": 2, "w": 6, "h": 3},
+          "description": "CPU Throttling이 발생한 Container 수",
+          "targets": [{"expr": "count(rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FCF3CF"}, {"value": 5, "color": "#FADBD8"}]}, "unit": "short"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "2️⃣ OOMKilled Containers",
+          "type": "stat",
+          "gridPos": {"x": 6, "y": 2, "w": 6, "h": 3},
+          "description": "메모리 부족으로 종료된 Container",
+          "targets": [{"expr": "count(kube_pod_container_status_terminated_reason{reason=\"OOMKilled\"}) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FADBD8"}]}, "unit": "short"}},
+          "options": {"graphMode": "none", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "3️⃣ 노드 압박 상태",
+          "type": "stat",
+          "gridPos": {"x": 12, "y": 2, "w": 6, "h": 3},
+          "description": "MemoryPressure 또는 DiskPressure 상태의 노드",
+          "targets": [{"expr": "count(kube_node_status_condition{condition=~\"MemoryPressure|DiskPressure\",status=\"true\"}) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FADBD8"}]}, "unit": "short"}},
+          "options": {"graphMode": "none", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "4️⃣ 디스크 I/O 대기",
+          "type": "stat",
+          "gridPos": {"x": 18, "y": 2, "w": 6, "h": 3},
+          "description": "높은 디스크 I/O 대기 시간을 가진 노드 수",
+          "targets": [{"expr": "count(rate(node_disk_io_time_weighted_seconds_total[5m]) > 0.1) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FCF3CF"}, {"value": 2, "color": "#FADBD8"}]}, "unit": "short"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "🔍 CPU 과다 할당 Containers (Request vs Usage)",
+          "type": "table",
+          "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+          "description": "CPU Request는 높지만 실제 사용률이 낮은 Container (최적화 기회)",
+          "targets": [
+            {"expr": "kube_pod_container_resource_requests{resource=\"cpu\"}", "format": "table", "instant": true, "refId": "A"},
+            {"expr": "rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[5m])", "format": "table", "instant": true, "refId": "B"}
+          ],
+          "transformations": [
+            {"id": "merge"},
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true, "resource": true, "unit": true, "id": true, "image": true, "name": true}, "renameByName": {"namespace": "Namespace", "pod": "Pod", "container": "Container", "Value #A": "Request", "Value #B": "Usage"}}}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"align": "left"}}, "overrides": [
+            {"matcher": {"id": "byName", "options": "Request"}, "properties": [{"id": "decimals", "value": 3}]},
+            {"matcher": {"id": "byName", "options": "Usage"}, "properties": [{"id": "decimals", "value": 3}]}
+          ]},
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        },
+        {
+          "title": "💾 메모리 과다 할당 Containers (Request vs Usage)",
+          "type": "table",
+          "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+          "description": "메모리 Request는 높지만 실제 사용량이 낮은 Container (최적화 기회)",
+          "targets": [
+            {"expr": "kube_pod_container_resource_requests{resource=\"memory\"}", "format": "table", "instant": true, "refId": "A"},
+            {"expr": "container_memory_working_set_bytes{container!=\"\",container!=\"POD\"}", "format": "table", "instant": true, "refId": "B"}
+          ],
+          "transformations": [
+            {"id": "merge"},
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true, "resource": true, "unit": true, "id": true, "image": true, "name": true}, "renameByName": {"namespace": "Namespace", "pod": "Pod", "container": "Container", "Value #A": "Request", "Value #B": "Usage"}}}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"align": "left"}}, "overrides": [
+            {"matcher": {"id": "byName", "options": "Request"}, "properties": [{"id": "unit", "value": "bytes"}]},
+            {"matcher": {"id": "byName", "options": "Usage"}, "properties": [{"id": "unit", "value": "bytes"}]}
+          ]},
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        },
+        {
+          "title": "⚡ CPU Throttling 발생 Containers (Top 10)",
+          "type": "timeseries",
+          "gridPos": {"x": 0, "y": 13, "w": 12, "h": 8},
+          "targets": [{"expr": "topk(10, rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0)", "legendFormat": "{{namespace}}/{{pod}}/{{container}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 10, "pointSize": 5, "spanNulls": true}, "unit": "s"}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "max"]}}
+        },
+        {
+          "title": "💀 OOMKilled Events",
+          "type": "table",
+          "gridPos": {"x": 12, "y": 13, "w": 12, "h": 8},
+          "targets": [{"expr": "kube_pod_container_status_terminated_reason{reason=\"OOMKilled\"}", "format": "table", "instant": true, "refId": "A"}],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true, "uid": true, "reason": true, "Value": true}, "renameByName": {"namespace": "Namespace", "pod": "Pod", "container": "Container"}}}
+          ],
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        },
+        {
+          "title": "💡 리소스 최적화 권장사항",
+          "type": "text",
+          "gridPos": {"x": 0, "y": 21, "w": 24, "h": 10},
+          "options": {"mode": "markdown", "content": "# 💡 Kubernetes 리소스 최적화 가이드\n\n## 🔍 CPU/메모리 과다 할당 해결\n\n### 문제\nRequest는 높지만 실제 사용률이 30% 미만인 Container\n\n### 해결 방법\n```yaml\nresources:\n  requests:\n    cpu: 100m      # 현재 200m → 100m으로 감소\n    memory: 128Mi  # 현재 256Mi → 128Mi으로 감소\n  limits:\n    cpu: 200m\n    memory: 256Mi\n```\n\n**효과**: 클러스터 리소스 활용도 향상, 더 많은 Pod 배포 가능\n\n---\n\n## ⚡ CPU Throttling 해결\n\n### 문제\nCPU Limit에 의해 성능이 제한되는 Container\n\n### 해결 방법\n```yaml\nresources:\n  requests:\n    cpu: 100m\n  limits:\n    cpu: 500m      # 200m → 500m으로 증가\n```\n\n또는 Throttling이 빈번하면 Limit 제거 고려:\n```yaml\nresources:\n  requests:\n    cpu: 100m\n  # limits 제거 (Burstable QoS)\n```\n\n---\n\n## 💀 OOMKilled 해결\n\n### 문제\n메모리 부족으로 Container가 종료됨\n\n### 해결 방법\n```yaml\nresources:\n  requests:\n    memory: 256Mi\n  limits:\n    memory: 512Mi  # 256Mi → 512Mi으로 증가\n```\n\n**확인 명령어**:\n```bash\nkubectl logs <pod-name> --previous\nkubectl describe pod <pod-name>\n```\n\n---\n\n## 📊 노드 압박 상태 해결\n\n### MemoryPressure\n- **원인**: 노드의 가용 메모리 부족\n- **해결**: Pod eviction, 노드 추가, Memory Request 최적화\n\n### DiskPressure\n- **원인**: 디스크 사용률 85% 이상\n- **해결**: 불필요한 이미지 삭제, PVC 용량 증설\n\n```bash\n# 디스크 정리\nkubectl delete pods --field-selector=status.phase==Failed\ndocker system prune -a\n```\n\n---\n\n## ⚡ 성능 최적화 체크리스트\n\n- [ ] CPU/메모리 Request vs Usage 비율 70% 이상 유지\n- [ ] CPU Throttling 발생 Container Limit 증가\n- [ ] OOMKilled Container 메모리 Limit 증가\n- [ ] 노드 압박 상태(MemoryPressure/DiskPressure) 해소\n- [ ] 디스크 I/O 대기 시간 0.1s 이하 유지\n- [ ] 미사용 리소스 정리 (Failed Pods, 이미지)\n- [ ] QoS Class 최적화 (Guaranteed > Burstable > BestEffort)"}
+        }
+      ]
+    }

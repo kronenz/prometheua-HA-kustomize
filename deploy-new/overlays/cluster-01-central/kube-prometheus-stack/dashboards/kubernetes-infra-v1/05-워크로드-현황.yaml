@@ -1,0 +1,161 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-k8s-workload-status-v1
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  k8s-workload-status-v1.json: |
+    {
+      "uid": "k8s-workload-status-v1",
+      "title": "쿠버네티스-05-인프라-워크로드 현황",
+      "tags": ["kubernetes", "infrastructure", "workload", "pod", "deployment", "korean", "v1"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "title": "📋 워크로드 현황",
+          "type": "text",
+          "gridPos": {"x": 0, "y": 0, "w": 24, "h": 2},
+          "options": {"mode": "markdown", "content": "# 📦 Kubernetes 워크로드 현황 (Pod, Deployment, StatefulSet, DaemonSet)\n\n**빠른 이동**: [🏠 개요](d/k8s-cluster-overview-v1) | [🖥️ 노드](d/k8s-node-resources-v1) | [🌐 네트워크](d/k8s-network-monitoring-v1) | [💾 스토리지](d/k8s-storage-capacity-v1) | [⚡ 성능](d/k8s-performance-analysis-v1)"}
+        },
+        {
+          "title": "1️⃣ Running Pods",
+          "type": "stat",
+          "gridPos": {"x": 0, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "count(kube_pod_status_phase{phase=\"Running\"})", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}]}, "unit": "short"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "2️⃣ Pending Pods",
+          "type": "stat",
+          "gridPos": {"x": 4, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "count(kube_pod_status_phase{phase=\"Pending\"}) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FCF3CF"}, {"value": 5, "color": "#FADBD8"}]}, "unit": "short"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "3️⃣ Failed Pods",
+          "type": "stat",
+          "gridPos": {"x": 8, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "count(kube_pod_status_phase{phase=\"Failed\"}) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FADBD8"}]}, "unit": "short"}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "4️⃣ Container 재시작",
+          "type": "stat",
+          "gridPos": {"x": 12, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "sum(rate(kube_pod_container_status_restarts_total[5m]))", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 0.01, "color": "#FCF3CF"}, {"value": 0.1, "color": "#FADBD8"}]}, "unit": "reqps", "decimals": 4}},
+          "options": {"graphMode": "area", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "5️⃣ CrashLoopBackOff",
+          "type": "stat",
+          "gridPos": {"x": 16, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "count(kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\"}) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FADBD8"}]}, "unit": "short"}},
+          "options": {"graphMode": "none", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "6️⃣ ImagePullBackOff",
+          "type": "stat",
+          "gridPos": {"x": 20, "y": 2, "w": 4, "h": 3},
+          "targets": [{"expr": "count(kube_pod_container_status_waiting_reason{reason=~\"ImagePullBackOff|ErrImagePull\"}) or vector(0)", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "#D5F4E6"}, {"value": 1, "color": "#FADBD8"}]}, "unit": "short"}},
+          "options": {"graphMode": "none", "colorMode": "background", "textMode": "value_and_name"}
+        },
+        {
+          "title": "📊 Deployment 상태",
+          "type": "table",
+          "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "kube_deployment_spec_replicas", "format": "table", "instant": true, "refId": "A"},
+            {"expr": "kube_deployment_status_replicas_available", "format": "table", "instant": true, "refId": "B"}
+          ],
+          "transformations": [
+            {"id": "merge"},
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true}, "renameByName": {"namespace": "Namespace", "deployment": "Deployment", "Value #A": "Desired", "Value #B": "Available"}}}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"align": "center"}}, "overrides": [
+            {"matcher": {"id": "byName", "options": "Available"}, "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"value": null, "color": "#FADBD8"}, {"value": 1, "color": "#D5F4E6"}]}}
+            ]}
+          ]},
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        },
+        {
+          "title": "🗂️ StatefulSet 상태",
+          "type": "table",
+          "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "kube_statefulset_replicas", "format": "table", "instant": true, "refId": "A"},
+            {"expr": "kube_statefulset_status_replicas_ready", "format": "table", "instant": true, "refId": "B"}
+          ],
+          "transformations": [
+            {"id": "merge"},
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true}, "renameByName": {"namespace": "Namespace", "statefulset": "StatefulSet", "Value #A": "Desired", "Value #B": "Ready"}}}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"align": "center"}}, "overrides": [
+            {"matcher": {"id": "byName", "options": "Ready"}, "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+              {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"value": null, "color": "#FADBD8"}, {"value": 1, "color": "#D5F4E6"}]}}
+            ]}
+          ]},
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        },
+        {
+          "title": "📈 Pod Phase 추이",
+          "type": "timeseries",
+          "gridPos": {"x": 0, "y": 13, "w": 12, "h": 8},
+          "targets": [
+            {"expr": "count(kube_pod_status_phase{phase=\"Running\"})", "legendFormat": "Running", "refId": "A"},
+            {"expr": "count(kube_pod_status_phase{phase=\"Pending\"})", "legendFormat": "Pending", "refId": "B"},
+            {"expr": "count(kube_pod_status_phase{phase=\"Failed\"})", "legendFormat": "Failed", "refId": "C"}
+          ],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 20, "pointSize": 5, "spanNulls": true}, "unit": "short"}},
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}}
+        },
+        {
+          "title": "🔄 Container 재시작 추이",
+          "type": "timeseries",
+          "gridPos": {"x": 12, "y": 13, "w": 12, "h": 8},
+          "targets": [{"expr": "topk(10, rate(kube_pod_container_status_restarts_total[5m]) > 0)", "legendFormat": "{{namespace}}/{{pod}}/{{container}}", "refId": "A"}],
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2, "fillOpacity": 10, "pointSize": 5, "spanNulls": true}, "unit": "reqps"}},
+          "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "calcs": ["lastNotNull", "max"]}}
+        },
+        {
+          "title": "⚠️ 문제 있는 Pods",
+          "type": "table",
+          "gridPos": {"x": 0, "y": 21, "w": 24, "h": 8},
+          "targets": [{"expr": "kube_pod_status_phase{phase=~\"Pending|Failed\"} or kube_pod_container_status_waiting_reason{reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull\"}", "format": "table", "instant": true, "refId": "A"}],
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "job": true, "instance": true, "__name__": true, "uid": true, "Value": true}, "renameByName": {"namespace": "Namespace", "pod": "Pod", "phase": "Phase", "reason": "Reason"}}}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"align": "left"}}, "overrides": [
+            {"matcher": {"id": "byName", "options": "Phase"}, "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+              {"id": "mappings", "value": [
+                {"type": "value", "value": "Pending", "text": "Pending", "color": "#FCF3CF"},
+                {"type": "value", "value": "Failed", "text": "Failed", "color": "#FADBD8"}
+              ]}
+            ]},
+            {"matcher": {"id": "byName", "options": "Reason"}, "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}},
+              {"id": "mappings", "value": [
+                {"type": "value", "value": "CrashLoopBackOff", "text": "CrashLoop", "color": "#FADBD8"},
+                {"type": "value", "value": "ImagePullBackOff", "text": "ImagePull", "color": "#FCF3CF"}
+              ]}
+            ]}
+          ]},
+          "options": {"showHeader": true, "cellHeight": "sm"}
+        }
+      ]
+    }

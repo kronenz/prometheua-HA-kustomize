@@ -1,0 +1,496 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-k8s-cluster-overview-v1
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  k8s-cluster-overview-v1.json: |
+    {
+      "uid": "k8s-cluster-overview-v1",
+      "title": "쿠버네티스-01-인프라-클러스터 개요",
+      "tags": ["kubernetes", "infrastructure", "cluster", "overview", "korean", "v1"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "title": "📋 베어메탈 Kubernetes 멀티 클러스터 개요",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 3 },
+          "options": {
+            "mode": "markdown",
+            "content": "# 🖥️ 베어메탈 Kubernetes 멀티 클러스터 모니터링\n\n**4개 클러스터의 전체 상태**를 실시간으로 모니터링합니다.\n\n- **Central Cluster**: cluster-01 (192.168.101.194) - 중앙 모니터링 및 데이터 집계\n- **Edge Clusters**: cluster-02/03/04 (196/197/198) - 엣지 워크로드 실행\n\n---\n\n**빠른 이동**: [🖥️ 노드](d/k8s-node-resources-v1) | [🌐 네트워크](d/k8s-network-monitoring-v1) | [💾 스토리지](d/k8s-storage-capacity-v1) | [📦 워크로드](d/k8s-workload-status-v1) | [⚡ 성능](d/k8s-performance-analysis-v1)"
+          }
+        },
+        {
+          "title": "1️⃣ 총 클러스터 수",
+          "type": "stat",
+          "gridPos": { "x": 0, "y": 3, "w": 6, "h": 4 },
+          "description": "**관리 중인 Kubernetes 클러스터**\n\n베어메탈 환경의 전체 클러스터 개수입니다.",
+          "targets": [
+            {
+              "expr": "count(count(up{job=\"kube-state-metrics\"}) by (cluster)) or vector(4)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#B8D8F0" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "2️⃣ 정상 노드 비율",
+          "type": "stat",
+          "gridPos": { "x": 6, "y": 3, "w": 6, "h": 4 },
+          "description": "**Ready 상태 노드 비율**\n\n전체 노드 중 Ready 상태의 노드 비율입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_node_status_condition{condition=\"Ready\",status=\"true\"}) / count(kube_node_info) * 100",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#FADBD8" },
+                  { "value": 90, "color": "#FCF3CF" },
+                  { "value": 95, "color": "#D5F4E6" }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "3️⃣ 총 Pod 수",
+          "type": "stat",
+          "gridPos": { "x": 12, "y": 3, "w": 6, "h": 4 },
+          "description": "**전체 클러스터의 Pod**\n\n모든 클러스터에서 실행 중인 Pod의 총 개수입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_info)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#FFD8A8" }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "4️⃣ Running Pod 비율",
+          "type": "stat",
+          "gridPos": { "x": 18, "y": 3, "w": 6, "h": 4 },
+          "description": "**정상 실행 중인 Pod 비율**\n\nRunning 상태의 Pod 비율입니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Running\"}) / count(kube_pod_info) * 100",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "#FADBD8" },
+                  { "value": 85, "color": "#FCF3CF" },
+                  { "value": 90, "color": "#D5F4E6" }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "graphMode": "area",
+            "colorMode": "background",
+            "textMode": "value_and_name"
+          }
+        },
+        {
+          "title": "🌐 멀티 클러스터 상태 종합",
+          "type": "table",
+          "gridPos": { "x": 0, "y": 7, "w": 24, "h": 8 },
+          "description": "**클러스터별 상태 요약**\n\n각 클러스터의 노드, Pod, CPU, 메모리 사용 현황을 표시합니다.",
+          "targets": [
+            {
+              "expr": "count(kube_node_info) by (cluster)",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "count(kube_pod_info) by (cluster)",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            },
+            {
+              "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[5m])) by (cluster) / sum(rate(node_cpu_seconds_total[5m])) by (cluster) * 100",
+              "format": "table",
+              "instant": true,
+              "refId": "C"
+            },
+            {
+              "expr": "(1 - sum(node_memory_MemAvailable_bytes) by (cluster) / sum(node_memory_MemTotal_bytes) by (cluster)) * 100",
+              "format": "table",
+              "instant": true,
+              "refId": "D"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "cluster": "클러스터",
+                  "Value #A": "노드 수",
+                  "Value #B": "Pod 수",
+                  "Value #C": "CPU 사용률 %",
+                  "Value #D": "메모리 사용률 %"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "md",
+            "footer": {
+              "show": true,
+              "reducer": ["sum"]
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "center"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "CPU 사용률 %" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 70, "color": "#FCF3CF" },
+                        { "value": 85, "color": "#FADBD8" }
+                      ]
+                    }
+                  },
+                  { "id": "unit", "value": "percent" },
+                  { "id": "decimals", "value": 1 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "메모리 사용률 %" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "value": null, "color": "#D5F4E6" },
+                        { "value": 75, "color": "#FCF3CF" },
+                        { "value": 90, "color": "#FADBD8" }
+                      ]
+                    }
+                  },
+                  { "id": "unit", "value": "percent" },
+                  { "id": "decimals", "value": 1 }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "📈 클러스터별 CPU 사용률 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+          "description": "**CPU 사용률 시계열**\n\n각 클러스터의 CPU 사용률을 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[5m])) by (cluster) / sum(rate(node_cpu_seconds_total[5m])) by (cluster) * 100",
+              "legendFormat": "{{cluster}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percent",
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "transparent" },
+                  { "value": 80, "color": "red" }
+                ]
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "mean", "max"]
+            }
+          }
+        },
+        {
+          "title": "💾 클러스터별 메모리 사용률 추이",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 15, "w": 12, "h": 8 },
+          "description": "**메모리 사용률 시계열**\n\n각 클러스터의 메모리 사용률을 시간에 따라 추적합니다.",
+          "targets": [
+            {
+              "expr": "(1 - sum(node_memory_MemAvailable_bytes) by (cluster) / sum(node_memory_MemTotal_bytes) by (cluster)) * 100",
+              "legendFormat": "{{cluster}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "pointSize": 5,
+                "spanNulls": true
+              },
+              "unit": "percent",
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "value": null, "color": "transparent" },
+                  { "value": 85, "color": "red" }
+                ]
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": ["lastNotNull", "mean", "max"]
+            }
+          }
+        },
+        {
+          "title": "📊 Pod 상태별 분포",
+          "type": "piechart",
+          "gridPos": { "x": 0, "y": 23, "w": 8, "h": 8 },
+          "description": "**Pod Phase 분포**\n\nRunning, Pending, Failed, Succeeded 상태의 Pod 분포를 표시합니다.",
+          "targets": [
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Running\"})",
+              "legendFormat": "Running",
+              "refId": "A"
+            },
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Pending\"})",
+              "legendFormat": "Pending",
+              "refId": "B"
+            },
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Failed\"})",
+              "legendFormat": "Failed",
+              "refId": "C"
+            },
+            {
+              "expr": "count(kube_pod_status_phase{phase=\"Succeeded\"})",
+              "legendFormat": "Succeeded",
+              "refId": "D"
+            }
+          ],
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "values": ["value", "percent"]
+            },
+            "pieType": "donut"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Running" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#D5F4E6", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Pending" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#FCF3CF", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Failed" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#FADBD8", "mode": "fixed" } }]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Succeeded" },
+                "properties": [{ "id": "color", "value": { "fixedColor": "#D6EAF8", "mode": "fixed" } }]
+              }
+            ]
+          }
+        },
+        {
+          "title": "⚠️ 클러스터 경고 이벤트",
+          "type": "table",
+          "gridPos": { "x": 8, "y": 23, "w": 16, "h": 8 },
+          "description": "**주의가 필요한 상태**\n\nPending, Failed Pod 및 Not Ready 노드를 표시합니다.",
+          "targets": [
+            {
+              "expr": "kube_pod_status_phase{phase=~\"Pending|Failed\"}",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true,
+                  "instance": true,
+                  "uid": true,
+                  "Value": true
+                },
+                "renameByName": {
+                  "cluster": "클러스터",
+                  "namespace": "Namespace",
+                  "pod": "Pod",
+                  "phase": "상태"
+                }
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "상태" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      { "type": "value", "value": "Pending", "text": "Pending", "color": "#FCF3CF" },
+                      { "type": "value", "value": "Failed", "text": "Failed", "color": "#FADBD8" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "🔍 빠른 네비게이션",
+          "type": "text",
+          "gridPos": { "x": 0, "y": 31, "w": 24, "h": 4 },
+          "options": {
+            "mode": "markdown",
+            "content": "# 🗺️ 상세 모니터링 대시보드\n\n클릭하여 각 영역의 상세 모니터링 대시보드로 이동하세요:\n\n| 대시보드 | 설명 | 링크 |\n|---------|------|------|\n| 🖥️ **노드 리소스** | 각 노드의 CPU, 메모리, 디스크 상세 모니터링 | [이동하기](d/k8s-node-resources-v1) |\n| 🌐 **네트워크** | Cilium CNI, Pod 네트워크, Ingress 트래픽 | [이동하기](d/k8s-network-monitoring-v1) |\n| 💾 **스토리지** | Longhorn 볼륨, PVC 용량 관리 | [이동하기](d/k8s-storage-capacity-v1) |\n| 📦 **워크로드** | Pod, Deployment, StatefulSet 상태 | [이동하기](d/k8s-workload-status-v1) |\n| ⚡ **성능 분석** | 병목 지점 식별, 최적화 권장 | [이동하기](d/k8s-performance-analysis-v1) |"
+          }
+        }
+      ]
+    }
