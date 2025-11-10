@@ -1,0 +1,253 @@
+{
+  "description": "JSON 로그 포맷 예제 - 다양한 로그 레벨과 시나리오",
+  "examples": [
+    {
+      "scenario": "일반 정보 로그",
+      "log": {
+        "timestamp": "2025-01-15T08:30:45.123Z",
+        "level": "INFO",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.UserService",
+        "message": "User login successful",
+        "userId": "user123",
+        "username": "john.doe",
+        "ip_address": "192.168.1.100",
+        "session_id": "sess_abc123xyz"
+      }
+    },
+    {
+      "scenario": "에러 로그 (Exception 포함)",
+      "log": {
+        "timestamp": "2025-01-15T08:31:12.456Z",
+        "level": "ERROR",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.PaymentService",
+        "message": "Payment processing failed",
+        "userId": "user456",
+        "orderId": "order_789",
+        "amount": 99.99,
+        "currency": "USD",
+        "error_type": "PaymentGatewayException",
+        "error_message": "Connection timeout to payment gateway",
+        "stack_trace": [
+          "com.mycompany.myapp.PaymentGatewayException: Connection timeout",
+          "  at com.mycompany.myapp.PaymentService.processPayment(PaymentService.java:45)",
+          "  at com.mycompany.myapp.OrderController.checkout(OrderController.java:78)",
+          "Caused by: java.net.SocketTimeoutException: Read timed out",
+          "  at java.net.SocketInputStream.socketRead0(Native Method)",
+          "  ... 5 more"
+        ],
+        "retry_count": 3,
+        "gateway": "stripe"
+      }
+    },
+    {
+      "scenario": "경고 로그",
+      "log": {
+        "timestamp": "2025-01-15T08:32:00.789Z",
+        "level": "WARN",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.CacheService",
+        "message": "Cache miss rate exceeding threshold",
+        "cache_name": "user_cache",
+        "miss_rate": 0.45,
+        "threshold": 0.40,
+        "total_requests": 10000,
+        "cache_misses": 4500,
+        "recommendation": "Consider increasing cache size or TTL"
+      }
+    },
+    {
+      "scenario": "디버그 로그",
+      "log": {
+        "timestamp": "2025-01-15T08:32:30.123Z",
+        "level": "DEBUG",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "development",
+        "logger": "com.mycompany.myapp.DatabaseService",
+        "message": "SQL query executed",
+        "query": "SELECT * FROM users WHERE id = ?",
+        "parameters": ["user123"],
+        "execution_time_ms": 45,
+        "rows_affected": 1,
+        "connection_pool_size": 10,
+        "active_connections": 3
+      }
+    },
+    {
+      "scenario": "감사 로그 (보안/컴플라이언스)",
+      "log": {
+        "timestamp": "2025-01-15T08:33:15.456Z",
+        "level": "INFO",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.SecurityService",
+        "message": "User role modified",
+        "log_type": "audit",
+        "action": "role_change",
+        "actor_user_id": "admin001",
+        "target_user_id": "user789",
+        "old_role": "user",
+        "new_role": "admin",
+        "ip_address": "10.0.1.50",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "reason": "Promotion to team lead",
+        "approved_by": "manager001"
+      }
+    },
+    {
+      "scenario": "HTTP 요청 로그",
+      "log": {
+        "timestamp": "2025-01-15T08:34:00.789Z",
+        "level": "INFO",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.AccessLog",
+        "message": "HTTP request completed",
+        "http_method": "POST",
+        "http_path": "/api/v1/orders",
+        "http_status": 201,
+        "http_response_time_ms": 234,
+        "http_request_size_bytes": 1024,
+        "http_response_size_bytes": 512,
+        "client_ip": "203.0.113.42",
+        "user_agent": "MyApp-Mobile/2.1.0 (iOS 17.0)",
+        "userId": "user123",
+        "correlation_id": "req_abc123xyz"
+      }
+    },
+    {
+      "scenario": "비즈니스 메트릭 로그",
+      "log": {
+        "timestamp": "2025-01-15T08:35:00.123Z",
+        "level": "INFO",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.MetricsService",
+        "message": "Order completed",
+        "metric_type": "business_event",
+        "event_name": "order_completed",
+        "orderId": "order_12345",
+        "userId": "user456",
+        "order_value": 199.99,
+        "currency": "USD",
+        "items_count": 3,
+        "payment_method": "credit_card",
+        "shipping_method": "express",
+        "processing_time_seconds": 12.5,
+        "discount_applied": 19.99,
+        "tax_amount": 16.00
+      }
+    },
+    {
+      "scenario": "Multiline 로그 (Java Exception)",
+      "log": {
+        "timestamp": "2025-01-15T08:36:00.456Z",
+        "level": "ERROR",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.EmailService",
+        "message": "Failed to send email",
+        "userId": "user789",
+        "email_type": "welcome",
+        "recipient": "user@example.com",
+        "error_type": "SmtpException",
+        "stack_trace": [
+          "com.mycompany.myapp.SmtpException: SMTP server connection failed",
+          "  at com.mycompany.myapp.EmailService.sendEmail(EmailService.java:123)",
+          "  at com.mycompany.myapp.UserService.sendWelcomeEmail(UserService.java:67)",
+          "  at com.mycompany.myapp.UserService.createUser(UserService.java:45)",
+          "  at com.mycompany.myapp.UserController.register(UserController.java:89)",
+          "  at jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)",
+          "  at jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)",
+          "Caused by: javax.mail.MessagingException: Could not connect to SMTP host",
+          "  at com.sun.mail.smtp.SMTPTransport.openServer(SMTPTransport.java:1961)",
+          "  ... 10 more",
+          "Caused by: java.net.SocketTimeoutException: connect timed out",
+          "  at java.net.PlainSocketImpl.socketConnect(Native Method)",
+          "  ... 15 more"
+        ]
+      }
+    },
+    {
+      "scenario": "성능 로그",
+      "log": {
+        "timestamp": "2025-01-15T08:37:00.789Z",
+        "level": "INFO",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.PerformanceMonitor",
+        "message": "Slow query detected",
+        "query_type": "database",
+        "query_name": "fetch_user_orders",
+        "execution_time_ms": 2500,
+        "threshold_ms": 1000,
+        "userId": "user123",
+        "result_count": 150,
+        "database": "postgresql",
+        "table": "orders",
+        "index_used": "idx_user_id_created_at"
+      }
+    },
+    {
+      "scenario": "외부 서비스 호출 로그",
+      "log": {
+        "timestamp": "2025-01-15T08:38:00.123Z",
+        "level": "INFO",
+        "app": "myapp",
+        "service-team": "myteam",
+        "environment": "production",
+        "logger": "com.mycompany.myapp.ExternalApiClient",
+        "message": "External API call completed",
+        "api_name": "payment_gateway",
+        "api_endpoint": "https://api.stripe.com/v1/charges",
+        "http_method": "POST",
+        "http_status": 200,
+        "response_time_ms": 450,
+        "request_id": "req_stripe_abc123",
+        "retry_count": 0,
+        "circuit_breaker_status": "closed"
+      }
+    }
+  ],
+  "best_practices": {
+    "required_fields": [
+      "timestamp (ISO 8601 format)",
+      "level (DEBUG/INFO/WARN/ERROR)",
+      "app (애플리케이션 이름)",
+      "service-team (팀 식별자)",
+      "logger (로거 이름)",
+      "message (로그 메시지)"
+    ],
+    "recommended_fields": [
+      "environment (production/staging/development)",
+      "correlation_id (분산 추적용)",
+      "userId (사용자 컨텍스트)",
+      "error_type (에러 분류)",
+      "stack_trace (Exception 상세)"
+    ],
+    "avoid": [
+      "민감정보: 비밀번호, API 키, 토큰, 신용카드 전체 번호",
+      "과도한 DEBUG 로그 (프로덕션 환경)",
+      "비구조화된 메시지 (파싱 불가능한 형식)",
+      "너무 긴 메시지 (10KB 이상)"
+    ],
+    "multiline_handling": {
+      "description": "Java Exception, Python Traceback 등은 배열로 저장",
+      "example_field": "stack_trace",
+      "fluent_bit_config": "multiline.parser 설정 필요"
+    }
+  }
+}

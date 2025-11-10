@@ -1,0 +1,180 @@
+# Apache Spark Metrics 수집 예제
+# Spark 3.x on Kubernetes 환경에서 Prometheus 메트릭 수집
+
+---
+# Spark Driver Pod 예제
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spark-driver
+  namespace: data-team
+  labels:
+    app: spark
+    service-team: data-team
+    spark-role: driver
+    spark-app-name: myapp
+spec:
+  containers:
+    - name: spark
+      image: apache/spark:3.5.0
+      ports:
+        # Spark UI
+        - name: ui
+          containerPort: 4040
+          protocol: TCP
+        # Prometheus 메트릭 (Spark UI와 같은 포트 사용)
+        - name: metrics
+          containerPort: 4040
+          protocol: TCP
+      env:
+        # Spark 메트릭 설정 파일 경로
+        - name: SPARK_METRICS_CONF
+          value: /opt/spark/conf/metrics.properties
+      volumeMounts:
+        - name: spark-metrics-config
+          mountPath: /opt/spark/conf
+  volumes:
+    - name: spark-metrics-config
+      configMap:
+        name: spark-metrics-config
+
+---
+# Spark Metrics 설정 ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-metrics-config
+  namespace: data-team
+data:
+  metrics.properties: |
+    # Prometheus Servlet Sink 설정
+    *.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
+    *.sink.prometheusServlet.path=/metrics/prometheus
+
+    # JVM 메트릭 수집
+    *.source.jvm.class=org.apache.spark.metrics.source.JvmSource
+
+    # Driver 메트릭
+    driver.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
+    driver.sink.prometheusServlet.path=/metrics/driver/prometheus
+    driver.source.jvm.class=org.apache.spark.metrics.source.JvmSource
+
+    # Executor 메트릭
+    executor.sink.prometheusServlet.class=org.apache.spark.metrics.sink.PrometheusServlet
+    executor.sink.prometheusServlet.path=/metrics/executors/prometheus
+    executor.source.jvm.class=org.apache.spark.metrics.source.JvmSource
+
+---
+# Spark Driver Service (메트릭 노출용)
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-driver-metrics
+  namespace: data-team
+  labels:
+    app: spark
+    service-team: data-team
+    component: driver
+spec:
+  type: ClusterIP
+  selector:
+    app: spark
+    spark-role: driver
+  ports:
+    - name: metrics
+      port: 4040
+      targetPort: 4040
+      protocol: TCP
+
+---
+# Spark Driver ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: spark-driver-metrics
+  namespace: data-team
+  labels:
+    release: kube-prometheus-stack
+    app: spark
+    service-team: data-team
+spec:
+  selector:
+    matchLabels:
+      app: spark
+      service-team: data-team
+      component: driver
+  endpoints:
+    - port: metrics
+      path: /metrics/driver/prometheus
+      interval: 30s
+      scrapeTimeout: 10s
+      # Spark Driver가 종료되면 메트릭도 사라지므로 honorLabels 활성화
+      honorLabels: true
+
+---
+# Spark History Server (선택사항 - 과거 작업 메트릭)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history-server
+  namespace: data-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-history
+      service-team: data-team
+  template:
+    metadata:
+      labels:
+        app: spark-history
+        service-team: data-team
+    spec:
+      containers:
+        - name: spark-history
+          image: apache/spark:3.5.0
+          command:
+            - /opt/spark/sbin/start-history-server.sh
+          ports:
+            - name: http
+              containerPort: 18080
+          env:
+            - name: SPARK_NO_DAEMONIZE
+              value: "true"
+            # 이벤트 로그 경로 (S3, HDFS 등)
+            - name: SPARK_HISTORY_OPTS
+              value: "-Dspark.history.fs.logDirectory=s3a://spark-logs/"
+          volumeMounts:
+            - name: spark-metrics-config
+              mountPath: /opt/spark/conf
+      volumes:
+        - name: spark-metrics-config
+          configMap:
+            name: spark-metrics-config
+
+---
+# 주요 Spark 메트릭 설명
+#
+# Driver 메트릭:
+# - metrics_driver_DAGScheduler_stage_runningStages: 실행 중인 Stage 수
+# - metrics_driver_DAGScheduler_stage_failedStages: 실패한 Stage 수
+# - metrics_driver_DAGScheduler_job_allJobs: 총 Job 수
+# - metrics_driver_BlockManager_memory_memUsed_MB: 메모리 사용량 (MB)
+#
+# Executor 메트릭:
+# - metrics_executor_runTime: Executor 실행 시간
+# - metrics_executor_shuffleRead_readBytes: Shuffle Read 바이트
+# - metrics_executor_shuffleWrite_writeBytes: Shuffle Write 바이트
+# - metrics_executor_filesystem_read_bytes: 파일시스템 읽기 바이트
+# - metrics_executor_filesystem_write_bytes: 파일시스템 쓰기 바이트
+#
+# JVM 메트릭:
+# - metrics_jvm_heap_used: JVM Heap 사용량
+# - metrics_jvm_heap_max: JVM Heap 최대값
+# - metrics_jvm_non_heap_used: Non-Heap 메모리 사용량
+# - metrics_jvm_gc_PS_MarkSweep_time: GC 시간 (ms)
+#
+# PromQL 쿼리 예제:
+# - Shuffle Read 속도: rate(metrics_executor_shuffleRead_readBytes[5m])
+# - 실패한 Stage 수: increase(metrics_driver_DAGScheduler_stage_failedStages[1h])
+# - JVM Heap 사용률: (metrics_jvm_heap_used / metrics_jvm_heap_max) * 100

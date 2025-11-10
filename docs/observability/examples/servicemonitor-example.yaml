@@ -1,0 +1,49 @@
+# ServiceMonitor 예제
+# ServiceMonitor는 Prometheus Operator가 메트릭을 수집할 Service를 정의하는 Custom Resource입니다.
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  # ServiceMonitor의 이름 (애플리케이션명-metrics 형식 권장)
+  name: myapp-metrics
+  # 배포할 네임스페이스 (애플리케이션과 동일한 네임스페이스)
+  namespace: myteam-prod
+  labels:
+    # 필수 레이블: 애플리케이션 이름
+    app: myapp
+    # 필수 레이블: 서비스 팀 식별자 (메트릭 필터링에 사용)
+    service-team: myteam
+    # Prometheus Operator가 이 ServiceMonitor를 감지하기 위한 레이블
+    # kube-prometheus-stack values.yaml의 serviceMonitorSelector와 일치해야 함
+    release: kube-prometheus-stack
+spec:
+  # 메트릭을 수집할 Service 선택 (label selector)
+  selector:
+    matchLabels:
+      app: myapp
+      service-team: myteam
+  # 메트릭 수집 엔드포인트 설정
+  endpoints:
+    # Service의 포트 이름 (Service 리소스의 spec.ports[].name과 일치)
+    - port: metrics
+      # 메트릭 경로 (기본값: /metrics)
+      path: /metrics
+      # 수집 간격 (기본값: 30s, 범위: 10s~5m)
+      interval: 30s
+      # 수집 타임아웃 (interval보다 작아야 함)
+      scrapeTimeout: 10s
+      # HTTP 스킴 (http 또는 https)
+      scheme: http
+      # 메트릭에 추가할 커스텀 레이블 (선택사항)
+      relabelings:
+        # 기존 레이블 유지하면서 추가 레이블 설정
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+          action: replace
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+          action: replace
+  # 네임스페이스 선택 (생략 시 ServiceMonitor와 같은 네임스페이스)
+  namespaceSelector:
+    matchNames:
+      - myteam-prod

@@ -1,0 +1,44 @@
+# PodMonitor 예제
+# PodMonitor는 Service 없이 Pod에서 직접 메트릭을 수집할 때 사용합니다.
+# StatefulSet, DaemonSet 등 Service를 거치지 않는 경우에 유용합니다.
+
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  # PodMonitor의 이름
+  name: myapp-pod-metrics
+  namespace: myteam-prod
+  labels:
+    # 필수 레이블
+    app: myapp
+    service-team: myteam
+    # Prometheus Operator가 감지하기 위한 레이블
+    release: kube-prometheus-stack
+spec:
+  # 메트릭을 수집할 Pod 선택 (label selector)
+  selector:
+    matchLabels:
+      app: myapp
+      service-team: myteam
+  # Pod의 메트릭 엔드포인트 설정
+  podMetricsEndpoints:
+    # Pod 컨테이너의 포트 이름 (containerPort.name과 일치)
+    - port: metrics
+      # 메트릭 경로
+      path: /metrics
+      # 수집 간격
+      interval: 30s
+      # 수집 타임아웃
+      scrapeTimeout: 10s
+      # 메트릭에 추가할 레이블 설정
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+          action: replace
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node
+          action: replace
+  # 네임스페이스 선택
+  namespaceSelector:
+    matchNames:
+      - myteam-prod

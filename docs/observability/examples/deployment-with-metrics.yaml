@@ -1,0 +1,109 @@
+# Deployment + Service 예제 (메트릭 수집 활성화)
+# 이 예제는 애플리케이션 배포와 메트릭 수집을 위한 Service 설정을 보여줍니다.
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  namespace: myteam-prod
+  labels:
+    app: myapp
+    service-team: myteam
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+      service-team: myteam
+  template:
+    metadata:
+      labels:
+        # 필수: Pod에 레이블 추가 (Service selector와 일치)
+        app: myapp
+        service-team: myteam
+    spec:
+      containers:
+        - name: myapp
+          image: myregistry.io/myapp:1.0.0
+          ports:
+            # 애플리케이션 서비스 포트
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            # 메트릭 엔드포인트 포트 (Prometheus 수집용)
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          # 환경변수를 통한 로그 설정
+          env:
+            - name: LOG_LEVEL
+              value: "info"
+            - name: LOG_FORMAT
+              value: "json"
+          # Health check 설정
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          # 리소스 제한 (메트릭 수집에 영향)
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+# 메트릭 수집을 위한 Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-metrics
+  namespace: myteam-prod
+  labels:
+    # 필수: ServiceMonitor가 이 Service를 찾을 수 있도록 레이블 설정
+    app: myapp
+    service-team: myteam
+spec:
+  type: ClusterIP
+  selector:
+    # Deployment의 Pod 레이블과 일치
+    app: myapp
+    service-team: myteam
+  ports:
+    # 메트릭 포트만 노출
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+
+---
+# 애플리케이션 접근을 위한 Service (선택사항)
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp
+  namespace: myteam-prod
+  labels:
+    app: myapp
+    service-team: myteam
+spec:
+  type: ClusterIP
+  selector:
+    app: myapp
+    service-team: myteam
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,278 @@
+# Trino (PrestoSQL) Metrics 수집 예제
+# JMX Exporter를 통한 Prometheus 메트릭 수집
+
+---
+# JMX Exporter ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-jmx-exporter-config
+  namespace: data-team
+data:
+  config.yaml: |
+    lowercaseOutputName: true
+    lowercaseOutputLabelNames: true
+    rules:
+      # Query Manager 메트릭
+      - pattern: 'trino.execution<name=QueryManager><>(RunningQueries|QueuedQueries):'
+        name: trino_query_manager_$1
+        type: GAUGE
+
+      # Query Manager - 실패/완료된 쿼리
+      - pattern: 'trino.execution<name=QueryManager><>(FailedQueries|CompletedQueries|StartedQueries):'
+        name: trino_query_manager_$1_total
+        type: COUNTER
+
+      # Memory Pool 메트릭
+      - pattern: 'trino.memory<type=(.+), name=(.+)><>(FreeBytes|ReservedBytes|MaxBytes):'
+        name: trino_memory_$1_$3
+        type: GAUGE
+        labels:
+          pool: $2
+
+      # Task Manager 메트릭
+      - pattern: 'trino.execution<name=TaskManager><>(InputDataSize|OutputDataSize):'
+        name: trino_task_manager_$1_bytes
+        type: COUNTER
+
+      # Query Execution 메트릭
+      - pattern: 'trino.execution.executor<name=TaskExecutor><>(.+):'
+        name: trino_execution_executor_$1
+        type: GAUGE
+
+      # JVM 메트릭
+      - pattern: 'java.lang<type=Memory><HeapMemoryUsage>(.+):'
+        name: jvm_memory_heap_$1
+        type: GAUGE
+
+      # GC 메트릭
+      - pattern: 'java.lang<type=GarbageCollector, name=(.+)><>CollectionCount:'
+        name: jvm_gc_collection_total
+        type: COUNTER
+        labels:
+          gc: $1
+
+---
+# Trino Coordinator Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-coordinator
+  namespace: data-team
+  labels:
+    app: trino
+    component: coordinator
+    service-team: data-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trino
+      component: coordinator
+  template:
+    metadata:
+      labels:
+        app: trino
+        component: coordinator
+        service-team: data-team
+    spec:
+      containers:
+        - name: trino
+          image: trinodb/trino:435
+          ports:
+            # Trino HTTP UI
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            # JMX Exporter
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            # JMX Exporter JavaAgent 설정
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/opt/jmx_exporter/jmx_prometheus_javaagent.jar=9090:/opt/jmx_exporter/config.yaml"
+          volumeMounts:
+            - name: jmx-exporter
+              mountPath: /opt/jmx_exporter
+            - name: trino-config
+              mountPath: /etc/trino
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "2"
+            limits:
+              memory: "8Gi"
+              cpu: "4"
+
+      # Init Container: JMX Exporter 다운로드
+      initContainers:
+        - name: download-jmx-exporter
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              curl -Lo /opt/jmx_exporter/jmx_prometheus_javaagent.jar \
+                https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.20.0/jmx_prometheus_javaagent-0.20.0.jar
+          volumeMounts:
+            - name: jmx-exporter
+              mountPath: /opt/jmx_exporter
+
+      volumes:
+        - name: jmx-exporter
+          emptyDir: {}
+        - name: jmx-exporter-config
+          configMap:
+            name: trino-jmx-exporter-config
+        - name: trino-config
+          configMap:
+            name: trino-coordinator-config
+
+---
+# Trino Coordinator Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: trino-coordinator
+  namespace: data-team
+  labels:
+    app: trino
+    component: coordinator
+    service-team: data-team
+spec:
+  type: ClusterIP
+  selector:
+    app: trino
+    component: coordinator
+  ports:
+    # HTTP UI
+    - name: http
+      port: 8080
+      targetPort: 8080
+    # Metrics
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+
+---
+# Trino Coordinator ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: trino-coordinator-metrics
+  namespace: data-team
+  labels:
+    release: kube-prometheus-stack
+    app: trino
+    service-team: data-team
+spec:
+  selector:
+    matchLabels:
+      app: trino
+      component: coordinator
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+
+---
+# Trino Worker Deployment (선택사항)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-worker
+  namespace: data-team
+  labels:
+    app: trino
+    component: worker
+    service-team: data-team
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: trino
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: trino
+        component: worker
+        service-team: data-team
+    spec:
+      containers:
+        - name: trino
+          image: trinodb/trino:435
+          ports:
+            - name: metrics
+              containerPort: 9090
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-javaagent:/opt/jmx_exporter/jmx_prometheus_javaagent.jar=9090:/opt/jmx_exporter/config.yaml"
+          volumeMounts:
+            - name: jmx-exporter
+              mountPath: /opt/jmx_exporter
+            - name: trino-config
+              mountPath: /etc/trino
+          resources:
+            requests:
+              memory: "8Gi"
+              cpu: "4"
+            limits:
+              memory: "16Gi"
+              cpu: "8"
+
+      initContainers:
+        - name: download-jmx-exporter
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              curl -Lo /opt/jmx_exporter/jmx_prometheus_javaagent.jar \
+                https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.20.0/jmx_prometheus_javaagent-0.20.0.jar
+          volumeMounts:
+            - name: jmx-exporter
+              mountPath: /opt/jmx_exporter
+
+      volumes:
+        - name: jmx-exporter
+          emptyDir: {}
+        - name: jmx-exporter-config
+          configMap:
+            name: trino-jmx-exporter-config
+        - name: trino-config
+          configMap:
+            name: trino-worker-config
+
+---
+# 주요 Trino 메트릭 설명
+#
+# Query Manager 메트릭:
+# - trino_query_manager_runningqueries: 실행 중인 쿼리 수
+# - trino_query_manager_queuedqueries: 대기 중인 쿼리 수
+# - trino_query_manager_failedqueries_total: 실패한 쿼리 수 (누적)
+# - trino_query_manager_completedqueries_total: 완료된 쿼리 수 (누적)
+#
+# Memory Pool 메트릭:
+# - trino_memory_cluster_pool_freebytes: 사용 가능한 메모리 (바이트)
+# - trino_memory_cluster_pool_reservedbytes: 예약된 메모리 (바이트)
+# - trino_memory_cluster_pool_maxbytes: 최대 메모리 (바이트)
+#
+# Task Manager 메트릭:
+# - trino_task_manager_inputdatasize_bytes: 입력 데이터 크기 (누적)
+# - trino_task_manager_outputdatasize_bytes: 출력 데이터 크기 (누적)
+#
+# Executor 메트릭:
+# - trino_execution_executor_queuedtaskcount: 대기 중인 태스크 수
+# - trino_execution_executor_runningtaskcount: 실행 중인 태스크 수
+#
+# JVM 메트릭:
+# - jvm_memory_heap_used: Heap 메모리 사용량
+# - jvm_gc_collection_total: GC 횟수 (누적)
+#
+# PromQL 쿼리 예제:
+# - 쿼리 실패율: rate(trino_query_manager_failedqueries_total[5m]) / rate(trino_query_manager_startedqueries_total[5m])
+# - 메모리 사용률: (trino_memory_cluster_pool_reservedbytes / trino_memory_cluster_pool_maxbytes) * 100
+# - 초당 처리 데이터: rate(trino_task_manager_inputdatasize_bytes[1m])
