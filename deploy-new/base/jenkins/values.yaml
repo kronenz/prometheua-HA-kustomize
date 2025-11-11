@@ -1,0 +1,98 @@
+---
+# Jenkins Helm Chart Values (Simplified for v5.7.x)
+# Chart: jenkins/jenkins
+
+controller:
+  # Jenkins Controller Image
+  image:
+    registry: docker.io
+    repository: jenkins/jenkins
+    tag: "2.479.1-lts-jdk17"
+    pullPolicy: IfNotPresent
+
+  # Admin Settings
+  admin:
+    username: "admin"
+    password: "admin123!"
+
+  # Resources
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+
+  # Java Options
+  javaOpts: "-Xms1g -Xmx3g -XX:+UseG1GC"
+
+  # Jenkins URL
+  jenkinsUrl: "http://jenkins.k8s-cluster-01.miribit.lab"
+
+  # Install Plugins (minimal set to avoid dependency conflicts)
+  installPlugins:
+    - kubernetes:latest
+    - workflow-aggregator:latest
+    - git:latest
+    - configuration-as-code:latest
+    - prometheus:latest
+    - timestamper:latest
+
+  additionalPlugins: []
+
+  # JCasC Configuration
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      welcome-message: |
+        jenkins:
+          systemMessage: "Jenkins for DataOps - Configured by JCasC"
+
+  # Ingress
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    hostName: jenkins.k8s-cluster-01.miribit.lab
+
+  # Persistence
+  persistence:
+    enabled: true
+    storageClass: "longhorn"
+    size: 20Gi
+
+# Agent Configuration
+agent:
+  enabled: true
+  image:
+    repository: jenkins/inbound-agent
+    tag: "3261.v9c670a_4748a_9-1"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+
+# Service Configuration
+serviceType: ClusterIP
+servicePort: 8080
+
+# Service Account
+serviceAccount:
+  create: true
+  name: jenkins
+
+# RBAC
+rbac:
+  create: true
+  readSecrets: true
+
+# Service Account for Agent
+serviceAccountAgent:
+  create: true
+  name: jenkins-agent
