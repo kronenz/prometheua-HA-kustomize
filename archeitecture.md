@@ -2,8 +2,7 @@
 (아래 Mermaid 코드는 그대로 문서/위키에 붙이면 다이어그램으로 볼 수 있습니다.)
 
 
---- mermaid
-
+``` mermaid 
 flowchart LR
     %% ========== 클러스터별 Prometheus + Thanos Receive 패턴 ==========
     subgraph C1[Cluster A (K8s)]
@@ -102,7 +101,7 @@ flowchart LR
     classDef am fill=#ffeeaa,stroke=#cc9900,stroke-width=1px;
 
 
----
+```
 
 2. Alert 발행/ Silence 흐름 (요약)
 
