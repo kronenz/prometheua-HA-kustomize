@@ -3,6 +3,7 @@
 
 
 --- mermaid
+
 flowchart LR
     %% ========== 클러스터별 Prometheus + Thanos Receive 패턴 ==========
     subgraph C1[Cluster A (K8s)]
