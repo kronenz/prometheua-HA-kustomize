@@ -1,0 +1,111 @@
+---
+# Log4j 로그 생성 샘플 애플리케이션
+# hostPath에 로그 파일을 작성하는 간단한 쉘 스크립트 기반 로그 생성기
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-generator
+  namespace: demo
+  labels:
+    app: log-generator
+    app.kubernetes.io/name: log-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-generator
+  template:
+    metadata:
+      labels:
+        app: log-generator
+    spec:
+      # 호스트 로그 디렉토리에 쓰기 위해 initContainer에서 디렉토리 생성
+      initContainers:
+        - name: create-log-dir
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /var/log/apps/demo
+              chmod 777 /var/log/apps/demo
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log/apps
+
+      containers:
+        - name: log-generator
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # 로그 파일 경로 설정
+              APP_NAME="loggenerator"
+              SERVICE_NAME="backend"
+              LOG_NAME="app"
+              NAMESPACE="demo"
+
+              echo "Starting log generator..."
+              echo "Log path: /var/log/apps/${NAMESPACE}/"
+
+              counter=0
+              while true; do
+                # 날짜 기반 로그 파일명
+                TODAY=$(date +%Y-%m-%d)
+                LOG_FILE="/var/log/apps/${NAMESPACE}/${APP_NAME}-${SERVICE_NAME}-${LOG_NAME}-${TODAY}.log"
+
+                # 랜덤 로그 레벨 선택 (0-3)
+                LEVEL_NUM=$((counter % 4))
+                case $LEVEL_NUM in
+                  0) LEVEL="INFO"; CLASS="com.example.service.UserService"; MESSAGE="Processing user request successfully" ;;
+                  1) LEVEL="DEBUG"; CLASS="com.example.controller.ApiController"; MESSAGE="Database connection established" ;;
+                  2) LEVEL="WARN"; CLASS="com.example.repository.DataRepository"; MESSAGE="Cache miss, fetching from database" ;;
+                  3) LEVEL="ERROR"; CLASS="com.example.util.Helper"; MESSAGE="Failed to connect to external service" ;;
+                esac
+
+                # 가끔 다른 메시지 출력
+                if [ $((counter % 7)) -eq 0 ]; then
+                  MESSAGE="Request completed in ${counter}ms"
+                fi
+                if [ $((counter % 11)) -eq 0 ]; then
+                  LEVEL="ERROR"
+                  MESSAGE="NullPointerException occurred at line ${counter}"
+                fi
+
+                # 타임스탬프 (밀리초는 카운터로 대체)
+                TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S"),$(printf "%03d" $((counter % 1000)))
+
+                # Log4j 형식 로그 출력
+                LOG_LINE="${TIMESTAMP} [main-thread-${counter}] ${LEVEL} ${CLASS} - ${MESSAGE}"
+
+                echo "$LOG_LINE" >> "$LOG_FILE"
+                echo "$LOG_LINE"
+
+                counter=$((counter + 1))
+
+                # 5초마다 로그 생성
+                sleep 5
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: applogs
+              mountPath: /var/log/apps
+
+      volumes:
+        - name: applogs
+          hostPath:
+            path: /var/log/apps
+            type: DirectoryOrCreate
+
+      # control-plane 노드에도 배포 가능
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"

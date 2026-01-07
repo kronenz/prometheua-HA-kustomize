@@ -1,0 +1,19 @@
+---
+# 컨테이너 로그 수집 (표준 Kubernetes 로그)
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: tail-containers
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  tail:
+    tag: kube.*
+    path: /var/log/containers/*.log
+    excludePath: /var/log/containers/*fluent*.log
+    parser: containerd
+    refreshIntervalSeconds: 10
+    memBufLimit: 5MB
+    skipLongLines: true
+    db: /fluent-bit/tail/containers-pos.db
+    dbSync: Normal

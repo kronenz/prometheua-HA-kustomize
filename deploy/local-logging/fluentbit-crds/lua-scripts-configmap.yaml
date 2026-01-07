@@ -1,0 +1,65 @@
+---
+# Lua 스크립트 ConfigMap - 파일 경로에서 메타데이터 추출
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-lua-scripts
+  namespace: logging
+data:
+  extract_metadata.lua: |
+    -- 파일 경로에서 애플리케이션 메타데이터 추출
+    -- 경로 형식: /var/log/apps/{namespace}/{app}-{service}-{logname}-YYYY-MM-dd.log
+    -- 또는: /var/log/apps/{namespace}/{app}-{service}-YYYY-MM-dd.log
+    -- 또는: /var/log/apps/{namespace}/{app}-YYYY-MM-dd.log
+    function extract_app_metadata(tag, timestamp, record)
+      local filepath = record["filepath"]
+
+      -- 기본값 설정
+      record["app"] = record["app"] or "unknown"
+      record["service"] = record["service"] or "unknown"
+      record["namespace"] = record["namespace"] or "default"
+      record["logname"] = record["logname"] or "main"
+
+      if filepath then
+        -- 경로 파싱: /var/log/apps/namespace/filename.log
+        local namespace, filename = filepath:match("/var/log/apps/([^/]+)/(.+)$")
+
+        if namespace and filename then
+          record["namespace"] = namespace
+
+          -- 파일명에서 app, service, logname 추출
+          -- 형식 1: app-service-logname-YYYY-MM-dd.log (예: myapp-api-access-2024-01-07.log)
+          local app, service, logname = filename:match("^([^-]+)-([^-]+)-([^-]+)-%d%d%d%d%-%d%d%-%d%d%.log$")
+
+          if app and service and logname then
+            record["app"] = app
+            record["service"] = service
+            record["logname"] = logname
+          else
+            -- 형식 2: app-service-YYYY-MM-dd.log (예: myapp-api-2024-01-07.log)
+            local app2, service2 = filename:match("^([^-]+)-([^-]+)-%d%d%d%d%-%d%d%-%d%d%.log$")
+            if app2 and service2 then
+              record["app"] = app2
+              record["service"] = service2
+              record["logname"] = "main"
+            else
+              -- 형식 3: app-YYYY-MM-dd.log (예: myapp-2024-01-07.log)
+              local simple_app = filename:match("^([^-]+)-%d%d%d%d%-%d%d%-%d%d%.log$")
+              if simple_app then
+                record["app"] = simple_app
+                record["service"] = "default"
+                record["logname"] = "main"
+              else
+                -- 형식 4: 일반 파일명.log
+                local base_name = filename:gsub("%.log$", "")
+                record["app"] = base_name
+                record["service"] = "default"
+                record["logname"] = "main"
+              end
+            end
+          end
+        end
+      end
+
+      return 1, timestamp, record
+    end

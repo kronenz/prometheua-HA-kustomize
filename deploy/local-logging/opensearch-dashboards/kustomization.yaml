@@ -1,0 +1,16 @@
+# OpenSearch Dashboards
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logging
+
+resources:
+  - ingress.yaml
+
+helmCharts:
+  - name: opensearch-dashboards
+    repo: https://opensearch-project.github.io/helm-charts
+    version: 2.24.1
+    releaseName: opensearch-dashboards
+    namespace: logging
+    valuesFile: values.yaml

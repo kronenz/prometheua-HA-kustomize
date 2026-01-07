@@ -1,0 +1,22 @@
+---
+# 애플리케이션 hostPath 로그 수집
+# 경로 형식: /var/log/apps/{namespace}/{app}-{service}-{logname}-YYYY-MM-dd.log
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: tail-hostpath-apps
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  tail:
+    tag: app.*
+    # 모든 네임스페이스의 애플리케이션 로그 수집
+    path: /var/log/apps/*/*.log
+    pathKey: filepath
+    parser: log4j
+    refreshIntervalSeconds: 5
+    memBufLimit: 10MB
+    skipLongLines: true
+    db: /fluent-bit/tail/hostpath-pos.db
+    dbSync: Normal
+    readFromHead: false

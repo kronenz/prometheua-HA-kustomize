@@ -1,0 +1,59 @@
+# OpenSearch Dashboards - 최소 리소스 구성
+replicaCount: 1
+
+image:
+  repository: opensearchproject/opensearch-dashboards
+  tag: "2.17.1"
+
+# OpenSearch 연결 설정
+opensearchHosts: "http://opensearch-cluster-master:9200"
+
+# 최소 리소스
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# 서비스 설정
+service:
+  type: ClusterIP
+  port: 5601
+
+# Security 플러그인 비활성화 (OpenSearch와 동일)
+extraEnvs:
+  - name: DISABLE_SECURITY_DASHBOARDS_PLUGIN
+    value: "true"
+
+config:
+  opensearch_dashboards.yml: |
+    server:
+      name: opensearch-dashboards
+      host: "0.0.0.0"
+
+    opensearch:
+      hosts: ["http://opensearch-cluster-master:9200"]
+
+# Liveness/Readiness probe
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 10
+
+readinessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 10
+
+# 노드 셀렉터 (필요시)
+nodeSelector: {}
+
+# 톨러레이션
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule

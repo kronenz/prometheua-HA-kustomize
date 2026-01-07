@@ -1,0 +1,34 @@
+# Fluent Operator Minimal Configuration
+# 최소 자원 사용 설정
+
+operator:
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Fluentd 비활성화 (Fluent-Bit만 사용)
+  disableComponentControllers: "fluentd"
+
+# Container Runtime
+containerRuntime: containerd
+
+# Fluent-Bit 기본 설정 (operator가 관리)
+fluentbit:
+  enable: false  # CRD로 별도 배포
+
+# Fluentd 비활성화
+fluentd:
+  enable: false
+
+# 네임스페이스 감시 (모든 네임스페이스)
+watchNamespaces: []
+
+# 단일 노드 toleration
+tolerations:
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"

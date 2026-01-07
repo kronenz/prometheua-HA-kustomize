@@ -1,0 +1,57 @@
+# OpenSearch Dashboards Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opensearch-dashboards
+  namespace: logging
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+    # 호스트 기반 라우팅 (dashboards.local)
+    - host: dashboards.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: opensearch-dashboards
+                port:
+                  number: 5601
+    # IP 기반 직접 접속 (호스트 없이)
+    - http:
+        paths:
+          - path: /dashboards
+            pathType: Prefix
+            backend:
+              service:
+                name: opensearch-dashboards
+                port:
+                  number: 5601
+---
+# OpenSearch API Ingress (선택사항)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opensearch-api
+  namespace: logging
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: opensearch.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: opensearch-cluster-master
+                port:
+                  number: 9200

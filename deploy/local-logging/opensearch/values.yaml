@@ -1,0 +1,109 @@
+# OpenSearch Minimal Configuration for Local Single Node
+# 최소 자원 사용을 위한 설정
+
+clusterName: "opensearch-cluster"
+nodeGroup: "master"
+
+# 단일 노드 설정
+replicas: 1
+minimumMasterNodes: 1
+masterService: "opensearch-cluster-master"
+
+roles:
+  - master
+  - data
+  - ingest
+
+# 최소 자원 설정 (단일 노드 환경)
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1536Mi
+  requests:
+    cpu: 500m
+    memory: 1024Mi
+
+# 로컬 스토리지 비활성화 (emptyDir 사용)
+persistence:
+  enabled: false
+
+# JVM heap size (50% of memory)
+opensearchJavaOpts: "-Xmx512m -Xms512m"
+
+# 플러그인 비활성화 (최소 구성)
+plugins:
+  enabled: false
+
+# Single node 모드 (cluster.initial_master_nodes 자동생성 비활성화)
+singleNode: true
+
+# Security 비활성화 (테스트 환경)
+config:
+  opensearch.yml: |
+    cluster.name: opensearch-cluster
+    network.host: 0.0.0.0
+    discovery.type: single-node
+
+    # Security 완전 비활성화
+    plugins.security.disabled: true
+
+    # 메모리 설정
+    indices.memory.index_buffer_size: 10%
+
+    # 단일 노드 최적화
+    cluster.routing.allocation.disk.threshold_enabled: false
+
+# cluster.initial_master_nodes 비활성화
+clusterManagerService: ""
+
+# Service
+service:
+  type: ClusterIP
+  httpPort: 9200
+  transportPort: 9300
+
+# Ingress 비활성화
+ingress:
+  enabled: false
+
+# 추가 환경변수
+extraEnvs:
+  - name: DISABLE_INSTALL_DEMO_CONFIG
+    value: "true"
+  - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+    value: "Admin123!"
+
+# Anti-affinity 비활성화 (단일 노드)
+antiAffinity: ""
+antiAffinityTopologyKey: "kubernetes.io/hostname"
+
+# Pod disruption budget 비활성화
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Security context
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# sysctl init
+sysctlInit:
+  enabled: true
+  image: busybox
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# 단일 노드에서 toleration
+tolerations:
+  - key: "node-role.kubernetes.io/control-plane"
+    operator: "Exists"
+    effect: "NoSchedule"

@@ -1,0 +1,15 @@
+# Local Logging Stack - 전체 배포
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 개별 컴포넌트를 순서대로 배포
+# 1. NGINX Ingress Controller
+# 2. OpenSearch
+# 3. OpenSearch Dashboards
+# 4. Fluent Operator
+# 5. FluentBit CRDs
+# 6. Sample Application
+
+# 참고: 각 컴포넌트는 개별적으로도 배포 가능
+# kustomize build opensearch --enable-helm | kubectl apply -f -
+# kustomize build opensearch-dashboards --enable-helm | kubectl apply -f -

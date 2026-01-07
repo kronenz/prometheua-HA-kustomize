@@ -1,0 +1,54 @@
+---
+# Log4j 로그 파서
+# 형식: 2024-01-07 14:30:45.123 [thread-1] INFO com.example.MyClass - Message
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: log4j
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  regex:
+    regex: '^(?<time>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}[.,]\d{3})\s+\[(?<thread>[^\]]+)\]\s+(?<level>\w+)\s+(?<logger>[^\s]+)\s+-\s+(?<message>.*)$'
+    timeKey: time
+    timeFormat: "%Y-%m-%d %H:%M:%S,%L"
+    timeKeep: true
+---
+# Log4j JSON 형식 파서
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: log4j-json
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  json:
+    timeKey: timestamp
+    timeFormat: "%Y-%m-%dT%H:%M:%S.%L"
+    timeKeep: true
+---
+# 파일명에서 메타데이터 추출 파서
+# 형식: {namespace}/{app}-{service}-{logname}-YYYY-MM-dd.log
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: applog-filename
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  regex:
+    regex: '^/var/log/apps/(?<namespace>[^/]+)/(?<app>[^-]+)-(?<service>[^-]+)-(?<logname>[^-]+)-\d{4}-\d{2}-\d{2}\.log$'
+---
+# Docker/Containerd 로그 파서
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: containerd
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  regex:
+    regex: '^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$'
+    timeKey: time
+    timeFormat: "%Y-%m-%dT%H:%M:%S.%L%z"
+    timeKeep: true

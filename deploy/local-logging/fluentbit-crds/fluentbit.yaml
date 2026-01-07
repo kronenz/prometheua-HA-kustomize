@@ -1,0 +1,66 @@
+---
+# FluentBit DaemonSet 정의
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: FluentBit
+metadata:
+  name: fluent-bit
+  namespace: fluent-operator-system
+  labels:
+    app.kubernetes.io/name: fluent-bit
+spec:
+  image: fluent/fluent-bit:3.1.4
+
+  # FluentBit 실행 명령어 - 올바른 설정 파일 경로 지정
+  command:
+    - /fluent-bit/bin/fluent-bit
+  args:
+    - --workdir=/fluent-bit/etc
+    - --config=/fluent-bit/config/fluent-bit.conf
+
+  # Position DB (재시작 시 로그 위치 유지)
+  positionDB:
+    hostPath:
+      path: /var/lib/fluent-bit/
+
+  # 최소 리소스
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  # FluentBitConfig 참조
+  fluentBitConfigName: fluent-bit-config
+
+  # 볼륨 마운트 (hostPath 로그 수집용)
+  volumes:
+    # 컨테이너 로그
+    - name: varlog
+      hostPath:
+        path: /var/log
+    # 애플리케이션 커스텀 로그 (hostPath)
+    - name: applogs
+      hostPath:
+        path: /var/log/apps
+        type: DirectoryOrCreate
+    # Lua 스크립트
+    - name: lua-scripts
+      configMap:
+        name: fluent-bit-lua-scripts
+
+  volumesMounts:
+    - name: varlog
+      mountPath: /var/log
+      readOnly: true
+    - name: applogs
+      mountPath: /var/log/apps
+      readOnly: true
+    - name: lua-scripts
+      mountPath: /fluent-bit/scripts
+      readOnly: true
+
+  # 모든 노드에 배포
+  tolerations:
+    - operator: Exists

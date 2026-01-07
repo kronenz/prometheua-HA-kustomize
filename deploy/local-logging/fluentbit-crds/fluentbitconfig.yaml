@@ -1,0 +1,34 @@
+---
+# FluentBit Config (ClusterFluentBitConfig)
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFluentBitConfig
+metadata:
+  name: fluent-bit-config
+  labels:
+    app.kubernetes.io/name: fluent-bit
+spec:
+  service:
+    daemon: false
+    flushSeconds: 5
+    logLevel: info
+    parsersFile: /fluent-bit/config/parsers.conf
+    httpServer: true
+    httpListen: 0.0.0.0
+    httpPort: 2020
+
+  # Input/Filter/Output selector (모든 enabled 리소스 포함)
+  inputSelector:
+    matchLabels:
+      fluentbit.fluent.io/enabled: "true"
+
+  filterSelector:
+    matchLabels:
+      fluentbit.fluent.io/enabled: "true"
+
+  outputSelector:
+    matchLabels:
+      fluentbit.fluent.io/enabled: "true"
+
+  parserSelector:
+    matchLabels:
+      fluentbit.fluent.io/enabled: "true"

@@ -1,0 +1,57 @@
+---
+# OpenSearch 출력 - 컨테이너 로그
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterOutput
+metadata:
+  name: opensearch-containers
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  opensearch:
+    host: opensearch-cluster-master.logging.svc.cluster.local
+    port: 9200
+    # Security 비활성화 환경에서는 인증 불필요
+    suppressTypeName: true
+    logstashFormat: true
+    logstashPrefix: k8s-containers
+    logstashDateFormat: "%Y.%m.%d"
+    timeKey: "@timestamp"
+    includeTagKey: true
+    tagKey: fluent_tag
+    writeOperation: create
+    bufferSize: 5MB
+---
+# OpenSearch 출력 - 애플리케이션 로그 (hostPath)
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterOutput
+metadata:
+  name: opensearch-applications
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: app.*
+  opensearch:
+    host: opensearch-cluster-master.logging.svc.cluster.local
+    port: 9200
+    suppressTypeName: true
+    logstashFormat: true
+    logstashPrefix: app-logs
+    logstashDateFormat: "%Y.%m.%d"
+    timeKey: "@timestamp"
+    includeTagKey: true
+    tagKey: fluent_tag
+    writeOperation: create
+    bufferSize: 5MB
+---
+# 디버깅용 stdout 출력 (선택적 활성화)
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterOutput
+metadata:
+  name: stdout-debug
+  labels:
+    fluentbit.fluent.io/enabled: "false"  # 필요시 true로 변경
+spec:
+  match: "*"
+  stdout:
+    format: json_lines

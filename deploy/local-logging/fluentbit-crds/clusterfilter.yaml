@@ -1,0 +1,124 @@
+---
+# 컨테이너 로그 필터 - Kubernetes 메타데이터 추가
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: kubernetes-metadata
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  filters:
+    - kubernetes:
+        kubeURL: https://kubernetes.default.svc:443
+        kubeCAFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        kubeTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+        labels: true
+        annotations: false
+        mergeLog: true
+        keepLog: false
+        k8sLoggingParser: true
+        k8sLoggingExclude: true
+---
+# 컨테이너 로그 필드 정리
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: kubernetes-nest
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  filters:
+    - nest:
+        operation: lift
+        nestedUnder: kubernetes
+        addPrefix: k8s_
+---
+# 컨테이너 로그 필드명 정리 (rename만 사용)
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: kubernetes-modify
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  filters:
+    - modify:
+        rules:
+          - rename:
+              key: k8s_container_name
+              value: container
+          - rename:
+              key: k8s_namespace_name
+              value: namespace
+          - rename:
+              key: k8s_pod_name
+              value: pod
+          - rename:
+              key: k8s_host
+              value: node
+---
+# 컨테이너 로그 타입 필드 추가
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: kubernetes-record-modifier
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: kube.*
+  filters:
+    - recordModifier:
+        records:
+          - "log_type container"
+          - "source kubernetes"
+---
+# hostPath 애플리케이션 로그 - Lua 스크립트로 파일경로에서 메타데이터 추출
+# 경로 형식: /var/log/apps/{namespace}/{app}-{service}-{logname}-YYYY-MM-dd.log
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: applog-lua-metadata
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+    fluentbit.fluent.io/component: filter
+spec:
+  match: app.*
+  filters:
+    - lua:
+        script:
+          key: extract_metadata.lua
+          name: fluent-bit-lua-scripts
+        call: extract_app_metadata
+---
+# hostPath 애플리케이션 로그 - record_modifier로 기본 메타데이터 추가
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: applog-record-modifier
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+    fluentbit.fluent.io/component: filter
+spec:
+  match: app.*
+  filters:
+    - recordModifier:
+        records:
+          - "source hostpath"
+          - "log_type application"
+---
+# 공통 클러스터 필드 추가
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: record-modifier
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  match: "*"
+  filters:
+    - recordModifier:
+        records:
+          - "cluster local-cluster"
